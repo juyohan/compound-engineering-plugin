@@ -1,249 +1,249 @@
-# Deepening Workflow
+# 심화 워크플로우 (Deepening Workflow)
 
-This file contains the confidence-check execution path (5.3.3-5.3.7). Load it only when the deepening gate at 5.3.2 determines that deepening is warranted.
+이 파일은 신뢰도 체크 실행 경로(5.3.3 ~ 5.3.7)를 포함합니다. 5.3.2의 심화 게이트(deepening gate)에서 심화가 필요하다고 판단된 경우에만 이 파일을 로드하십시오.
 
-## 5.3.3 Score Confidence Gaps
+## 5.3.3 신뢰도 격차 점수 산정 (Score Confidence Gaps)
 
-Use a checklist-first, risk-weighted scoring pass.
+체크리스트 우선, 리스크 가중 점수 산정 패스를 사용하십시오.
 
-For each section, compute:
-- **Trigger count** - number of checklist problems that apply
-- **Risk bonus** - add 1 if the topic is high-risk and this section is materially relevant to that risk
-- **Critical-section bonus** - add 1 for `Key Technical Decisions`, `Implementation Units`, `System-Wide Impact`, `Risks & Dependencies`, or `Open Questions` in `Standard` or `Deep` plans
+각 섹션에 대해 다음을 계산하십시오:
+- **트리거 수 (Trigger count)** - 적용되는 체크리스트 문제의 수
+- **리스크 보너스 (Risk bonus)** - 주제가 고위험군이고 해당 섹션이 그 리스크와 실질적으로 관련된 경우 1점을 추가합니다.
+- **핵심 섹션 보너스 (Critical-section bonus)** - `Standard` 또는 `Deep` 플랜의 `Key Technical Decisions`, `Implementation Units`, `System-Wide Impact`, `Risks & Dependencies`, 또는 `Open Questions` 섹션인 경우 1점을 추가합니다.
 
-Treat a section as a candidate if:
-- it hits **2+ total points**, or
-- it hits **1+ point** in a high-risk domain and the section is materially important
+다음의 경우 해당 섹션을 심화 후보로 간주합니다:
+- **총점이 2점 이상**인 경우, 또는
+- 고위험 도메인에서 **1점 이상**이고 해당 섹션이 실질적으로 중요한 경우
 
-Choose only the top **2-5** sections by score. If deepening a lightweight plan (high-risk exception), cap at **1-2** sections.
+점수에 따라 상위 **2~5개** 섹션만 선택하십시오. 경량(lightweight) 플랜을 심화하는 경우(고위험 예외 상황), **1~2개** 섹션으로 제한하십시오.
 
-If the plan already has a `deepened:` date:
-- Prefer sections that have not yet been substantially strengthened, if their scores are comparable
-- Revisit an already-deepened section only when it still scores clearly higher than alternatives
+플랜에 이미 `deepened:` 날짜가 있는 경우:
+- 점수가 비슷하다면 아직 실질적으로 강화되지 않은 섹션을 우선하십시오.
+- 이미 심화된 섹션이라도 다른 대안보다 점수가 확연히 높은 경우에만 다시 검토하십시오.
 
-**Section Checklists:**
+**섹션별 체크리스트:**
 
-**Requirements**
-- Requirements are vague or disconnected from implementation units
-- Success criteria are missing or not reflected downstream
-- Units do not clearly advance the traced requirements
-- Origin requirements are not clearly carried forward
-- Origin A/F/AE IDs (when supplied by the upstream brainstorm) are not preserved where planning decisions touch them, or are referenced inconsistently across Requirements, units, and test scenarios
+**Requirements (요구사항)**
+- 요구사항이 모호하거나 구현 단위(implementation units)와 연결되지 않음
+- 성공 기준이 누락되었거나 하류 작업에 반영되지 않음
+- 구현 단위가 추적된 요구사항을 명확하게 진전시키지 못함
+- 기원(origin) 요구사항이 명확하게 전달되지 않음
+- 상류의 브레인스토밍에서 제공한 기원 A/F/AE ID가 플래닝 결정이 닿는 곳에서 보존되지 않았거나, Requirements, units, test scenarios 전반에 걸쳐 일관성 없게 참조됨
 
-**Context & Research / Sources & References**
-- Relevant repo patterns are named but never used in decisions or implementation units
-- Cited learnings or references do not materially shape the plan
-- High-risk work lacks appropriate external or internal grounding
-- Research is generic instead of tied to this repo or this plan
+**Context & Research / Sources & References (컨텍스트 및 조사 / 소스 및 참조)**
+- 관련 저장소 패턴이 명명되었으나 결정이나 구현 단위에서 한 번도 사용되지 않음
+- 인용된 학습 내용이나 참조가 플랜을 실질적으로 형성하지 못함
+- 고위험 작업에 적절한 외부 또는 내부 근거가 부족함
+- 조사가 해당 저장소나 플랜에 결합되지 않고 일반적임
 
-**Key Technical Decisions**
-- A decision is stated without rationale
-- Rationale does not explain tradeoffs or rejected alternatives
-- The decision does not connect back to scope, requirements, or origin context
-- An obvious design fork exists but the plan never addresses why one path won
+**Key Technical Decisions (핵심 기술 결정)**
+- 결정 사항이 근거 없이 기술됨
+- 근거가 트레이드오프나 기각된 대안을 설명하지 않음
+- 결정이 범위, 요구사항 또는 기원 컨텍스트와 연결되지 않음
+- 명확한 설계 분기점이 존재하지만, 왜 한 경로를 선택했는지 플랜에서 다루지 않음
 
-**Open Questions**
-- Product blockers are hidden as assumptions
-- Planning-owned questions are incorrectly deferred to implementation
-- Resolved questions have no clear basis in repo context, research, or origin decisions
-- Deferred items are too vague to be useful later
+**Open Questions (미결 질문)**
+- 제품 블로커(blocker)가 가정(assumptions)으로 숨겨짐
+- 플래닝 단계에서 해결해야 할 질문이 잘못되게 구현 단계로 미뤄짐
+- 해결된 질문이 저장소 컨텍스트, 조사 또는 기원 결정에 명확한 근거를 두지 않음
+- 미뤄진 항목이 너무 모호하여 나중에 도움이 되지 않음
 
-**High-Level Technical Design (when present)**
-- The sketch uses the wrong medium for the work
-- The sketch contains implementation code rather than pseudo-code
-- The non-prescriptive framing is missing or weak
-- The sketch does not connect to the key technical decisions or implementation units
+**High-Level Technical Design (상위 수준 기술 설계 - 있는 경우)**
+- 스케치가 작업에 부적절한 매체를 사용함
+- 스케치에 의사 코드(pseudo-code)가 아닌 실제 구현 코드가 포함됨
+- 비규정적 프레이밍(non-prescriptive framing)이 누락되었거나 약함
+- 스케치가 핵심 기술 결정이나 구현 단위와 연결되지 않음
 
-**High-Level Technical Design (when absent)** *(Standard or Deep plans only)*
-- The work involves DSL design, API surface design, multi-component integration, complex data flow, or state-heavy lifecycle
-- Key technical decisions would be easier to validate with a visual or pseudo-code representation
-- The approach section of implementation units is thin and a higher-level technical design would provide context
+**High-Level Technical Design (상위 수준 기술 설계 - 없는 경우)** *(Standard 또는 Deep 플랜만 해당)*
+- 작업이 DSL 설계, API 표면 설계, 다중 컴포넌트 통합, 복잡한 데이터 흐름 또는 상태 중심 라이프사이클을 포함함
+- 시각적 자료나 의사 코드 표현이 있다면 핵심 기술 결정을 검증하기가 더 쉬울 것임
+- 구현 단위의 접근 방식(approach) 섹션이 빈약하여 상위 수준의 기술 설계가 컨텍스트를 제공할 필요가 있음
 
-**Implementation Units**
-- Dependency order is unclear or likely wrong
-- File paths or test file paths are missing where they should be explicit
-- Units are too large, too vague, or broken into micro-steps
-- Approach notes are thin or do not name the pattern to follow
-- Test scenarios are vague (don't name inputs and expected outcomes), skip applicable categories (e.g., no error paths for a unit with failure modes, no integration scenarios for a unit crossing layers), or are disproportionate to the unit's complexity
-- Feature-bearing units have blank or missing test scenarios (feature-bearing units require actual test scenarios; the `Test expectation: none` annotation is only valid for non-feature-bearing units)
-- Verification outcomes are vague or not expressed as observable results
-- Existing U-IDs were renumbered after a unit was reordered, split, or deleted (U-IDs are stable: never renumber existing IDs; gaps from deletions are preserved; new units take the next unused number)
-- A unit realizing an origin Key Flow does not cite the F-ID, or a unit enforcing an origin Acceptance Example does not cite the AE-ID, when origin supplies them
+**Implementation Units (구현 단위)**
+- 의존성 순서가 불분명하거나 틀렸을 가능성이 높음
+- 명시되어야 할 파일 경로 또는 테스트 파일 경로가 누락됨
+- 단위가 너무 크거나 모호함, 또는 너무 미세한 단계로 쪼개짐
+- 접근 방식 노트가 빈약하거나 따라야 할 패턴을 명시하지 않음
+- 테스트 시나리오가 모호함(입력과 예상 결과를 명시하지 않음), 적용 가능한 범주를 누락함(예: 실패 모드가 있는 단위에 오류 경로가 없음, 레이어를 가로지르는 작업에 통합 시나리오가 없음), 또는 단위의 복잡도에 비해 부적절함
+- 기능을 포함하는 단위의 테스트 시나리오가 비어 있거나 누락됨(기능 포함 단위는 실제 테스트 시나리오가 필수임. `Test expectation: none` 주석은 기능이 없는 단위에만 유효함)
+- 검증 결과가 모호하거나 관찰 가능한 결과로 표현되지 않음
+- 단위 재정렬, 분할 또는 삭제 후 기존 U-ID가 다시 번호 매겨짐 (U-ID는 고정되어야 함: 기존 ID를 절대 다시 번호 매기지 마십시오. 삭제로 인한 공백은 유지하며, 새 단위는 다음 미사용 번호를 사용함)
+- 기원 Key Flow를 구현하는 단위가 F-ID를 인용하지 않거나, 기원 Acceptance Example을 강제하는 단위가 AE-ID를 인용하지 않음 (기원에서 이를 제공한 경우)
 
-**System-Wide Impact**
-- Affected interfaces, callbacks, middleware, entry points, or parity surfaces are missing
-- Failure propagation is underexplored
-- State lifecycle, caching, or data integrity risks are absent where relevant
-- Integration coverage is weak for cross-layer work
+**System-Wide Impact (시스템 전반의 영향)**
+- 영향을 받는 인터페이스, 콜백, 미들웨어, 진입점 또는 패리티 표면이 누락됨
+- 실패 전파(failure propagation)에 대한 탐색이 부족함
+- 상태 라이프사이클, 캐싱 또는 데이터 무결성 리스크가 관련 부문에 누락됨
+- 레이어 간 작업에 대한 통합 커버리지가 약함
 
-**Risks & Dependencies / Documentation / Operational Notes**
-- Risks are listed without mitigation
-- Rollout, monitoring, migration, or support implications are missing when warranted
-- External dependency assumptions are weak or unstated
-- Security, privacy, performance, or data risks are absent where they obviously apply
+**Risks & Dependencies / Documentation / Operational Notes (리스크 및 의존성 / 문서화 / 운영 노트)**
+- 리스크가 완화 대책 없이 나열됨
+- 배포, 모니터링, 마이그레이션 또는 지원 관련 함의가 필요한데도 누락됨
+- 외부 의존성 가정이 약하거나 명시되지 않음
+- 보안, 프라이버시, 성능 또는 데이터 리스크가 명백히 적용되는데도 누락됨
 
-Use the plan's own `Context & Research` and `Sources & References` as evidence. If those sections cite a pattern, learning, or risk that never affects decisions, implementation units, or verification, treat that as a confidence gap.
+플랜 자체의 `Context & Research`와 `Sources & References`를 증거로 사용하십시오. 해당 섹션에서 패턴, 학습 내용 또는 리스크를 인용했음에도 결정, 구현 단위 또는 검증에 영향을 주지 않는다면 이를 신뢰도 격차로 간주하십시오.
 
-## 5.3.4 Report and Dispatch Targeted Research
+## 5.3.4 타겟 조사 보고 및 발송 (Report and Dispatch Targeted Research)
 
-Before dispatching agents, report what sections are being strengthened and why:
+에이전트를 발송하기 전에 어떤 섹션이 왜 강화되는지 보고하십시오:
 
 ```text
-Strengthening [section names] — [brief reason for each, e.g., "decision rationale is thin", "cross-boundary effects aren't mapped"]
+강화 대상 섹션: [섹션 이름] — [각 섹션에 대한 짧은 이유, 예: "결정 근거가 빈약함", "경계를 넘나드는 영향이 매핑되지 않음"]
 ```
 
-For each selected section, choose the smallest useful agent set. Do **not** run every agent. Use at most **1-3 agents per section** and usually no more than **8 agents total**.
+선택된 각 섹션에 대해 가장 작고 유용한 에이전트 세트를 선택하십시오. 모든 에이전트를 실행하지 마십시오. **섹션당 최대 1~3개의 에이전트**를 사용하며, 일반적으로 **총 8개 이하의 에이전트**를 사용하십시오.
 
-Use fully-qualified agent names inside Task calls.
+Task 호출 내에서 정규화된(fully-qualified) 에이전트 이름을 사용하십시오.
 
-**Deterministic Section-to-Agent Mapping:**
+**섹션별 에이전트 매핑:**
 
-**Requirements / Open Questions classification**
-- `ce-spec-flow-analyzer` for missing user flows, edge cases, and handoff gaps
-- `ce-repo-research-analyst` (Scope: `architecture, patterns`) for repo-grounded patterns, conventions, and implementation reality checks
+**Requirements / Open Questions 분류**
+- `ce-spec-flow-analyzer`: 누락된 사용자 흐름, 에지 케이스, 핸드오프 격차 확인
+- `ce-repo-research-analyst` (Scope: `architecture, patterns`): 저장소에 기반한 패턴, 컨벤션 및 구현 현실성 체크
 
-**Context & Research / Sources & References gaps**
-- `ce-learnings-researcher` for institutional knowledge and past solved problems
-- `ce-framework-docs-researcher` for official framework or library behavior
-- `ce-best-practices-researcher` for current external patterns and industry guidance
-- Add `ce-git-history-analyzer` only when historical rationale or prior art is materially missing
+**Context & Research / Sources & References 격차**
+- `ce-learnings-researcher`: 조직 내 지식 및 과거 해결된 문제 확인
+- `ce-framework-docs-researcher`: 공식 프레임워크 또는 라이브러리 동작 확인
+- `ce-best-practices-researcher`: 현재 외부 패턴 및 업계 가이드 확인
+- `ce-git-history-analyzer`: 역사적 근거 또는 선행 사례가 실질적으로 누락된 경우에만 추가
 
 **Key Technical Decisions**
-- `ce-architecture-strategist` for design integrity, boundaries, and architectural tradeoffs
-- Add `ce-framework-docs-researcher` or `ce-best-practices-researcher` when the decision needs external grounding beyond repo evidence
+- `ce-architecture-strategist`: 설계 무결성, 경계 및 아키텍처 트레이드오프 확인
+- 결정에 저장소 증거 이상의 외부 근거가 필요한 경우 `ce-framework-docs-researcher` 또는 `ce-best-practices-researcher` 추가
 
 **High-Level Technical Design**
-- `ce-architecture-strategist` for validating that the technical design accurately represents the intended approach and identifying gaps
-- `ce-repo-research-analyst` (Scope: `architecture, patterns`) for grounding the technical design in existing repo patterns and conventions
-- Add `ce-best-practices-researcher` when the technical design involves a DSL, API surface, or pattern that benefits from external validation
+- `ce-architecture-strategist`: 기술 설계가 의도한 접근 방식을 정확하게 표현하는지 검증하고 격차 식별
+- `ce-repo-research-analyst` (Scope: `architecture, patterns`): 기술 설계를 기존 저장소 패턴 및 컨벤션에 결합
+- 기술 설계가 외부 검증이 유용한 DSL, API 표면 또는 패턴을 포함하는 경우 `ce-best-practices-researcher` 추가
 
 **Implementation Units / Verification**
-- `ce-repo-research-analyst` (Scope: `patterns`) for concrete file targets, patterns to follow, and repo-specific sequencing clues
-- `ce-pattern-recognition-specialist` for consistency, duplication risks, and alignment with existing patterns
-- Add `ce-spec-flow-analyzer` when sequencing depends on user flow or handoff completeness
+- `ce-repo-research-analyst` (Scope: `patterns`): 구체적인 파일 타겟, 따라야 할 패턴, 저장소 특유의 순서 힌트 확인
+- `ce-pattern-recognition-specialist`: 일관성, 중복 리스크 및 기존 패턴과의 정렬 확인
+- 순서가 사용자 흐름이나 핸드오프 완결성에 의존하는 경우 `ce-spec-flow-analyzer` 추가
 
 **System-Wide Impact**
-- `ce-architecture-strategist` for cross-boundary effects, interface surfaces, and architectural knock-on impact
-- Add the specific specialist that matches the risk:
-  - `ce-performance-oracle` for scalability, latency, throughput, and resource-risk analysis
-  - `ce-security-sentinel` for auth, validation, exploit surfaces, and security boundary review
-  - `ce-data-integrity-guardian` for migrations, persistent state safety, consistency, and data lifecycle risks
+- `ce-architecture-strategist`: 경계를 넘나드는 영향, 인터페이스 표면 및 아키텍처적 연쇄 영향 확인
+- 리스크에 맞는 특정 전문가 추가:
+  - `ce-performance-oracle`: 확장성, 지연 시간, 처리량 및 리스크 분석
+  - `ce-security-sentinel`: 인증, 검증, 취약점 표면 및 보안 경계 검토
+  - `ce-data-integrity-guardian`: 마이그레이션, 지속성 상태 안전, 일관성 및 데이터 라이프사이클 리스크
 
 **Risks & Dependencies / Operational Notes**
-- Use the specialist that matches the actual risk:
-  - `ce-security-sentinel` for security, auth, privacy, and exploit risk
-  - `ce-data-integrity-guardian` for persistent data safety, constraints, and transaction boundaries
-  - `ce-data-migration-expert` for migration realism, backfills, and production data transformation risk
-  - `ce-deployment-verification-agent` for rollout checklists, rollback planning, and launch verification
-  - `ce-performance-oracle` for capacity, latency, and scaling concerns
+- 실제 리스크에 맞는 전문가 사용:
+  - `ce-security-sentinel`: 보안, 인증, 프라이버시 및 취약점 리스크
+  - `ce-data-integrity-guardian`: 지속성 데이터 안전, 제약 조건 및 트랜잭션 경계
+  - `ce-data-migration-expert`: 마이그레이션 현실성, 백필 및 운영 데이터 변환 리스크
+  - `ce-deployment-verification-agent`: 배포 체크리스트, 롤백 계획 및 런칭 검증
+  - `ce-performance-oracle`: 용량, 지연 시간 및 확장성 우려
 
-**Agent Prompt Shape:**
+**에이전트 프롬프트 형태:**
 
-For each selected section, pass:
-- The scope prefix from the mapping above when the agent supports scoped invocation
-- A short plan summary
-- The exact section text
-- Why the section was selected, including which checklist triggers fired
-- The plan depth and risk profile
-- A specific question to answer
+선택된 각 섹션에 대해 다음을 전달하십시오:
+- 에이전트가 범위 지정 호출을 지원하는 경우 위 매핑의 범위 접두사(scope prefix)
+- 짧은 플랜 요약
+- 해당 섹션의 정확한 텍스트
+- 어떤 체크리스트 트리거가 작동했는지를 포함하여 해당 섹션이 선택된 이유
+- 플랜 깊이(depth) 및 리스크 프로필
+- 답변해야 할 구체적인 질문
 
-Instruct the agent to return:
-- findings that change planning quality
-- stronger rationale, sequencing, verification, risk treatment, or references
-- no implementation code
-- no shell commands
+에이전트에게 다음을 반환하도록 지시하십시오:
+- 플래닝 품질을 바꿀 수 있는 발견 사항
+- 더 강력한 근거, 순서, 검증, 리스크 처리 또는 참조
+- 구현 코드는 포함하지 않음
+- 쉘 명령어는 포함하지 않음
 
-## 5.3.5 Choose Research Execution Mode
+## 5.3.5 조사 실행 모드 선택 (Choose Research Execution Mode)
 
-Use the lightest mode that will work:
+작동 가능한 가장 가벼운 모드를 사용하십시오:
 
-- **Direct mode** - Default. Use when the selected section set is small and the parent can safely read the agent outputs inline.
-- **Artifact-backed mode** - Use only when the selected research scope is large enough that inline returns would create unnecessary context pressure.
+- **직접 모드 (Direct mode)** - 기본값. 선택된 섹션 세트가 작고 부모 에이전트가 에이전트 출력을 인라인으로 안전하게 읽을 수 있는 경우 사용합니다.
+- **아티팩트 기반 모드 (Artifact-backed mode)** - 선택된 조사 범위가 커서 인라인 반환이 불필요한 컨텍스트 압박을 줄 수 있는 경우에만 사용합니다.
 
-Signals that justify artifact-backed mode:
-- More than 5 agents are likely to return meaningful findings
-- The selected section excerpts are long enough that repeating them in multiple agent outputs would be wasteful
-- The topic is high-risk and likely to attract bulky source-backed analysis
+아티팩트 기반 모드를 정당화하는 신호:
+- 5개 이상의 에이전트가 의미 있는 결과를 반환할 가능성이 높음
+- 선택된 섹션 발췌본이 길어서 여러 에이전트 출력에 반복하는 것이 낭비인 경우
+- 주제가 고위험군이며 대량의 소스 기반 분석을 수반할 가능성이 높은 경우
 
-If artifact-backed mode is not clearly warranted, stay in direct mode.
+아티팩트 기반 모드가 명확하게 정당화되지 않는다면 직접 모드를 유지하십시오.
 
-Artifact-backed mode uses a per-run OS-temp scratch directory. Create it once before dispatching sub-agents and capture its **absolute path** — pass that absolute path to each sub-agent so they write to it directly. Do not use `.context/`; the artifacts are per-run throwaway that are cleaned up when deepening ends (see 5.3.6b), matching the repo Scratch Space convention for one-shot artifacts. Do not pass unresolved shell-variable strings to sub-agents; they need the resolved absolute path.
+아티팩트 기반 모드는 실행당 OS 임시 스크래치 디렉토리를 사용합니다. 하위 에이전트를 발송하기 전에 한 번 생성하고 **절대 경로**를 캡처하십시오. 각 하위 에이전트가 해당 경로에 직접 쓰도록 절대 경로를 전달하십시오. `.context/`를 사용하지 마십시오. 아티팩트는 심화 작업이 끝나면 삭제되는 일회용입니다(5.3.6b 참조). 이는 일회성 아티팩트에 대한 저장소 스크래치 공간(Scratch Space) 컨벤션과 일치합니다. 하위 에이전트에게 해석되지 않은 쉘 변수 문자열을 전달하지 마십시오. 해석된 절대 경로가 필요합니다.
 
 ```bash
 SCRATCH_DIR="$(mktemp -d -t ce-plan-deepen-XXXXXX)"
 echo "$SCRATCH_DIR"
 ```
 
-Refer to the echoed absolute path as `<scratch-dir>` throughout the rest of this workflow.
+이 워크플로우의 나머지 부분에서는 에코된 절대 경로를 `<scratch-dir>`로 참조하십시오.
 
-## 5.3.6 Run Targeted Research
+## 5.3.6 타겟 조사 실행 (Run Targeted Research)
 
-Launch the selected agents in parallel using the execution mode chosen above. If the current platform does not support parallel dispatch, run them sequentially instead. Omit the `mode` parameter when dispatching so the user's configured permission settings apply.
+위에서 선택한 실행 모드를 사용하여 선택된 에이전트들을 병렬로 실행하십시오. 현재 플랫폼이 병렬 실행을 지원하지 않는 경우 순차적으로 실행하십시오. 사용자가 설정한 권한 설정이 적용되도록 발송 시 `mode` 파라미터는 생략하십시오.
 
-Prefer local repo and institutional evidence first. Use external research only when the gap cannot be closed responsibly from repo context or already-cited sources.
+로컬 저장소 및 조직 내 증거를 먼저 우선하십시오. 저장소 컨텍스트나 이미 인용된 소스로부터 격차를 책임감 있게 메울 수 없는 경우에만 외부 조사를 사용하십시오.
 
-If a selected section can be improved by reading the origin document more carefully, do that before dispatching external agents.
+선택된 섹션이 기원 문서를 더 주의 깊게 읽음으로써 개선될 수 있다면, 외부 에이전트를 발송하기 전에 그렇게 하십시오.
 
-**Direct mode:** Have each selected agent return its findings directly to the parent. Keep the return payload focused: strongest findings only, the evidence or sources that matter, the concrete planning improvement implied by the finding.
+**직접 모드:** 선택된 각 에이전트가 발견 사항을 부모에게 직접 반환하게 하십시오. 반환 페이로드는 가장 강력한 발견 사항, 중요한 증거 또는 소스, 발견 사항이 시사하는 구체적인 플랜 개선 사항에 집중하십시오.
 
-**Artifact-backed mode:** For each selected agent, pass the absolute `<scratch-dir>` path captured earlier and instruct the agent to write one compact artifact file inside that directory, then return only a short completion summary. Each artifact should contain: target section, why selected, 3-7 findings, source-backed rationale, the specific plan change implied by each finding. No implementation code, no shell commands.
+**아티팩트 기반 모드:** 선택된 각 에이전트에게 이전에 캡처한 절대 `<scratch-dir>` 경로를 전달하고, 해당 디렉토리 내에 하나의 압축된 아티팩트 파일을 작성한 후 짧은 완료 요약만 반환하도록 지시하십시오. 각 아티팩트에는 대상 섹션, 선택된 이유, 3~7개의 발견 사항, 소스 기반 근거, 각 발견 사항이 시사하는 구체적인 플랜 변경 사항이 포함되어야 합니다. 구현 코드나 쉘 명령어는 포함하지 않습니다.
 
-If an artifact is missing or clearly malformed, re-run that agent or fall back to direct-mode reasoning for that section.
+아티팩트가 누락되었거나 명백히 잘못된 경우, 해당 에이전트를 다시 실행하거나 해당 섹션에 대해 직접 모드 추론으로 전환하십시오.
 
-If agent outputs conflict:
-- Prefer repo-grounded and origin-grounded evidence over generic advice
-- Prefer official framework documentation over secondary best-practice summaries when the conflict is about library behavior
-- If a real tradeoff remains, record it explicitly in the plan
+에이전트 출력이 충돌하는 경우:
+- 일반적인 조언보다 저장소 및 기원에 기반한 증거를 우선하십시오.
+- 라이브러리 동작에 대한 충돌인 경우, 2차적인 모범 사례 요약보다 공식 프레임워크 문서를 우선하십시오.
+- 실제 트레이드오프가 남는 경우, 플랜에 명시적으로 기록하십시오.
 
-## 5.3.6b Interactive Finding Review (Interactive Mode Only)
+## 5.3.6b 대화형 발견 사항 검토 (Interactive Finding Review - 대화형 모드 전용)
 
-Skip this step in auto mode — proceed directly to 5.3.7.
+자동(auto) 모드에서는 이 단계를 건너뛰고 5.3.7로 바로 진행하십시오.
 
-In interactive mode, present each agent's findings to the user before integration. For each agent that returned findings:
+대화형 모드에서는 통합 전에 각 에이전트의 발견 사항을 사용자에게 제시하십시오. 발견 사항을 반환한 각 에이전트에 대해:
 
-1. **Summarize the agent and its target section** — e.g., "The ce-architecture-strategist reviewed Key Technical Decisions and found:"
-2. **Present the findings concisely** — bullet the key points, not the raw agent output. Include enough context for the user to evaluate: what the agent found, what evidence supports it, and what plan change it implies.
-3. **Ask the user** using the platform's blocking question tool when available (see Interaction Method):
-   - **Accept** — integrate these findings into the plan
-   - **Reject** — discard these findings entirely
-   - **Discuss** — the user wants to talk through the findings before deciding
+1. **에이전트와 대상 섹션 요약** — 예: "ce-architecture-strategist가 핵심 기술 결정을 검토하여 다음을 발견했습니다:"
+2. **발견 사항을 간결하게 제시** — 에이전트 출력 그대로가 아닌 핵심 포인트를 불렛으로 정리하십시오. 사용자가 평가할 수 있도록 에이전트가 찾은 것, 이를 뒷받침하는 증거, 시사하는 플랜 변경 사항 등 충분한 컨텍스트를 포함하십시오.
+3. 플랫폼의 차단형 질문 도구가 있는 경우 이를 사용하여 **사용자에게 물어보십시오** (인터랙션 방식 참조):
+   - **수락 (Accept)** — 이 발견 사항들을 플랜에 통합합니다.
+   - **거부 (Reject)** — 이 발견 사항들을 완전히 버립니다.
+   - **토론 (Discuss)** — 결정 전에 발견 사항에 대해 이야기하고 싶어 합니다.
 
-If the user chooses "Discuss", engage in brief dialogue about the findings and then re-ask with only accept/reject (no discuss option on the second ask). The user makes a deliberate choice either way.
+사용자가 "토론"을 선택하면 발견 사항에 대해 짧게 대화한 후, 수락/거부만 있는 상태로 다시 물어보십시오(두 번째 질문에는 토론 옵션 없음). 사용자는 어느 쪽이든 의도적인 선택을 하게 됩니다.
 
-When presenting findings from multiple agents targeting the same section, present them one agent at a time so the user can make independent decisions. Do not merge findings from different agents before showing them.
+여러 에이전트가 동일한 섹션을 타겟팅한 경우, 사용자가 독립적으로 결정할 수 있도록 한 번에 한 에이전트씩 제시하십시오. 보여주기 전에 서로 다른 에이전트의 발견 사항을 병합하지 마십시오.
 
-After all agents have been reviewed, carry only the accepted findings forward to 5.3.7.
+모든 에이전트에 대한 검토가 끝나면 수락된 발견 사항만 5.3.7로 가져가십시오.
 
-If the user accepted no findings, report "No findings accepted — plan unchanged." Then proceed directly to Phase 5.4 (skip document-review and synthesis — the plan was not modified). This interactive-mode-only skip does not apply in auto mode; auto mode always proceeds through 5.3.7 and 5.3.8. No explicit scratch cleanup needed — `$SCRATCH_DIR` is OS temp and will be cleaned up by the OS; leaving it in place preserves the rejected agent artifacts for debugging.
+사용자가 아무 발견 사항도 수락하지 않은 경우, "수락된 발견 사항 없음 — 플랜 변경되지 않음"이라고 보고하십시오. 그런 다음 Phase 5.4로 바로 진행하십시오(문서 검토 및 합성을 건너뜁니다 — 플랜이 수정되지 않았기 때문). 이 대화형 모드 전용 건너뛰기는 자동 모드에는 적용되지 않습니다. 자동 모드는 항상 5.3.7과 5.3.8을 거칩니다. 별도의 스크래치 정리는 필요하지 않습니다. `$SCRATCH_DIR`은 OS 임시 디렉토리이므로 OS에 의해 정리될 것이며, 그대로 두면 디버깅을 위해 거부된 에이전트 아티팩트가 보존됩니다.
 
-If findings were accepted and the plan was modified, proceed through 5.3.7 and 5.3.8 as normal — document-review acts as a quality gate on the changes.
+발견 사항이 수락되어 플랜이 수정된 경우, 정상적으로 5.3.7과 5.3.8을 진행하십시오. 문서 검토(ce-doc-review)가 변경 사항에 대한 품질 게이트 역할을 합니다.
 
-## 5.3.7 Synthesize and Update the Plan
+## 5.3.7 플랜 합성 및 업데이트 (Synthesize and Update the Plan)
 
-Strengthen only the selected sections. Keep the plan coherent and preserve its overall structure.
+선택된 섹션만 강화하십시오. 플랜의 일관성을 유지하고 전체 구조를 보존하십시오.
 
-**In interactive mode:** Only integrate findings the user accepted in 5.3.6b. If some findings from different agents touch the same section, reconcile them coherently but do not reintroduce rejected findings.
+**대화형 모드:** 5.3.6b에서 사용자가 수락한 발견 사항만 통합하십시오. 서로 다른 에이전트의 일부 발견 사항이 동일한 섹션에 닿는 경우 이를 일관성 있게 조정하되, 거부된 발견 사항을 다시 도입하지 마십시오.
 
-Allowed changes:
-- Clarify or strengthen decision rationale
-- Tighten requirements trace or origin fidelity
-- Reorder or split implementation units when sequencing is weak — but **never renumber existing U-IDs**. Reordering preserves U-IDs in their new order (e.g., U1, U3, U5 reordered is correct; renumbering to U1, U2, U3 is not). Splitting keeps the original U-ID on the original concept and assigns the next unused number to the new unit. Renumbering breaks ce-work blocker and verification references that were written against the original IDs
-- Add missing pattern references, file/test paths, or verification outcomes
-- Expand system-wide impact, risks, or rollout treatment where justified
-- Reclassify open questions between `Resolved During Planning` and `Deferred to Implementation` when evidence supports the change
-- Strengthen, replace, or add a High-Level Technical Design section when the work warrants it and the current representation is weak
-- Strengthen or add per-unit technical design fields where the unit's approach is non-obvious
-- Add or update `deepened: YYYY-MM-DD` in frontmatter when the plan was substantively improved
+허용되는 변경 사항:
+- 결정 근거를 명확하게 하거나 강화함
+- 요구사항 추적 또는 기원 충실도를 강화함
+- 순서가 약한 경우 구현 단위를 재정렬하거나 분할함 — 하지만 **기존 U-ID를 절대 다시 번호 매기지 마십시오**. 재정렬 시에는 새 순서대로 U-ID를 보존합니다 (예: U1, U3, U5 순서는 맞지만, 이를 U1, U2, U3로 다시 번호 매기는 것은 틀림). 분할 시에는 원래 개념에 기존 U-ID를 유지하고, 새 단위에는 다음 미사용 번호를 할당합니다. 다시 번호 매기기는 기존 ID를 기준으로 작성된 ce-work 블로커 및 검증 참조를 깨뜨립니다.
+- 누락된 패턴 참조, 파일/테스트 경로 또는 검증 결과를 추가함
+- 정당한 경우 시스템 전반의 영향, 리스크 또는 배포 처리를 확장함
+- 증거가 뒷받침하는 경우 미결 질문을 `Resolved During Planning`과 `Deferred to Implementation` 사이에서 재분류함
+- 작업에 필요하고 현재 표현이 약한 경우 상위 수준 기술 설계 섹션을 강화, 교체 또는 추가함
+- 단위의 접근 방식이 명확하지 않은 경우 단위별 기술 설계 필드를 강화하거나 추가함
+- 플랜이 실질적으로 개선된 경우 frontmatter에 `deepened: YYYY-MM-DD`를 추가하거나 업데이트함
 
-Do **not**:
-- Add implementation code — no imports, exact method signatures, or framework-specific syntax. Pseudo-code sketches and DSL grammars are allowed
-- Add git commands, commit choreography, or exact test command recipes
-- Add generic `Research Insights` subsections everywhere
-- Rewrite the entire plan from scratch
-- Invent new product requirements, scope changes, or success criteria without surfacing them explicitly
-- Renumber existing U-IDs as part of reordering, splitting, deletion, or "tidying" the unit list. Deepening is the most likely accidental-renumber vector — preserve U-IDs even when the new order would look cleaner with sequential numbering
+**금지 사항:**
+- 구현 코드 추가 — import, 정확한 메서드 시그니처 또는 프레임워크 특화 문법 금지. 의사 코드 스케치 및 DSL 문법은 허용됨
+- git 명령어, 커밋 시퀀스 또는 정확한 테스트 명령어 레시피 추가
+- 모든 곳에 일반적인 `Research Insights` 하위 섹션 추가
+- 플랜 전체를 처음부터 다시 작성
+- 명시적으로 드러내지 않고 새로운 제품 요구사항, 범위 변경 또는 성공 기준을 만들어냄
+- 재정렬, 분할, 삭제 또는 단위 목록 "정리"의 일환으로 기존 U-ID를 다시 번호 매김. 심화 작업은 의도치 않은 재번호 매기기가 가장 발생하기 쉬운 지점입니다 — 새 순서가 순차적인 번호일 때 더 깔끔해 보이더라도 U-ID를 보존하십시오.
 
-If research reveals a product-level ambiguity that should change behavior or scope:
-- Do not silently decide it here
-- Record it under `Open Questions`
-- Recommend `ce-brainstorm` if the gap is truly product-defining
+조사를 통해 행동이나 범위를 바꿔야 할 제품 수준의 모호성이 드러난 경우:
+- 여기서 말없이 결정하지 마십시오.
+- `Open Questions`에 기록하십시오.
+- 격차가 정말로 제품 정의 수준이라면 `ce-brainstorm`을 권장하십시오.

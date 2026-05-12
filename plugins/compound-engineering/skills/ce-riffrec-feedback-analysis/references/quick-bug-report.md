@@ -1,44 +1,44 @@
-# Quick bug report path
+# 빠른 버그 보고 경로 (Quick bug report path)
 
-Use this path when the input is a short recording (under ~60 seconds), the user describes a single specific issue, or the user explicitly asks for "quick", "small", "simple", or "just transcribe". The goal is one concise bug report, not a multi-artifact requirements package.
+입력이 짧은 녹화본(약 60초 미만)이거나, 사용자가 하나의 구체적인 이슈를 설명하는 경우, 또는 사용자가 "빠르게", "작게", "간단히" 혹은 "그냥 트랜스크립션만"을 명시적으로 요청한 경우 이 경로를 사용하십시오. 목표는 여러 아티팩트로 구성된 요구 사항 패키지가 아닌, 하나의 간결한 버그 리포트를 생성하는 것입니다.
 
-## Workflow
+## 워크플로우
 
-1. Run the analyzer to a temp directory so nothing pollutes the repo:
+1. 리포지토리를 오염시키지 않도록 분석기를 임시 디렉토리에 실행합니다:
 
    ```bash
    python scripts/analyze_riffrec_zip.py /path/to/input --output-dir "$(mktemp -d -t riffrec-quick-XXXXXX)"
    ```
 
-   Capture the printed output directory; later steps read from it.
+   출력된 디렉토리 경로를 캡처하십시오. 이후 단계에서 이 경로의 파일을 읽습니다.
 
-2. Read only `analysis.md` from the temp output. Skip `problem-analysis.md`, `review-prompt.md`, `requirements-kickoff.md`, and `source-materials.md` — they are designed for the extensive path.
+2. 임시 출력물 중 `analysis.md`만 읽으십시오. `problem-analysis.md`, `review-prompt.md`, `requirements-kickoff.md`, `source-materials.md`는 심층 분석 경로를 위한 것이므로 건너뜁니다.
 
-3. Pick at most one or two screenshots from `frames/` that directly show the reported issue. Prefer frames near a verbal complaint, a failed click, a console error, or a failed network request.
+3. `frames/`에서 보고된 이슈를 직접적으로 보여주는 스크린샷을 최대 한두 개 선택하십시오. 불만 섞인 발언, 실패한 클릭, 콘솔 에러 또는 실패한 네트워크 요청 근처의 프레임을 우선하십시오.
 
-4. Emit a single concise bug report. Default to printing it inline in the chat so the user can confirm before anything is written to disk. Only write a file if the user asks for one — and even then, prefer a single `bug-report.md` next to the source recording or in a path the user names. Do not auto-create `docs/brainstorms/...` for this path.
+4. 하나의 간결한 버그 리포트를 생성하십시오. 기본적으로 채팅창에 인라인으로 출력하여 사용자가 디스크에 쓰기 전 확인할 수 있게 하십시오. 사용자가 요청하는 경우에만 파일을 작성하십시오. 이 경우에도 소스 녹화본 옆이나 사용자가 지정한 경로에 단일 `bug-report.md` 파일로 작성하는 것을 선호하십시오. 이 경로에서는 `docs/brainstorms/...`를 자동으로 생성하지 마십시오.
 
-## Bug report shape
+## 버그 리포트 형태
 
-Keep it focused and short. Include only what the recording supports:
+핵심에 집중하여 짧게 유지하십시오. 녹화본이 뒷받침하는 내용만 포함하십시오:
 
-- **Title** — one short sentence naming the broken behavior.
-- **Steps to reproduce** — bullet list reconstructed from clicks and transcript.
-- **Expected vs. actual** — what the user said should happen vs. what happened.
-- **Evidence** — transcript quote(s) with timestamps, plus 0–2 screenshot references.
-- **Suggested next step** — single sentence: file an issue, open `ce-debug`, or escalate to extensive analysis if more issues surfaced.
+- **제목 (Title)** — 잘못된 동작을 명시하는 짧은 한 문장.
+- **재현 단계 (Steps to reproduce)** — 클릭과 트랜스크립트를 통해 재구성된 불렛 리스트.
+- **기대 결과 vs 실제 결과 (Expected vs. actual)** — 사용자가 말한 기대 동작과 실제로 발생한 상황.
+- **증거 (Evidence)** — 타임스탬프가 포함된 트랜스크립트 인용구 및 0~2개의 스크린샷 참조.
+- **권장 다음 단계 (Suggested next step)** — 단일 문장: 이슈 등록, `ce-debug` 열기, 또는 더 많은 이슈가 발견된 경우 심층 분석으로 에스컬레이션.
 
-## Source mapping (optional, only if obvious)
+## 소스 매핑 (선택 사항, 명확한 경우에만)
 
-If the workspace is the product source code AND the broken surface is named clearly in the transcript or visible UI, add one short "Likely surface" line with file path and confidence (`High` / `Medium` / `Low`). Skip this section entirely when the mapping is speculative — speculative mappings belong in the extensive path, not a quick bug report.
+작업 디렉토리에 제품 소스 코드가 있고, 문제가 발생한 표면이 트랜스크립트나 가시적인 UI에 명확하게 명시된 경우, 파일 경로와 신뢰도(`High` / `Medium` / `Low`)를 포함한 짧은 "Likely surface" 라인을 추가하십시오. 매핑이 추측성인 경우 이 섹션을 완전히 건너뜁니다. 추측성 매핑은 빠른 버그 보고가 아닌 심층 분석 경로의 영역입니다.
 
-## What to skip
+## 건너뛸 항목
 
-- No `problem-analysis.md`, no `requirements-kickoff.md`, no Visual / Functional / Requirement / UX category split.
-- No automatic handoff to `ce-brainstorm`. The quick path ends with the bug report.
-- No commit of `raw/` or `frames/` — they live only in the temp dir and are discarded by the OS.
-- No source-mapping pass across the codebase.
+- `problem-analysis.md`, `requirements-kickoff.md`를 생성하지 않으며, Visual / Functional / Requirement / UX 카테고리 구분을 하지 않습니다.
+- `ce-brainstorm`으로의 자동 전달을 하지 않습니다. 빠른 경로는 버그 리포트에서 끝납니다.
+- `raw/` 또는 `frames/`를 커밋하지 않습니다 — 이들은 임시 디렉토리에만 존재하며 OS에 의해 삭제됩니다.
+- 코드베이스 전체에 대한 소스 매핑 패스를 실행하지 않습니다.
 
-## Escalation
+## 에스컬레이션 (Escalation)
 
-If, while reading the transcript, the recording turns out to contain multiple distinct issues, requirements, or a workflow walkthrough, stop and tell the user: "This recording has more than one issue — switching to the extensive path." Then load `references/extensive-analysis.md` and re-run the analyzer with a non-temp output directory.
+트랜스크립트를 읽는 중에 녹화본에 여러 개의 독립적인 이슈, 요구 사항 또는 워크플로우 시연이 포함되어 있음이 확인되면, 작업을 중단하고 사용자에게 알리십시오: "이 녹화본에는 하나 이상의 이슈가 포함되어 있습니다 — 심층 분석 경로로 전환합니다." 그런 다음 `references/extensive-analysis.md`를 로드하고 임시가 아닌 출력 디렉토리를 지정하여 분석기를 다시 실행하십시오.

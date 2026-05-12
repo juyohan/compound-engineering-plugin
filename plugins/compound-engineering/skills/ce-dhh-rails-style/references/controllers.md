@@ -1,41 +1,41 @@
-# Controllers - DHH Rails Style
+# 컨트롤러 (Controllers) - DHH Rails 스타일
 
 <rest_mapping>
-## Everything Maps to CRUD
+## 모든 것은 CRUD로 매핑됩니다
 
-Custom actions become new resources. Instead of verbs on existing resources, create noun resources:
+커스텀 액션은 새로운 리소스가 됩니다. 기존 리소스에 동사를 추가하는 대신, 명사 형태의 리소스를 생성하십시오:
 
 ```ruby
-# Instead of this:
+# 지양:
 POST /cards/:id/close
 DELETE /cards/:id/close
 POST /cards/:id/archive
 
-# Do this:
-POST /cards/:id/closure      # create closure
-DELETE /cards/:id/closure    # destroy closure
-POST /cards/:id/archival     # create archival
+# 권장:
+POST /cards/:id/closure      # closure 생성
+DELETE /cards/:id/closure    # closure 삭제
+POST /cards/:id/archival     # archival 생성
 ```
 
-**Real examples from 37signals:**
+**37signals의 실제 사례:**
 ```ruby
 resources :cards do
-  resource :closure       # closing/reopening
-  resource :goldness      # marking important
-  resource :not_now       # postponing
-  resources :assignments  # managing assignees
+  resource :closure       # 닫기/다시 열기
+  resource :goldness      # 중요 표시
+  resource :not_now       # 연기하기
+  resources :assignments  # 담당자 관리
 end
 ```
 
-Each resource gets its own controller with standard CRUD actions.
+각 리소스는 표준 CRUD 액션을 갖는 전용 컨트롤러를 가집니다.
 </rest_mapping>
 
 <controller_concerns>
-## Concerns for Shared Behavior
+## 공통 동작을 위한 Concern
 
-Controllers use concerns extensively. Common patterns:
+컨트롤러는 concern을 광범위하게 사용합니다. 일반적인 패턴:
 
-**CardScoped** - loads @card, @board, provides render_card_replacement
+**CardScoped** - @card, @board를 로드하고 render_card_replacement 제공
 ```ruby
 module CardScoped
   extend ActiveSupport::Concern
@@ -56,23 +56,23 @@ module CardScoped
 end
 ```
 
-**BoardScoped** - loads @board
-**CurrentRequest** - populates Current with request data
-**CurrentTimezone** - wraps requests in user's timezone
-**FilterScoped** - handles complex filtering
-**TurboFlash** - flash messages via Turbo Stream
-**ViewTransitions** - disables on page refresh
-**BlockSearchEngineIndexing** - sets X-Robots-Tag header
-**RequestForgeryProtection** - Sec-Fetch-Site CSRF (modern browsers)
+**BoardScoped** - @board 로드
+**CurrentRequest** - 요청 데이터로 Current 채우기
+**CurrentTimezone** - 사용자 타임존으로 요청 감싸기
+**FilterScoped** - 복잡한 필터링 처리
+**TurboFlash** - Turbo Stream을 통한 플래시 메시지
+**ViewTransitions** - 페이지 새로고침 시 비활성화
+**BlockSearchEngineIndexing** - X-Robots-Tag 헤더 설정
+**RequestForgeryProtection** - Sec-Fetch-Site CSRF (현대적 브라우저)
 </controller_concerns>
 
 <authorization_patterns>
-## Authorization Patterns
+## 권한 부여 패턴 (Authorization Patterns)
 
-Controllers check permissions via before_action, models define what permissions mean:
+컨트롤러는 before_action을 통해 권한을 확인하고, 모델은 권한의 의미를 정의합니다:
 
 ```ruby
-# Controller concern
+# 컨트롤러 concern
 module Authorization
   extend ActiveSupport::Concern
 
@@ -86,13 +86,13 @@ module Authorization
     end
 end
 
-# Usage
+# 사용법
 class BoardsController < ApplicationController
   before_action :ensure_can_administer, only: [:destroy]
 end
 ```
 
-**Model-level authorization:**
+**모델 레벨 권한 부여:**
 ```ruby
 class Board < ApplicationRecord
   def editable_by?(user)
@@ -105,14 +105,14 @@ class Board < ApplicationRecord
 end
 ```
 
-Keep authorization simple, readable, colocated with domain.
+권한 부여는 단순하고 가독성 있게 유지하며, 도메인 로직과 함께 위치시키십시오.
 </authorization_patterns>
 
 <security_concerns>
-## Security Concerns
+## 보안 Concern
 
-**Sec-Fetch-Site CSRF Protection:**
-Modern browsers send Sec-Fetch-Site header. Use it for defense in depth:
+**Sec-Fetch-Site CSRF 보호:**
+현대적 브라우저는 Sec-Fetch-Site 헤더를 보냅니다. 이를 심층 방어(defense in depth)에 활용하십시오:
 
 ```ruby
 module RequestForgeryProtection
@@ -128,7 +128,7 @@ module RequestForgeryProtection
       return if %w[same-origin same-site].include?(
         request.headers["Sec-Fetch-Site"]&.downcase
       )
-      # Fall back to token verification for older browsers
+      # 구형 브라우저를 위해 토큰 검증으로 폴백
       verify_authenticity_token
     end
 end
@@ -141,13 +141,13 @@ class MagicLinksController < ApplicationController
 end
 ```
 
-Apply to: auth endpoints, email sending, external API calls, resource creation.
+인증 엔드포인트, 이메일 전송, 외부 API 호출, 리소스 생성 등에 적용하십시오.
 </security_concerns>
 
 <request_context>
-## Request Context Concerns
+## 요청 컨텍스트 Concern
 
-**CurrentRequest** - populates Current with HTTP metadata:
+**CurrentRequest** - HTTP 메타데이터로 Current 채우기:
 ```ruby
 module CurrentRequest
   extend ActiveSupport::Concern
@@ -166,7 +166,7 @@ module CurrentRequest
 end
 ```
 
-**CurrentTimezone** - wraps requests in user's timezone:
+**CurrentTimezone** - 사용자 타임존으로 요청 감싸기:
 ```ruby
 module CurrentTimezone
   extend ActiveSupport::Concern
@@ -187,7 +187,7 @@ module CurrentTimezone
 end
 ```
 
-**SetPlatform** - detects mobile/desktop:
+**SetPlatform** - 모바일/데스크톱 감지:
 ```ruby
 module SetPlatform
   extend ActiveSupport::Concern
@@ -204,9 +204,9 @@ end
 </request_context>
 
 <turbo_responses>
-## Turbo Stream Responses
+## Turbo Stream 응답
 
-Use Turbo Streams for partial updates:
+부분 업데이트를 위해 Turbo Stream을 사용하십시오:
 
 ```ruby
 class Cards::ClosuresController < ApplicationController
@@ -224,16 +224,16 @@ class Cards::ClosuresController < ApplicationController
 end
 ```
 
-For complex updates, use morphing:
+복잡한 업데이트에는 morphing을 사용하십시오:
 ```ruby
 render turbo_stream: turbo_stream.morph(@card)
 ```
 </turbo_responses>
 
 <api_patterns>
-## API Design
+## API 디자인
 
-Same controllers, different format. Convention for responses:
+동일한 컨트롤러, 다른 포맷. 응답 컨벤션:
 
 ```ruby
 def create
@@ -264,17 +264,17 @@ def destroy
 end
 ```
 
-**Status codes:**
-- Create: 201 Created + Location header
+**상태 코드:**
+- Create: 201 Created + Location 헤더
 - Update: 204 No Content
 - Delete: 204 No Content
-- Bearer token authentication
+- Bearer 토큰 인증
 </api_patterns>
 
 <http_caching>
-## HTTP Caching
+## HTTP 캐싱
 
-Extensive use of ETags and conditional GETs:
+ETag과 조건부 GET을 광범위하게 사용하십시오:
 
 ```ruby
 class CardsController < ApplicationController
@@ -290,14 +290,14 @@ class CardsController < ApplicationController
 end
 ```
 
-Key insight: Times render server-side in user's timezone, so timezone must affect the ETag to prevent serving wrong times to other timezones.
+핵심 통찰: 시간은 사용자 타임존에 따라 서버에서 렌더링되므로, 다른 타임존에 잘못된 시간을 제공하는 것을 방지하기 위해 타임존이 ETag에 영향을 미쳐야 합니다.
 
-**ApplicationController global etag:**
+**ApplicationController 글로벌 ETag:**
 ```ruby
 class ApplicationController < ActionController::Base
-  etag { "v1" }  # Bump to invalidate all caches
+  etag { "v1" }  # 모든 캐시를 무효화하려면 버전을 올리십시오
 end
 ```
 
-Use `touch: true` on associations for cache invalidation.
+캐시 무효화를 위해 연관 관계(associations)에 `touch: true`를 사용하십시오.
 </http_caching>

@@ -1,51 +1,51 @@
-# Gems - DHH Rails Style
+# 젬 (Gems) - DHH Rails 스타일
 
 <what_they_use>
-## What 37signals Uses
+## 37signals가 사용하는 것
 
-**Core Rails stack:**
+**핵심 Rails 스택:**
 - turbo-rails, stimulus-rails, importmap-rails
-- propshaft (asset pipeline)
+- propshaft (에셋 파이프라인)
 
-**Database-backed services (Solid suite):**
-- solid_queue - background jobs
-- solid_cache - caching
-- solid_cable - WebSockets/Action Cable
+**데이터베이스 기반 서비스 (Solid 제품군):**
+- solid_queue - 백그라운드 작업
+- solid_cache - 캐싱
+- solid_cable - 웹소켓/Action Cable
 
-**Authentication & Security:**
-- bcrypt (for any password hashing needed)
+**인증 및 보안:**
+- bcrypt (패스워드 해싱이 필요한 경우)
 
-**Their own gems:**
-- geared_pagination (cursor-based pagination)
-- lexxy (rich text editor)
-- mittens (mailer utilities)
+**자체 제작 젬:**
+- geared_pagination (커서 기반 페이지네이션)
+- lexxy (리치 텍스트 에디터)
+- mittens (메일러 유틸리티)
 
-**Utilities:**
-- rqrcode (QR code generation)
-- redcarpet + rouge (Markdown rendering)
-- web-push (push notifications)
+**유틸리티:**
+- rqrcode (QR 코드 생성)
+- redcarpet + rouge (마크다운 렌더링)
+- web-push (푸시 알림)
 
-**Deployment & Operations:**
-- kamal (Docker deployment)
-- thruster (HTTP/2 proxy)
-- mission_control-jobs (job monitoring)
-- autotuner (GC tuning)
+**배포 및 운영:**
+- kamal (Docker 배포)
+- thruster (HTTP/2 프록시)
+- mission_control-jobs (작업 모니터링)
+- autotuner (GC 튜닝)
 </what_they_use>
 
 <what_they_avoid>
-## What They Deliberately Avoid
+## 그들이 의도적으로 피하는 것
 
-**Authentication:**
+**인증 (Authentication):**
 ```
-devise → Custom ~150-line auth
+devise → 커스텀 ~150라인 인증
 ```
-Why: Full control, no password liability with magic links, simpler.
+이유: 완전한 제어 가능, 매직 링크를 통한 패스워드 책임 제거, 더 단순함.
 
-**Authorization:**
+**권한 부여 (Authorization):**
 ```
-pundit/cancancan → Simple role checks in models
+pundit/cancancan → 모델에서의 단순한 역할 확인
 ```
-Why: Most apps don't need policy objects. A method on the model suffices:
+이유: 대부분의 앱에는 정책(policy) 객체가 필요하지 않습니다. 모델의 메서드로 충분합니다:
 ```ruby
 class Board < ApplicationRecord
   def editable_by?(user)
@@ -54,83 +54,83 @@ class Board < ApplicationRecord
 end
 ```
 
-**Background Jobs:**
+**백그라운드 작업 (Background Jobs):**
 ```
 sidekiq → Solid Queue
 ```
-Why: Database-backed means no Redis, same transactional guarantees.
+이유: 데이터베이스 기반은 Redis가 필요 없음을 의미하며, 동일한 트랜잭션 보장을 제공합니다.
 
-**Caching:**
+**캐싱 (Caching):**
 ```
 redis → Solid Cache
 ```
-Why: Database is already there, simpler infrastructure.
+이유: 데이터베이스가 이미 존재하므로 인프라가 단순해집니다.
 
-**Search:**
+**검색 (Search):**
 ```
-elasticsearch → Custom sharded search
+elasticsearch → 커스텀 샤딩 검색
 ```
-Why: Built exactly what they need, no external service dependency.
+이유: 외부 서비스 의존성 없이 필요한 기능을 정확히 구축했습니다.
 
-**View Layer:**
+**뷰 레이어 (View Layer):**
 ```
-view_component → Standard partials
+view_component → 표준 partial
 ```
-Why: Partials work fine. ViewComponents add complexity without clear benefit for their use case.
+이유: partial만으로도 충분히 작동합니다. ViewComponent는 그들의 유즈케이스에서 명확한 이점 없이 복잡성만 더합니다.
 
 **API:**
 ```
-GraphQL → REST with Turbo
+GraphQL → Turbo를 포함한 REST
 ```
-Why: REST is sufficient when you control both ends. GraphQL complexity not justified.
+이유: 양 끝단을 직접 제어할 때는 REST로 충분합니다. GraphQL의 복잡성이 정당화되지 않습니다.
 
-**Factories:**
+**Factory:**
 ```
-factory_bot → Fixtures
+factory_bot → Fixture
 ```
-Why: Fixtures are simpler, faster, and encourage thinking about data relationships upfront.
+이유: Fixture가 더 단순하고 빠르며, 데이터 관계에 대해 미리 생각하도록 유도합니다.
 
-**Service Objects:**
+**서비스 객체 (Service Objects):**
 ```
-Interactor, Trailblazer → Fat models
+Interactor, Trailblazer → Fat 모델
 ```
-Why: Business logic stays in models. Methods like `card.close` instead of `CardCloser.call(card)`.
+이유: 비즈니스 로직은 모델에 머뭅니다. `CardCloser.call(card)` 대신 `card.close` 같은 메서드를 사용합니다.
 
-**Form Objects:**
+**폼 객체 (Form Objects):**
 ```
-Reform, dry-validation → params.expect + model validations
+Reform, dry-validation → params.expect + 모델 검증
 ```
-Why: Rails 7.1's `params.expect` is clean enough. Contextual validations on model.
+이유: Rails 7.1의 `params.expect`는 충분히 깔끔합니다. 모델의 컨텍스트별 검증을 활용합니다.
 
-**Decorators:**
+**데코레이터 (Decorators):**
 ```
-Draper → View helpers + partials
+Draper → 뷰 헬퍼 + partial
 ```
-Why: Helpers and partials are simpler. No decorator indirection.
+이유: 헬퍼와 partial이 더 단순합니다. 데코레이터의 간접 참조(indirection)가 없습니다.
 
 **CSS:**
 ```
-Tailwind, Sass → Native CSS
+Tailwind, Sass → 네이티브 CSS
 ```
-Why: Modern CSS has nesting, variables, layers. No build step needed.
+이유: 현대적 CSS에는 중첩(nesting), 변수, 레이어가 있습니다. 빌드 단계가 필요 없습니다.
 
-**Frontend:**
+**프론트엔드 (Frontend):**
 ```
 React, Vue, SPAs → Turbo + Stimulus
 ```
-Why: Server-rendered HTML with sprinkles of JS. SPA complexity not justified.
+이유: 약간의 JS가 가미된 서버 렌더링 HTML을 선호합니다. SPA의 복잡성이 정당화되지 않습니다.
 
-**Testing:**
+**테스트 (Testing):**
 ```
 RSpec → Minitest
 ```
-Why: Simpler, faster boot, less DSL magic, ships with Rails.
+이유: 더 단순하고, 부팅이 빠르며, DSL 마법이 적고, Rails와 함께 제공됩니다.
 </what_they_avoid>
 
 <testing_philosophy>
-## Testing Philosophy
+## 테스트 철학
 
-**Minitest** - simpler, faster:
+**Minitest** - 더 단순하고 빠름:
 ```ruby
 class CardTest < ActiveSupport::TestCase
   test "closing creates closure" do
@@ -143,7 +143,7 @@ class CardTest < ActiveSupport::TestCase
 end
 ```
 
-**Fixtures** - loaded once, deterministic:
+**Fixture** - 한 번 로드되고 결정적임:
 ```yaml
 # test/fixtures/cards.yml
 open_card:
@@ -157,7 +157,7 @@ closed_card:
   creator: bob
 ```
 
-**Dynamic timestamps** with ERB:
+ERB를 통한 **동적 타임스탬프**:
 ```yaml
 recent:
   title: Recent
@@ -168,7 +168,7 @@ old:
   created_at: <%= 1.month.ago %>
 ```
 
-**Time travel** for time-dependent tests:
+시간 의존적 테스트를 위한 **시간 여행(Time travel)**:
 ```ruby
 test "expires after 15 minutes" do
   magic_link = MagicLink.create!(user: users(:alice))
@@ -179,7 +179,7 @@ test "expires after 15 minutes" do
 end
 ```
 
-**VCR** for external APIs:
+외부 API를 위한 **VCR**:
 ```ruby
 VCR.use_cassette("stripe/charge") do
   charge = Stripe::Charge.create(amount: 1000)
@@ -187,46 +187,46 @@ VCR.use_cassette("stripe/charge") do
 end
 ```
 
-**Tests ship with features** - same commit, not before or after.
+**기능과 함께 테스트를 배포** - 전이나 후가 아닌, 동일한 커밋에 함께 포함합니다.
 </testing_philosophy>
 
 <decision_framework>
-## Decision Framework
+## 의사결정 프레임워크
 
-Before adding a gem, ask:
+젬을 추가하기 전 다음을 자문하십시오:
 
-1. **Can vanilla Rails do this?**
-   - ActiveRecord can do most things Sequel can
-   - ActionMailer handles email fine
-   - ActiveJob works for most job needs
+1. **순수 Rails(vanilla Rails)로 가능한가?**
+   - ActiveRecord는 Sequel이 할 수 있는 대부분을 할 수 있습니다.
+   - ActionMailer는 이메일을 잘 처리합니다.
+   - ActiveJob은 대부분의 작업 요구사항에 부합합니다.
 
-2. **Is the complexity worth it?**
-   - 150 lines of custom code vs. 10,000-line gem
-   - You'll understand your code better
-   - Fewer upgrade headaches
+2. **복잡성을 감수할 가치가 있는가?**
+   - 10,000라인의 젬 vs 150라인의 커스텀 코드.
+   - 자신의 코드를 더 잘 이해하게 될 것입니다.
+   - 업그레이드 시 골칫거리가 적습니다.
 
-3. **Does it add infrastructure?**
-   - Redis? Consider database-backed alternatives
-   - External service? Consider building in-house
-   - Simpler infrastructure = fewer failure modes
+3. **인프라를 추가하는가?**
+   - Redis? 데이터베이스 기반 대안을 고려하십시오.
+   - 외부 서비스? 자체 구축을 고려하십시오.
+   - 단순한 인프라 = 더 적은 실패 모드.
 
-4. **Is it from someone you trust?**
-   - 37signals gems: battle-tested at scale
-   - Well-maintained, focused gems: usually fine
-   - Kitchen-sink gems: probably overkill
+4. **신뢰할 만한 사람의 것인가?**
+   - 37signals 젬: 대규모 환경에서 검증되었습니다.
+   - 잘 관리되고 집중된 젬: 대개 괜찮습니다.
+   - 모든 것을 다 하는 젬: 아마 과할 것입니다.
 
-**The philosophy:**
-> "Build solutions before reaching for gems."
+**그들의 철학:**
+> "젬을 찾기 전에 솔루션을 먼저 구축하라."
 
-Not anti-gem, but pro-understanding. Use gems when they genuinely solve a problem you have, not a problem you might have.
+젬 반대론자가 아니라, 이해 중심론자입니다. 있을지도 모를 문제가 아니라, 실제로 당면한 문제를 진정으로 해결할 때 젬을 사용하십시오.
 </decision_framework>
 
 <gem_patterns>
-## Gem Usage Patterns
+## 젬 사용 패턴
 
-**Pagination:**
+**페이지네이션 (Pagination):**
 ```ruby
-# geared_pagination - cursor-based
+# geared_pagination - 커서 기반
 class CardsController < ApplicationController
   def index
     @cards = @board.cards.geared(page: params[:page])
@@ -234,7 +234,7 @@ class CardsController < ApplicationController
 end
 ```
 
-**Markdown:**
+**마크다운 (Markdown):**
 ```ruby
 # redcarpet + rouge
 class MarkdownRenderer
@@ -248,18 +248,18 @@ class MarkdownRenderer
 end
 ```
 
-**Background jobs:**
+**백그라운드 작업 (Background jobs):**
 ```ruby
-# solid_queue - no Redis
+# solid_queue - Redis 불필요
 class ApplicationJob < ActiveJob::Base
   queue_as :default
-  # Just works, backed by database
+  # 데이터베이스 기반으로 즉시 작동합니다
 end
 ```
 
-**Caching:**
+**캐싱 (Caching):**
 ```ruby
-# solid_cache - no Redis
+# solid_cache - Redis 불필요
 # config/environments/production.rb
 config.cache_store = :solid_cache_store
 ```

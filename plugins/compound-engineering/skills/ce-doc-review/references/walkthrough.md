@@ -1,20 +1,20 @@
-# Per-finding Walk-through
+# Per-finding Walk-through (발견 사항별 워크스루)
 
-This reference defines Interactive mode's per-finding walk-through — the path the user enters by picking option A (`Review each finding one by one — accept the recommendation or choose another action`) from the routing question, plus the unified completion report that every terminal path (walk-through, best-judgment, Append-to-Open-Questions, zero findings) emits.
+이 참조 문서는 Interactive 모드의 발견 사항별 워크스루를 정의합니다. 이는 사용자가 라우팅 질문에서 옵션 A(`Review each finding one by one — accept the recommendation or choose another action`)를 선택했을 때 진입하는 경로와, 모든 종료 경로(워크스루, 최선의 판단, Open Questions 추가, 발견 사항 없음)에서 내보내는 통합 완료 보고서를 포함합니다.
 
-Interactive mode only.
+Interactive 모드 전용입니다.
 
 ---
 
-## Routing question (the entry point)
+## 라우팅 질문 (진입점) (Routing question)
 
-After `safe_auto` fixes apply and synthesis produces the remaining finding set, the orchestrator asks a four-option routing question before any walk-through or bulk action runs.
+`safe_auto` 수정 사항이 적용되고 합성을 통해 남은 발견 사항 세트가 생성된 후, 오케스트레이터는 워크스루나 일괄 작업을 실행하기 전에 4가지 옵션의 라우팅 질문을 던집니다.
 
-Use the platform's blocking question tool (`AskUserQuestion` in Claude Code, `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension)). In Claude Code, the tool should already be loaded from the Interactive-mode pre-load step in `SKILL.md` — if it isn't, call `ToolSearch` with query `select:AskUserQuestion` now. Fall back to presenting the options as a numbered list only when the harness genuinely lacks a blocking tool — `ToolSearch` returns no match, the tool call explicitly fails, or the runtime mode does not expose it (e.g., Codex edit modes without `request_user_input`). A pending schema load is not a fallback trigger. Never silently skip the question. Rendering the routing question as narrative text without the numbered-list fallback is a bug.
+플랫폼의 블로킹 질문 도구(Claude Code의 `AskUserQuestion`, Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user`)를 사용하십시오. Claude Code에서는 `SKILL.md`의 Interactive 모드 프리로드 단계에서 도구가 이미 로드되어 있어야 합니다 — 로드되지 않은 경우 지금 `ToolSearch`를 호출하여 `select:AskUserQuestion`을 수행하십시오. 하네스에 블로킹 도구가 실제로 없는 경우에만 번호가 매겨진 리스트로 옵션을 제시하십시오. 스키마 로드 대기 중인 상태는 폴백 트리거가 아닙니다. 절대로 질문을 자동으로 건너뛰지 마십시오. 라우팅 질문을 번호 매겨진 리스트 폴백 없이 내레이션 텍스트로만 렌더링하는 것은 버그입니다.
 
-**Stem:** `What should the agent do with the remaining N findings?`
+**질문:** `What should the agent do with the remaining N findings?`
 
-**Options (fixed order; no option is labeled `(recommended)` — the routing choice is user-intent):**
+**옵션 (고정된 순서; 어떤 옵션도 `(recommended)` 레이블을 갖지 않음 — 라우팅 선택은 사용자의 의도에 따름):**
 
 ```
 A. Review each finding one by one — accept the recommendation or choose another action
@@ -23,57 +23,57 @@ C. Append findings to the doc's Open Questions section and proceed
 D. Report only — take no further action
 ```
 
-The per-finding `(recommended)` labeling lives inside the walk-through (option A) and the bulk preview (options B/C), where it's applied per-finding from synthesis step 3.5b's `recommended_action`. The routing question itself does not recommend one of A/B/C/D because the right route depends on user intent (engage / trust / triage / skim), not on the finding-set shape — a rule that mapped finding-set shape to routing recommendation (e.g., "most findings are Apply-shaped → recommend best-judgment") would pressure users toward automated paths in ways that conflict with the user-intent framing.
+발견 사항별 `(recommended)` 레이블은 워크스루(옵션 A) 및 일괄 미리보기(옵션 B/C) 내부에 존재하며, 합성 단계 3.5b의 `recommended_action`에 따라 각 발견 사항에 적용됩니다. 라우팅 질문 자체는 A/B/C/D 중 하나를 권장하지 않습니다. 올바른 경로는 발견 사항 세트의 모양이 아니라 사용자의 의도(참여 / 신뢰 / 분류 / 훑어보기)에 달려 있기 때문입니다. 발견 사항 세트의 모양을 라우팅 권장 사항에 매핑하는 규칙(예: "대부분의 발견 사항이 Apply 형태임 → 최선의 판단 권장")은 사용자의 의도 프레이밍과 충돌하는 방식으로 자동화된 경로를 선택하도록 사용자에게 압박을 줄 수 있습니다.
 
-If all remaining findings are FYI-subsection-only (no `gated_auto` or `manual` findings at confidence anchor `75` or `100`), skip the routing question entirely and flow to the Phase 5 terminal question.
+남은 발견 사항이 모두 FYI 하위 섹션 전용인 경우(앵커 `75` 또는 `100`인 `gated_auto` 또는 `manual` 발견 사항이 없는 경우), 라우팅 질문을 건너뛰고 Phase 5 최종 질문으로 이동합니다.
 
-**Append-availability adaptation.** When `references/open-questions-defer.md` has cached `append_available: false` at Phase 4 start (e.g., read-only document, unwritable filesystem), option C is suppressed from the routing question because every per-finding Defer would fail into the open-questions failure path. The menu shows three options (A / B / D) and the stem appends one line explaining why (e.g., `Append to Open Questions unavailable — document is read-only in this environment.`). This mirrors the per-finding option B suppression described under "Adaptations" below — both routing-level and per-finding Defer paths share the same availability signal so the user never sees Defer surfaced at one level and omitted at the other.
+**추가 가용성 적응 (Append-availability adaptation).** Phase 4 시작 시 `references/open-questions-defer.md`에 `append_available: false`가 캐시된 경우(예: 읽기 전용 문서, 쓰기 불가능 파일 시스템), 모든 발견 사항별 Defer가 실패할 것이므로 라우팅 질문에서 옵션 C가 억제됩니다. 메뉴에는 세 가지 옵션(A / B / D)이 표시되고 질문 줄기에 그 이유를 설명하는 한 줄이 추가됩니다 (예: `Append to Open Questions unavailable — document is read-only in this environment.`). 이는 아래 "적응(Adaptations)" 섹션에서 설명하는 발견 사항별 옵션 B 억제와 유사합니다 — 라우팅 레벨과 발견 사항별 Defer 경로가 동일한 가용성 신호를 공유하여 사용자가 한 레벨에서는 Defer가 보이고 다른 레벨에서는 누락되는 것을 보지 않도록 합니다.
 
-**Dispatch by selection:**
+**선택에 따른 디스패치:**
 
-- **A** — load this walk-through (per-finding loop). Apply decisions accumulate in memory; Open-Questions defers execute inline via `references/open-questions-defer.md`; Skip decisions are recorded as no-action; `Auto-resolve with best judgment on the rest` routes through `references/bulk-preview.md`.
-- **B** — load `references/bulk-preview.md` scoped to every pending `gated_auto` / `manual` finding. On Proceed, execute the plan: Apply → end-of-batch document edit; Open-Questions defers → `references/open-questions-defer.md`; Skip → no-op. On Cancel, return to the routing question.
-- **C** — load `references/bulk-preview.md` with every pending finding in the Open-Questions bucket (regardless of the agent's natural recommendation). On Proceed, route every finding through `references/open-questions-defer.md`; no document edits apply. On Cancel, return to the routing question.
-- **D** — do not enter any dispatch phase. Emit the completion report and flow to Phase 5 terminal question.
-
----
-
-## Entry (walk-through mode)
-
-The walk-through receives, from the orchestrator:
-
-- The merged findings list in severity order (P0 → P1 → P2 → P3), filtered to actionable findings (confidence anchor `75` or `100` with `autofix_class` `gated_auto` or `manual`). FYI-subsection findings (anchor `50`) are not included — they surface in the final report only and have no walk-through entry.
-- The run id for artifact lookups (when applicable).
-- Premise-dependency chain annotations from synthesis step 3.5c: each finding may carry `depends_on: <root_id>` or `dependents: [<ids>]`.
-
-Each finding's recommended action has already been normalized by synthesis step 3.5b (Deterministic Recommended-Action Tie-Break, `Skip > Defer > Apply`) — the walk-through surfaces that recommendation via the merged finding's `recommended_action` field and does not recompute it.
-
-**Root-first iteration order.** When a finding has `dependents`, iterate it before any of its dependents regardless of severity order within the chain. The root always comes first so the user's root decision can cascade.
-
-**Cascading root decisions.** When the user picks Skip or Defer on a finding with `dependents`:
-
-1. Announce the cascade in the terminal before firing the next question: "Skipping/Deferring this root will auto-resolve N dependent finding(s): {titles}. Continue?"
-2. Use the platform's blocking question tool with two options: `Cascade — apply same action to all dependents` (recommended) and `Decide each dependent individually`. Labels must be self-contained per the blocking-question tool design rules.
-3. On Cascade: apply the root's action to every dependent and skip those findings' walk-through entries. Persistence follows the per-action routing rules from "Per-finding routing" below — the canonical home for every cascaded decision is the in-memory decision list (annotated with `cascaded from {root_title}` and the cascaded action), plus any action-specific side effect:
-   - Cascaded `Apply` — add the dependent id to the Apply set and record in the decision list.
-   - Cascaded `Defer` — invoke the open-questions append flow for the dependent and record the append outcome in the decision list. If the append fails, fall back to the per-finding failure path (Retry / Record only / Convert to Skip) for that dependent before advancing the cascade.
-   - Cascaded `Skip` — record in the decision list only; no Apply-set entry, no open-questions append.
-
-   On Individual: proceed normally — the root's dependents each get their own walk-through entry.
-
-When the user picks Apply on a root, do NOT cascade — the premise held, so dependents each need their own decision. Proceed through the walk-through normally.
-
-**Orphaned dependents.** If a dependent's root was rejected in a prior round and the root is suppressed this round (per R29), treat the dependent as a standalone finding with no chain context. Do not reference the missing root.
+- **A** — 이 워크스루(발견 사항별 루프)를 로드합니다. Apply 결정은 메모리에 누적됩니다. Open-Questions 지연은 `references/open-questions-defer.md`를 통해 인라인으로 실행됩니다. Skip 결정은 작업 없음으로 기록됩니다. `Auto-resolve with best judgment on the rest`는 `references/bulk-preview.md`를 통해 라우팅됩니다.
+- **B** — 보류 중인 모든 `gated_auto` / `manual` 발견 사항으로 범위가 지정된 `references/bulk-preview.md`를 로드합니다. Proceed 시 계획을 실행합니다: Apply → 일괄 문서 편집; Open-Questions 지연 → `references/open-questions-defer.md`; Skip → 작업 없음. Cancel 시 라우팅 질문으로 돌아갑니다.
+- **C** — 에이전트의 원래 권장 사항과 관계없이 보류 중인 모든 발견 사항을 Open-Questions 버킷에 담아 `references/bulk-preview.md`를 로드합니다. Proceed 시 모든 발견 사항을 `references/open-questions-defer.md`를 통해 라우팅하며, 문서 편집은 적용되지 않습니다. Cancel 시 라우팅 질문으로 돌아갑니다.
+- **D** — 어떤 디스패치 단계에도 진입하지 않습니다. 완료 보고서를 내보내고 Phase 5 최종 질문으로 이동합니다.
 
 ---
 
-## Per-finding presentation
+## 진입 (워크스루 모드) (Entry)
 
-Each finding is presented in two parts: a terminal output block carrying the explanation, and a question via the platform's blocking question tool carrying the decision. Never merge the two — the terminal block uses markdown; the question uses plain text.
+워크스루는 오케스트레이터로부터 다음을 수신합니다:
 
-### Terminal output block (print before firing the question)
+- 심각도 순서(P0 → P1 → P2 → P3)로 정렬되고 실행 가능한 발견 사항(앵커 `75` 또는 `100`이며 `autofix_class`가 `gated_auto` 또는 `manual`)으로 필터링된 병합된 발견 사항 리스트. FYI 하위 섹션 발견 사항(앵커 `50`)은 포함되지 않습니다 — 이들은 최종 보고서에만 나타나며 워크스루 항목이 없습니다.
+- 아티팩트 조회를 위한 실행 ID (해당하는 경우).
+- 합성 단계 3.5c의 전제 조건 의존성 체인 주석: 각 발견 사항은 `depends_on: <root_id>` 또는 `dependents: [<ids>]`를 가질 수 있습니다.
 
-Render as markdown. Labels on their own line, blank lines between sections:
+각 발견 사항의 권장 작업은 이미 합성 단계 3.5b(결정론적 권장 작업 타이브레이크, `Skip > Defer > Apply`)에 의해 정규화되었습니다 — 워크스루는 병합된 발견 사항의 `recommended_action` 필드를 통해 해당 권장 사항을 표시하며 다시 계산하지 않습니다.
+
+**루트 우선 반복 순서 (Root-first iteration order).** 발견 사항에 `dependents`가 있는 경우, 체인 내의 심각도 순서와 관계없이 종속 항목보다 먼저 루트를 반복합니다. 사용자의 루트 결정이 전파될 수 있도록 루트가 항상 먼저 옵니다.
+
+**루트 결정 전파 (Cascading root decisions).** `dependents`가 있는 발견 사항에 대해 사용자가 Skip 또는 Defer를 선택한 경우:
+
+1. 다음 질문을 던지기 전에 터미널에 전파 내용을 알립니다: "Skipping/Deferring this root will auto-resolve N dependent finding(s): {titles}. Continue?"
+2. 두 가지 옵션이 있는 플랫폼의 블로킹 질문 도구를 사용합니다: `Cascade — apply same action to all dependents` (권장) 및 `Decide each dependent individually`. 레이블은 블로킹 질문 도구 설계 규칙에 따라 자체 설명적이어야 합니다.
+3. Cascade 선택 시: 루트의 작업을 모든 종속 항목에 적용하고 해당 발견 사항들의 워크스루 항목을 건너뜁니다. 지속성은 아래 "발견 사항별 라우팅"의 작업별 라우팅 규칙을 따릅니다 — 모든 전파된 결정의 표준 보관소는 메모리 내 결정 리스트이며(`cascaded from {root_title}` 및 전파된 작업이 주석으로 달림), 작업별 부수 효과가 추가됩니다:
+   - 전파된 `Apply` — 종속 항목 ID를 Apply 세트에 추가하고 결정 리스트에 기록합니다.
+   - 전파된 `Defer` — 종속 항목에 대해 Open Questions 추가 흐름을 호출하고 결과 내용을 결정 리스트에 기록합니다. 추가에 실패하면 전파를 계속하기 전에 해당 종속 항목에 대해 발견 사항별 실패 경로(Retry / Record only / Convert to Skip)로 폴백합니다.
+   - 전파된 `Skip` — 결정 리스트에만 기록하며, Apply 세트 추가나 Open Questions 추가는 수행하지 않습니다.
+
+   Individual 선택 시: 정상적으로 진행합니다 — 루트의 종속 항목들은 각각 자신의 워크스루 항목을 갖게 됩니다.
+
+사용자가 루트에 대해 Apply를 선택한 경우, 전파하지 **않습니다** — 전제가 유지되었으므로 종속 항목들은 각각 자신의 결정이 필요합니다. 정상적으로 워크스루를 진행합니다.
+
+**고아가 된 종속 항목 (Orphaned dependents).** 종속 항목의 루트가 이전 라운드에서 거부되었고 이번 라운드에 억제된 경우(R29에 따라), 해당 종속 항목을 체인 컨텍스트가 없는 독립적인 발견 사항으로 취급합니다. 누락된 루트를 참조하지 마십시오.
+
+---
+
+## 발견 사항별 프레젠테이션 (Per-finding presentation)
+
+각 발견 사항은 두 부분으로 제시됩니다: 설명을 담은 터미널 출력 블록과 결정을 내리는 플랫폼의 블로킹 질문 도구입니다. 두 부분을 절대 병합하지 마십시오 — 터미널 블록은 마크다운을 사용하고, 질문은 일반 텍스트를 사용합니다.
+
+### 터미널 출력 블록 (질문을 던지기 전에 출력)
+
+마크다운으로 렌더링합니다. 레이블은 별도의 줄에 표시하고, 섹션 사이에는 빈 줄을 둡니다:
 
 ```
 ## Finding {N} of {M} — {severity} {plain-English title}
@@ -86,54 +86,54 @@ Section: {section}
 
 **Proposed fix**
 
-{suggested_fix — rendered per the substitution rules below: prose-first, intent-language}
+{suggested_fix — 아래 치환 규칙에 따라 렌더링: 산문 우선, 의도 중심 언어}
 
 **Why it works**
 
-{short reasoning, grounded in a pattern cited in the document or codebase when available}
+{단문으로 된 근거, 문서나 코드베이스에서 인용된 패턴에 기반 (가능한 경우)}
 
-{Conflict-context line, when applicable — see below}
+{충돌 컨텍스트 라인, 해당되는 경우 — 아래 참조}
 ```
 
-Substitutions:
+치환 규칙:
 
-- **`{plain-English title}`** — a 3–8 word summary suitable as a heading. Derived from the merged finding's `title` field but rephrased so it reads as observable consequence (e.g., "Implementers will pick different tiers" rather than "Section X-Y lists four tiers"). For document-review findings, observable consequence is the *effect on a reader, implementer, or downstream decision*, not runtime behavior.
-- **`{section}`** — from the finding's `section` field.
-- **`why_it_matters`** — from the merged finding's `why_it_matters` field. Rendered as-is; the subagent template's framing guidance ensures it's already observable-consequence-first.
-- **`suggested_fix`** — from the merged finding's `suggested_fix` field. Render as prose describing intent, not as raw markup. The user's job is to trust or reject the action — they don't need to review exact text. Rules:
-  - **Default — one sentence describing the effect.** What does the fix achieve, and where does it live? Prefer intent language over quoted text.
-    - Good: `Drop the Advisory tier from the enum; advisory-style findings surface in an FYI subsection at the presentation layer.`
-    - Good: `Add a deployment-ordering constraint requiring Units 3 and 4 in a single commit.`
-    - Bad: `Change "autofix_class: [auto, gated_auto, advisory, present]" to "autofix_class: [safe_auto, gated_auto, manual]" in findings-schema.json on line 48.` — too syntax-focused for a decision loop
-  - **Code-span budget** — at most 2 inline backtick spans per sentence, each a single identifier, flag, or short phrase (e.g., `` `safe_auto` ``, `` `<work-context>` ``). Always leave a space before and after each backtick span.
-  - **Raw code blocks** — only for short (≤5-line) genuinely additive content where no before-state exists. Above 5 lines, switch to a summary.
-  - **No diff blocks.** Document mutations render as prose.
-- **`Why it works`** — grounded reasoning that, where possible, references a similar pattern already used in the document or codebase. One to three sentences.
-- **Conflict-context line (when applicable)** — when contributing personas implied different actions for this finding and synthesis step 3.6 broke the tie, surface that briefly. Example: `Coherence recommends Apply; scope-guardian recommends Skip. Agent's recommendation: Skip.` The orchestrator's recommendation — the post-tie-break value — is what the menu labels "recommended."
+- **`{plain-English title}`** — 헤더로 적합한 3~8단어 요약입니다. 병합된 발견 사항의 `title` 필드에서 유도하되 관찰 가능한 결과로 읽히도록 재구성합니다 (예: "Section X-Y lists four tiers" 대신 "Implementers will pick different tiers"). 문서 검토 발견 사항의 경우, 관찰 가능한 결과는 런타임 동작이 아니라 *독자, 구현자 또는 다운스트림 결정에 미치는 영향*입니다.
+- **`{section}`** — 발견 사항의 `section` 필드에서 가져옵니다.
+- **`why_it_matters`** — 병합된 발견 사항의 `why_it_matters` 필드에서 가져옵니다. 있는 그대로 렌더링합니다. 서브 에이전트 템플릿의 프레이밍 가이드에 따라 이미 관찰 가능한 결과 우선으로 작성되어 있을 것입니다.
+- **`suggested_fix`** — 병합된 발견 사항의 `suggested_fix` 필드에서 가져옵니다. 가공되지 않은 마크업이 아닌 의도를 설명하는 산문으로 렌더링합니다. 사용자의 역할은 작업을 신뢰하거나 거부하는 것이지 정확한 텍스트를 검토하는 것이 아닙니다. 규칙:
+  - **기본값 — 효과를 설명하는 한 문장.** 수정 사항이 무엇을 달성하며 어디에 위치합니까? 인용된 텍스트보다 의도 중심 언어를 선호하십시오.
+    - 권장: `Drop the Advisory tier from the enum; advisory-style findings surface in an FYI subsection at the presentation layer.`
+    - 권장: `Add a deployment-ordering constraint requiring Units 3 and 4 in a single commit.`
+    - 비권장: `Change "autofix_class: [auto, gated_auto, advisory, present]" to "autofix_class: [safe_auto, gated_auto, manual]" in findings-schema.json on line 48.` — 결정 루프에 비해 너무 구문 중심적임
+  - **코드 스팬 예산** — 문장당 최대 2개의 인라인 백틱 스팬. 각각은 단일 식별자, 플래그 또는 짧은 문구여야 합니다 (예: `` `safe_auto` ``, `` `<work-context>` ``). 각 백틱 스팬 전후에 항상 공백을 두십시오.
+  - **원시 코드 블록** — 이전 상태가 존재하지 않는 짧은 (5줄 이하) 순수 추가 내용에만 사용합니다. 5줄을 초과하면 요약으로 전환하십시오.
+  - **diff 블록 사용 금지.** 문서 변경 사항은 산문으로 렌더링합니다.
+- **`Why it works`** — 문서나 코드베이스에서 이미 사용된 유사한 패턴을 가능한 경우 참조하는 근거 있는 이유입니다. 1~3문장으로 작성합니다.
+- **충돌 컨텍스트 라인 (해당되는 경우)** — 기여 페르소나들이 이 발견 사항에 대해 서로 다른 작업을 암시했고 합성 단계 3.6에서 타이브레이크가 발생한 경우, 이를 짧게 표시합니다. 예: `Coherence recommends Apply; scope-guardian recommends Skip. Agent's recommendation: Skip.` 오케스트레이터의 권장 사항 — 타이브레이크 후의 값 — 이 메뉴에서 "recommended"로 표시되는 대상입니다.
 
-### Question stem (short, decision-focused)
+### 질문 줄기 (스템) (짧고 결정 중심적)
 
-After the terminal block renders, fire the platform's blocking question tool with a compact two-line stem:
+터미널 블록 렌더링 후, 플랫폼의 블로킹 질문 도구를 사용하여 간결한 두 줄의 스템을 던집니다:
 
 ```
 Finding {N} of {M} — {severity} {short handle}.
 {Action framing in a phrase}?
 ```
 
-Where:
+설명:
 
-- **Short handle** matches the `{plain-English title}` from the terminal block heading.
-- **Action framing** — one phrase describing what the single recommended action does, as a yes/no question. Examples: `Apply the rename?`, `Defer to Open Questions since the tradeoff is genuine?`, `Skip since the document already resolves this elsewhere?`.
+- **Short handle**은 터미널 블록 헤더의 `{plain-English title}`과 일치합니다.
+- **Action framing** — 단일 권장 작업이 수행하는 내용을 설명하는 한 문구이며, 예/아니오 질문 형태입니다. 예시: `Apply the rename?`, `Defer to Open Questions since the tradeoff is genuine?`, `Skip since the document already resolves this elsewhere?`.
 
-Never enumerate alternatives in the stem. One recommendation as a yes/no — the option list carries the alternatives. When the recommendation is close, surface the disagreement in the conflict-context line, not as a multi-option stem.
+스템에서 대안을 열거하지 마십시오. 하나의 권장 사항을 예/아니오로 묻습니다 — 대안은 옵션 리스트에 포함되어 있습니다. 권장 사항이 아슬아슬하게 결정된 경우, 다중 옵션 스템이 아닌 충돌 컨텍스트 라인에서 의견 차이를 표시하십시오.
 
-### Confirmation between findings
+### 발견 사항 간 확인 메시지
 
-After the user answers and before printing the next finding's terminal block, emit a one-line confirmation of the action taken. Examples: `→ Applied. Edit staged at "Scope Boundaries" section.`, `→ Deferred. Entry appended to "## Deferred / Open Questions".`, `→ Skipped.`
+사용자가 응답한 후 다음 발견 사항의 터미널 블록을 출력하기 전에, 취해진 작업에 대한 한 줄 확인 메시지를 내보냅니다. 예시: `→ Applied. Edit staged at "Scope Boundaries" section.`, `→ Deferred. Entry appended to "## Deferred / Open Questions".`, `→ Skipped.`
 
-### Options (four; adapted as noted)
+### 옵션 (네 가지; 상황에 따라 조정됨)
 
-These four options are the **complete, exclusive set** for the regular per-finding question. Fixed order — never reorder, never add, never substitute. In particular, **`Acknowledge` is NOT one of these options** — it appears only in the no-fix sub-question described under "Per-finding routing" below, which fires only when the user picks Apply on a finding that lacks a `suggested_fix`. Importing `Acknowledge` into the regular menu (in place of D, or as a fifth option) is a bug — it silently drops the `Auto-resolve with best judgment on the rest` workflow shortcut, and surfacing `Acknowledge` outside the no-fix path mislabels the user's choice in the completion report's bucket counts.
+이 네 가지 옵션은 정규 발견 사항별 질문을 위한 **완전하고 배타적인 세트**입니다. 순서 고정 — 절대 순서를 바꾸거나, 추가하거나, 대체하지 마십시오. 특히, **`Acknowledge`는 이 옵션 중 하나가 아닙니다** — 이는 아래 "발견 사항별 라우팅"에서 설명하는 no-fix 하위 질문에만 나타나며, 사용자가 `suggested_fix`가 없는 발견 사항에 대해 Apply를 선택했을 때만 실행됩니다. `Acknowledge`를 정규 메뉴에 (D 대신 또는 다섯 번째 옵션으로) 가져오는 것은 버그입니다 — 이는 `Auto-resolve with best judgment on the rest` 워크플로 단축키를 무음으로 누락시키고, 완료 보고서의 버킷 카운트에서 사용자의 선택을 잘못 분류하게 만듭니다.
 
 ```
 A. Apply the proposed fix
@@ -142,7 +142,7 @@ C. Skip — don't apply, don't append
 D. Auto-resolve with best judgment on the rest
 ```
 
-**Mark the post-tie-break recommendation with `(recommended)` on its option label.** Required, not optional. Only A, B, or C can carry it — synthesis emits `recommended_action` as Apply/Defer/Skip, which maps to A/B/C. D (`Auto-resolve with best judgment on the rest`) is a workflow shortcut for bulk execution across remaining findings, not a finding-level resolution action, so it is never marked `(recommended)`.
+**타이브레이크 이후의 권장 사항에 대해 옵션 레이블에 `(recommended)`를 표시하십시오.** 이는 선택 사항이 아닌 필수 사항입니다. A, B, C 중 하나만 가질 수 있습니다 — 합성은 `recommended_action`을 Apply/Defer/Skip으로 내보내며 이는 A/B/C에 매핑됩니다. D (`Auto-resolve with best judgment on the rest`)는 남은 발견 사항들에 대한 일괄 실행을 위한 워크플로 단축키이지 발견 사항 레벨의 해결 작업이 아니므로 절대로 `(recommended)` 표시를 하지 않습니다.
 
 ```
 A. Apply the proposed fix  (recommended)
@@ -151,40 +151,40 @@ C. Skip — don't apply, don't append
 D. Auto-resolve with best judgment on the rest
 ```
 
-When reviewers disagreed or evidence cuts against the default, still mark one option — whichever synthesis produced — and surface the disagreement in the conflict-context line.
+검토자들이 의견이 다르거나 증거가 기본값에 반하더라도, 합성이 생성한 단 하나의 옵션을 마킹하고 충돌 컨텍스트 라인에 의견 차이를 표시하십시오.
 
-### Adaptations
+### 적응 (Adaptations)
 
-- **N=1 (exactly one pending finding):** the terminal block's heading omits `Finding N of M` and renders as `## {severity} {plain-English title}`. The stem's first line drops the position counter, becoming `{severity} {short handle}.` Option D (`Auto-resolve with best judgment on the rest`) is suppressed because no subsequent findings exist — the menu shows three options: Apply / Defer / Skip.
+- **N=1 (보류 중인 발견 사항이 정확히 하나인 경우):** 터미널 블록의 헤더에서 `Finding N of M`을 생략하고 `## {severity} {plain-English title}`로 렌더링합니다. 스템의 첫 번째 줄에서 위치 카운터를 생략하여 `{severity} {short handle}.`이 됩니다. 후속 발견 사항이 없으므로 옵션 D (`Auto-resolve with best judgment on the rest`)는 억제됩니다 — 메뉴에는 Apply / Defer / Skip 세 가지 옵션이 표시됩니다.
 
-- **Open-Questions append unavailable** (read-only document, write-failed): when `references/open-questions-defer.md` reports the in-doc append mechanic cannot run, option B is omitted. The stem appends one line explaining why (e.g., `Defer unavailable — document is read-only in this environment.`). The menu shows three options: Apply / Skip / Auto-resolve with best judgment on the rest. Before rendering options, remap any per-finding `Defer` recommendation from synthesis to `Skip` so the `(recommended)` marker lands on an option that's actually in the menu. Surface the remap on the conflict-context line (e.g., `Synthesis recommended Defer; downgraded to Skip — document is read-only.`).
+- **Open Questions 추가 불가** (읽기 전용 문서, 쓰기 실패): `references/open-questions-defer.md`에서 문서 내 추가 메커니즘을 실행할 수 없다고 보고하면 옵션 B가 제외됩니다. 스템에 그 이유를 설명하는 한 줄이 추가됩니다 (예: `Defer unavailable — document is read-only in this environment.`). 메뉴에는 Apply / Skip / Auto-resolve with best judgment on the rest 세 가지 옵션이 표시됩니다. 옵션을 렌더링하기 전에, 합성에서의 모든 발견 사항별 `Defer` 권장 사항을 `Skip`으로 리매핑하여 `(recommended)` 마커가 실제로 메뉴에 있는 옵션에 표시되도록 합니다. 리매핑 내용은 충돌 컨텍스트 라인에 표시합니다 (예: `Synthesis recommended Defer; downgraded to Skip — document is read-only.`).
 
-- **Combined N=1 + no-append:** the menu shows two options: Apply / Skip.
+- **N=1 + 추가 불가 결합:** 메뉴에는 Apply / Skip 두 가지 옵션이 표시됩니다.
 
-Only when `ToolSearch` explicitly returns no match or the tool call errors — or on a platform with no blocking question tool — fall back to presenting the options as a numbered list and waiting for the user's next reply.
+`ToolSearch`가 명시적으로 검색 결과 없음을 반환하거나 도구 호출이 에러를 발생시키는 경우 — 또는 블로킹 질문 도구가 없는 플랫폼에서만 — 번호가 매겨진 리스트로 옵션을 제시하고 사용자의 다음 응답을 기다리는 방식으로 폴백합니다.
 
 ---
 
-## Per-finding routing
+## 발견 사항별 라우팅 (Per-finding routing)
 
-For each finding's answer:
+각 발견 사항에 대한 응답 처리:
 
-- **Apply the proposed fix** — add the finding's id to an in-memory Apply set. Advance to the next finding. Do not edit the document inline — Apply accumulates for end-of-walk-through batch execution. **No-fix guard:** if the merged finding has no `suggested_fix` (possible on `manual` findings where the persona flagged the issue as observation without a concrete resolution), Apply is not executable. Do not add the finding to the Apply set. Instead, surface the no-fix sub-question described below before advancing.
-- **Defer — append to Open Questions section** — invoke the append flow from `references/open-questions-defer.md`. The walk-through's position indicator stays on the current finding during any failure-path sub-question (Retry / Fall back / Convert to Skip). On success, record the append location and reference in the in-memory decision list and advance. On conversion-to-Skip from the failure path, advance with the failure noted in the completion report.
-- **Skip — don't apply, don't append** — record Skip in the in-memory decision list. Advance. No side effects.
-- **Auto-resolve with best judgment on the rest** — exit the walk-through loop. Dispatch the bulk preview from `references/bulk-preview.md`, scoped to the current finding and everything not yet decided. The preview header reports the count of already-decided findings ("K already decided"). If the user picks Cancel from the preview, return to the current finding's per-finding question (not to the routing question). If the user picks Proceed, execute the plan per `references/bulk-preview.md` — Apply findings join the in-memory Apply set with the ones the user already picked, Defer findings route through `references/open-questions-defer.md`, Skip is no-op — then proceed to end-of-walk-through execution.
+- **Apply the proposed fix** — 발견 사항의 ID를 메모리 내 Apply 세트에 추가합니다. 다음 발견 사항으로 넘어갑니다. 문서를 인라인으로 편집하지 마십시오 — Apply는 워크스루 종료 시 일괄 실행을 위해 누적됩니다. **수정안 부재 보호 (No-fix guard):** 병합된 발견 사항에 `suggested_fix`가 없는 경우(페르소나가 구체적인 해결책 없이 관찰로만 이슈를 제기한 `manual` 발견 사항에서 가능), Apply를 실행할 수 없습니다. 발견 사항을 Apply 세트에 추가하지 마십시오. 대신 아래에 설명된 no-fix 하위 질문을 표시한 후 진행하십시오.
+- **Defer — append to Open Questions section** — `references/open-questions-defer.md`의 추가 흐름을 호출합니다. 실패 경로 하위 질문(Retry / Fall back / Convert to Skip) 중에도 워크스루의 위치 표시기는 현재 발견 사항에 머뭅니다. 성공 시 추가 위치와 참조를 메모리 내 결정 리스트에 기록하고 넘어갑니다. 실패 경로에서 Skip으로 전환된 경우, 완료 보고서에 실패 내용을 기록하고 넘어갑니다.
+- **Skip — don't apply, don't append** — 메모리 내 결정 리스트에 Skip을 기록합니다. 넘어갑니다. 부수 효과가 없습니다.
+- **Auto-resolve with best judgment on the rest** — 워크스루 루프를 종료합니다. 현재 발견 사항과 아직 결정되지 않은 모든 사항을 범위로 하여 `references/bulk-preview.md`의 일괄 미리보기를 디스패치합니다. 미리보기 헤더는 이미 결정된 발견 사항의 수("K already decided")를 보고합니다. 사용자가 미리보기에서 Cancel을 선택하면 (라우팅 질문이 아닌) 현재 발견 사항의 질문으로 돌아갑니다. 사용자가 Proceed를 선택하면 `references/bulk-preview.md`에 따라 계획을 실행합니다 — Apply 발견 사항은 사용자가 이미 선택한 것들과 함께 메모리 내 Apply 세트에 합쳐지고, Defer 발견 사항은 `references/open-questions-defer.md`를 통해 라우팅되며, Skip은 무시됩니다 — 그 후 워크스루 종료 후 실행 단계로 진행합니다.
 
-### No-fix sub-question (Apply picked on a finding with no `suggested_fix`)
+### No-fix 하위 질문 (수정안이 없는 발견 사항에 대해 Apply를 선택한 경우)
 
-This sub-question — and the `Acknowledge without applying` option in particular — is **exclusive to the no-fix path**. It fires only after the user picks Apply on a finding whose merged record has no `suggested_fix`. Do not surface this sub-question, or its `Acknowledge` option, in the regular per-finding menu. The regular menu's fourth option is always `Auto-resolve with best judgment on the rest` (per "Options" above), never `Acknowledge`.
+이 하위 질문 — 특히 `Acknowledge without applying` 옵션 — 은 **no-fix 경로 전용**입니다. 이는 병합된 레코드에 `suggested_fix`가 없는 발견 사항에 대해 사용자가 Apply를 선택한 경우에만 실행됩니다. 이 하위 질문이나 `Acknowledge` 옵션을 정규 발견 사항별 메뉴에 표시하지 마십시오. 정규 메뉴의 네 번째 옵션은 항상 `Auto-resolve with best judgment on the rest`이며 (위 "옵션" 섹션 참조), 절대 `Acknowledge`가 아닙니다.
 
-Synthesis step 3.5b demotes the default recommendation from Apply to Defer for any merged finding without a `suggested_fix`, so `(recommended)` never lands on Apply for these findings. But the menu still lets the user pick Apply manually. When that happens, do not add the finding to the Apply set — the execution pass has no edit payload to apply, which would either fail the batch or record a misleading "applied" outcome.
+합성 단계 3.5b는 `suggested_fix`가 없는 모든 병합된 발견 사항에 대해 기본 권장 사항을 Apply에서 Defer로 강등하므로, 이러한 발견 사항들에 대해 `(recommended)`가 Apply에 표시되는 일은 없습니다. 하지만 메뉴에서는 여전히 사용자가 수동으로 Apply를 선택할 수 있습니다. 그런 일이 발생하면 발견 사항을 Apply 세트에 추가하지 마십시오 — 실행 단계에서 적용할 편집 페이로드가 없으므로 일괄 처리에 실패하거나 오해의 소지가 있는 "applied" 결과를 기록하게 될 것이기 때문입니다.
 
-Fire a blocking sub-question using the platform's question tool. The stem explains why Apply is not executable in one line, then offers three self-contained options. Position indicator stays on the current finding while the sub-question is open.
+플랫폼의 질문 도구를 사용하여 블로킹 하위 질문을 던집니다. 스템은 왜 Apply를 실행할 수 없는지 한 줄로 설명하고, 세 가지 자체 설명적인 옵션을 제공합니다. 하위 질문이 열려 있는 동안 위치 표시기는 현재 발견 사항에 머뭅니다.
 
-**Stem:** `Apply isn't executable for this finding — the review surfaced the issue without a concrete fix. How should the agent proceed?`
+**질문:** `Apply isn't executable for this finding — the review surfaced the issue without a concrete fix. How should the agent proceed?`
 
-**Options (fixed order):**
+**옵션 (고정된 순서):**
 
 ```
 A. Defer to Open Questions  (recommended)
@@ -192,76 +192,76 @@ B. Skip — don't apply, don't append
 C. Acknowledge without applying — record the decision, no document edit
 ```
 
-**Routing:**
+**라우팅:**
 
-- **A. Defer to Open Questions** — invoke the append flow from `references/open-questions-defer.md` as though the user had originally picked Defer. Failure-path handling is identical (Retry / Fall back / Convert to Skip). On success, record the append location in the decision list (annotated `redirected from Apply — no suggested_fix`) and advance.
-- **B. Skip** — record Skip in the decision list (annotated `redirected from Apply — no suggested_fix`). Advance. No side effects.
-- **C. Acknowledge without applying** — record the finding in the decision list as `acknowledged` (annotated `Apply picked but no suggested_fix — no edit dispatched`). Do not add to the Apply set. Advance. The completion report surfaces Acknowledged as its own dedicated bucket with its own count, its own per-finding action label, and its own position in the report ordering (`Applied / Deferred / Skipped / Acknowledged`) — see "Minimum required fields" and "Report ordering" in the unified completion report section below for the full contract. The acknowledgement reason is surfaced on each per-finding line. For round-to-round suppression (distinct from report display), Acknowledged decisions carry forward in the multi-round decision primer as a rejected-class decision alongside Skip and Defer so round-N+1 synthesis suppresses re-raises via R29 — semantically the user saw the finding, chose not to act, and wants it recorded, which is equivalent to Skip for suppression purposes but remains its own bucket in the report.
+- **A. Defer to Open Questions** — 사용자가 원래 Defer를 선택한 것처럼 `references/open-questions-defer.md`의 추가 흐름을 호출합니다. 실패 경로 처리는 동일합니다 (Retry / Fall back / Convert to Skip). 성공 시 결정 리스트에 추가 위치를 기록하고(`redirected from Apply — no suggested_fix` 주석 포함) 넘어갑니다.
+- **B. Skip** — 결정 리스트에 Skip을 기록하고(`redirected from Apply — no suggested_fix` 주석 포함) 넘어갑니다. 부수 효과가 없습니다.
+- **C. Acknowledge without applying** — 결정 리스트에 해당 발견 사항을 `acknowledged`로 기록합니다(`Apply picked but no suggested_fix — no edit dispatched` 주석 포함). Apply 세트에 추가하지 않습니다. 넘어갑니다. 완료 보고서는 Acknowledged를 자체적인 카운트, 발견 사항별 작업 레이블 및 보고서 정렬 순서(`Applied / Deferred / Skipped / Acknowledged`)상의 고유한 위치를 가진 전용 버킷으로 표시합니다 — 전체 계약 내용은 아래 통합 완료 보고서 섹션의 "최소 필수 필드" 및 "보고서 정렬"을 참조하십시오. 각 발견 사항별 라인에 승인 이유가 표시됩니다. (보고서 표시와는 별개인) 라운드 간 억제를 위해, Acknowledged 결정은 다라운드 결정 프라이머에서 Skip 및 Defer와 함께 거부 클래스 결정으로 전달되어 라운드-N+1 합성이 R29를 통해 재제기를 억제하도록 합니다 — 의미론적으로 사용자가 발견 사항을 보았고 조치하지 않기로 선택했으며 기록에 남기길 원하므로 억제 목적상 Skip과 동일하지만 보고서에서는 자신의 버킷을 유지합니다.
 
-**Availability adaptation.** When `references/open-questions-defer.md` has cached `append_available: false` for the session, omit option A and surface one line in the stem explaining why (e.g., `Defer unavailable — document is read-only in this environment.`). The menu becomes Skip / Acknowledge without applying, with Skip labeled `(recommended)`.
+**가용성 적응.** 세션에 대해 `references/open-questions-defer.md`에 `append_available: false`가 캐시된 경우, 옵션 A를 생략하고 스템에 그 이유를 설명하는 한 줄을 표시합니다 (예: `Defer unavailable — document is read-only in this environment.`). 메뉴는 Skip / Acknowledge without applying이 되며, Skip에 `(recommended)` 레이블이 붙습니다.
 
-**Cascading roots.** When the finding is a root with dependents and the user picks A (Defer) or B (Skip) from this sub-question, run the cascade announcement in "Cascading root decisions" above — treat the sub-question's choice as the root's effective action. Option C (Acknowledge) does not cascade; the root is recorded as acknowledged and dependents each get their own walk-through entry.
-
----
-
-## Override rule
-
-"Override" means the user picks a different preset action (Defer or Skip in place of Apply, or Apply in place of the agent's recommendation). No inline freeform custom-fix authoring — the walk-through is a decision loop, not a pair-editing surface. A user who wants a variant of the proposed fix picks Skip and hand-edits outside the flow; if they also want the finding tracked, they can Defer first and edit afterward.
+**전파되는 루트 (Cascading roots).** 발견 사항이 종속 항목을 가진 루트이고 사용자가 이 하위 질문에서 A (Defer) 또는 B (Skip)를 선택한 경우, 위 "루트 결정 전파"의 전파 안내를 실행합니다 — 하위 질문의 선택을 루트의 실질적인 작업으로 취급합니다. 옵션 C (Acknowledge)는 전파되지 않습니다. 루트는 acknowledged로 기록되고 종속 항목들은 각각 자신의 워크스루 항목을 갖게 됩니다.
 
 ---
 
-## State
+## 재정의 규칙 (Override rule)
 
-Walk-through state is **in-memory only**. The orchestrator maintains:
-
-- An Apply set (finding ids the user picked Apply on)
-- A decision list (every answered finding with its action and any metadata like `append_location` for Deferred or `reason` for Skipped)
-- The current position in the findings list
-
-Nothing is written to disk per-decision except the in-doc Open Questions appends (which are external side effects — those cannot be rolled back). An interrupted walk-through (user cancels the prompt, session compacts, network dies) discards all in-memory state. Apply decisions have not been dispatched yet (they batch at end-of-walk-through), so they are cleanly lost with no document changes.
-
-Cross-session persistence is out of scope. Mirrors `ce-code-review`'s walk-through state rules.
+"재정의(Override)"란 사용자가 미리 설정된 다른 작업(Apply 대신 Defer 또는 Skip, 또는 에이전트의 권장 사항 대신 Apply)을 선택하는 것을 의미합니다. 인라인으로 자유 형식의 커스텀 수정안을 작성하는 기능은 없습니다 — 워크스루는 결정 루프이지 페어 에디팅 화면이 아닙니다. 제안된 수정안의 변형을 원하는 사용자는 Skip을 선택하고 흐름 외부에서 수동으로 편집합니다. 발견 사항을 추적하고 싶다면 먼저 Defer를 한 다음 나중에 편집할 수 있습니다.
 
 ---
 
-## End-of-walk-through execution
+## 상태 (State)
 
-After the loop terminates — either every finding has been answered, or the user took `Auto-resolve with best judgment on the rest → Proceed` — the walk-through hands off to the execution phase:
+워크스루 상태는 **메모리에만 유지**됩니다. 오케스트레이터는 다음을 관리합니다:
 
-1. **Apply set:** in a single pass, the orchestrator applies every accumulated Apply-set finding's `suggested_fix` to the document. Document edits happen inline via the platform's edit tool — ce-doc-review has no batch-fixer subagent (per scope boundary); the orchestrator performs the edits directly, since `gated_auto` and `manual` fixes for documents are single-file markdown changes with no cross-file dependencies. **Defensive no-fix check:** before dispatching the edit for each Apply-set entry, verify the merged finding carries a `suggested_fix`. If it does not (the decision-time no-fix guard in "Per-finding routing" should prevent this, but treat it as a defensive fallback), skip the edit, record the finding in the completion report's failure section with reason `Apply skipped — no suggested_fix available`, and continue the batch. Do not fail the entire pass because one Apply-set entry lacks a fix.
-2. **Defer set:** already executed inline during the walk-through via `references/open-questions-defer.md`. Nothing to dispatch here.
-3. **Skip:** no-op.
+- Apply 세트 (사용자가 Apply를 선택한 발견 사항 ID들)
+- 결정 리스트 (응답된 모든 발견 사항과 그 작업, 그리고 Deferred의 경우 `append_location`, Skipped의 경우 `reason`과 같은 메타데이터)
+- 발견 사항 리스트에서의 현재 위치
 
-After execution completes (or after `Auto-resolve with best judgment on the rest → Cancel` followed by the user working through remaining findings one at a time, or after the loop runs to completion), emit the unified completion report described below.
+문서 내 Open Questions 추가(이는 외부 부수 효과이며 롤백할 수 없음)를 제외하고는 결정마다 디스크에 아무것도 기록되지 않습니다. 중단된 워크스루(사용자가 프롬프트 취소, 세션 압축, 네트워크 중단)는 모든 메모리 내 상태를 폐기합니다. Apply 결정은 아직 실행되지 않았으므로(워크스루 종료 시 일괄 처리됨), 문서 변경 없이 깔끔하게 사라집니다.
+
+세션 간 지속성은 범위 밖입니다. `ce-code-review`의 워크스루 상태 규칙을 미러링합니다.
 
 ---
 
-## Unified completion report
+## 워크스루 종료 후 실행 (End-of-walk-through execution)
 
-Every terminal path of Interactive mode emits the same completion report structure. This covers:
+루프가 종료된 후 — 모든 발견 사항에 응답했거나 사용자가 `Auto-resolve with best judgment on the rest → Proceed`를 선택한 경우 — 워크스루는 실행 단계로 제어권을 넘깁니다:
 
-- Walk-through completed (all findings answered)
-- Walk-through bailed via `Auto-resolve with best judgment on the rest → Proceed`
-- Top-level best-judgment (routing option B) completed
-- Top-level Append-to-Open-Questions (routing option C) completed
-- Zero findings after `safe_auto` (routing question was skipped — the completion summary is a one-line degenerate case of this structure)
+1. **Apply 세트:** 오케스트레이터는 누적된 모든 Apply 세트 발견 사항의 `suggested_fix`를 단일 패스로 문서에 적용합니다. 문서 편집은 플랫폼의 편집 도구를 통해 인라인으로 이루어집니다 — ce-doc-review에는 (범위 경계에 따라) 일괄 수정 서브 에이전트가 없으며, 문서에 대한 `gated_auto` 및 `manual` 수정은 파일 간 의존성이 없는 단일 파일 마크다운 변경이므로 오케스트레이터가 직접 편집을 수행합니다. **방어적 수정안 부재 확인:** 각 Apply 세트 항목에 대해 편집을 디스패치하기 전에 병합된 발견 사항이 `suggested_fix`를 가지고 있는지 확인합니다. 가지고 있지 않은 경우 ("발견 사항별 라우팅"의 결정 시점 가드가 이를 방지해야 하지만 방어적 폴백으로 처리함), 편집을 건너뛰고 `Apply skipped — no suggested_fix available` 이유와 함께 완료 보고서의 실패 섹션에 기록한 후 일괄 처리를 계속합니다. 하나의 항목에 수정안이 없다고 해서 전체 패스를 실패시키지 마십시오.
+2. **Defer 세트:** 이미 워크스루 중에 `references/open-questions-defer.md`를 통해 인라인으로 실행되었습니다. 여기서 디스패치할 것은 없습니다.
+3. **Skip:** 작업 없음.
 
-### Minimum required fields
+실행이 완료된 후 (또는 `Auto-resolve with best judgment on the rest → Cancel` 이후 사용자가 남은 발견 사항들을 하나씩 처리한 후, 또는 루프가 완료될 때까지 실행된 후), 아래에 설명된 통합 완료 보고서를 내보냅니다.
 
-- **Per-finding entries:** for every finding the flow touched, a line with — at minimum — title, severity, the action taken (Applied / Deferred / Skipped / Acknowledged), the append location for Deferred entries, a one-line reason for Skipped entries (grounded in the finding's confidence anchor or the one-line `why_it_matters` snippet), and the acknowledgement reason for Acknowledged entries (e.g., `Apply picked but no suggested_fix available`).
-- **Summary counts by action:** totals per bucket (e.g., `4 applied, 2 deferred, 2 skipped`). Include an `acknowledged` count when any entries land in that bucket; omit the label when the count is zero.
-- **Failures called out explicitly:** any Apply that failed (e.g., document write error, or the defensive no-fix fallback skipping an Apply-set entry), any Open-Questions append that failed. Failures surface above the per-finding list so they are not missed.
-- **End-of-review verdict:** carried over from Phase 4's Coverage section.
+---
 
-### Report ordering
+## 통합 완료 보고서 (Unified completion report)
 
-Failures first (above the per-finding list), then per-finding entries grouped by action bucket in the order `Applied / Deferred / Skipped / Acknowledged`, then summary counts, then Coverage (FYI observations, residual concerns), then the verdict. Omit any bucket whose count is zero.
+Interactive 모드의 모든 종료 경로는 동일한 완료 보고서 구조를 내보냅니다. 이는 다음을 포함합니다:
 
-### Zero-findings degenerate case
+- 워크스루 완료 (모든 발견 사항에 응답함)
+- `Auto-resolve with best judgment on the rest → Proceed`를 통한 워크스루 이탈
+- 최상위 최선의 판단 (라우팅 옵션 B) 완료
+- 최상위 미결 질문 추가 (라우팅 옵션 C) 완료
+- `safe_auto` 이후 발견 사항 없음 (라우팅 질문 건너뜀 — 완료 요약은 이 구조의 한 줄짜리 축소 케이스임)
 
-When the routing question was skipped because no `gated_auto` / `manual` findings at confidence anchor `75` or `100` remained after `safe_auto`, the completion report collapses to its summary-counts + verdict form with one added line — the count of `safe_auto` fixes applied. The summary wording:
+### 최소 필수 필드
 
-No FYI or residual concerns:
+- **발견 사항별 항목:** 흐름이 터치한 모든 발견 사항에 대해 최소한 제목, 심각도, 취해진 작업(Applied / Deferred / Skipped / Acknowledged), Deferred 항목의 추가 위치, Skipped 항목의 한 줄 이유(발견 사항의 신뢰도 앵커나 한 줄 `why_it_matters` 스니펫에 기반), Acknowledged 항목의 승인 이유(예: `Apply picked but no suggested_fix available`)를 포함한 라인.
+- **작업별 요약 카운트:** 버킷별 합계 (예: `4 applied, 2 deferred, 2 skipped`). 해당 버킷에 항목이 있는 경우 `acknowledged` 카운트를 포함하고, 카운트가 0인 레이블은 생략합니다.
+- **명시적으로 호출된 실패:** 실패한 모든 Apply (예: 문서 쓰기 에러 또는 방어적 no-fix 폴백으로 건너뛴 항목), 실패한 모든 Open-Questions 추가. 실패 내용은 발견 사항별 리스트 위에 표시하여 놓치지 않도록 합니다.
+- **검토 종료 판결 (Verdict):** Phase 4의 Coverage 섹션에서 가져옵니다.
+
+### 보고서 정렬
+
+실패 내용을 먼저 표시하고(발견 사항별 리스트 위), 그 다음 `Applied / Deferred / Skipped / Acknowledged` 순서의 작업 버킷별로 그룹화된 발견 사항별 항목, 그 다음 요약 카운트, 그 다음 Coverage (FYI 관찰, 잔류 우려 사항), 마지막으로 판결(verdict) 순으로 정렬합니다. 카운트가 0인 버킷은 생략합니다.
+
+### 발견 사항 없음 축소 케이스 (Zero-findings degenerate case)
+
+`safe_auto` 이후 앵커 `75` 또는 `100`인 `gated_auto` / `manual` 발견 사항이 남지 않아 라우팅 질문을 건너뛴 경우, 완료 보고서는 요약 카운트 + 판결 형태로 축소되며 적용된 `safe_auto` 수정 사항 카운트가 한 줄 추가됩니다. 요약 문구:
+
+FYI나 잔류 우려 사항이 없는 경우:
 
 ```
 All findings resolved — 3 fixes applied.
@@ -269,7 +269,7 @@ All findings resolved — 3 fixes applied.
 Verdict: Ready.
 ```
 
-FYI or residual concerns remain:
+FYI나 잔류 우려 사항이 남은 경우:
 
 ```
 All actionable findings resolved — 3 fixes applied. (2 FYI observations, 1 residual concern remain in the report.)
@@ -279,6 +279,6 @@ Verdict: Ready.
 
 ---
 
-## Execution posture
+## 실행 자세 (Execution posture)
 
-The walk-through is operationally read-only with respect to the project except for three permitted writes: the in-memory Apply set / decision list (managed by the orchestrator), the in-doc Open Questions appends (external side effects managed by `references/open-questions-defer.md`), and the end-of-walk-through batch document edits (the orchestrator's final Apply pass). Persona agents remain strictly read-only. Unlike `ce-code-review`, there is no fixer subagent — the orchestrator owns the document edit directly.
+워크스루는 프로젝트에 대해 운영상 읽기 전용이지만, 세 가지 허용된 쓰기가 있습니다: 메모리 내 Apply 세트 / 결정 리스트 (오케스트레이터가 관리), 문서 내 Open Questions 추가 ( `references/open-questions-defer.md`가 관리하는 외부 부수 효과), 그리고 워크스루 종료 후 일괄 문서 편집 (오케스트레이터의 최종 Apply 패스). 페르소나 에이전트들은 엄격하게 읽기 전용 상태를 유지합니다. `ce-code-review`와 달리 수정자(fixer) 서브 에이전트가 없으며, 오케스트레이터가 직접 문서 편집을 수행합니다.

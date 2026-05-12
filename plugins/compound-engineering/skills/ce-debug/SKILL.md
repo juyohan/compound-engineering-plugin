@@ -1,235 +1,249 @@
 ---
 name: ce-debug
-description: 'Systematically find root causes and fix bugs. Use when debugging errors, investigating test failures, reproducing bugs from issue trackers (GitHub, Linear, Jira), or when stuck on a problem after failed fix attempts. Also use when the user says ''debug this'', ''why is this failing'', ''fix this bug'', ''trace this error'', or pastes stack traces, error messages, or issue references.'
-argument-hint: "[issue reference, error message, test path, or description of broken behavior]"
+description: '근본 원인을 체계적으로 찾아내고 버그를 수정합니다. 에러 디버깅, 테스트 실패 조사, 이슈 트래커(GitHub, Linear, Jira)의 버그 재현, 또는 여러 번의 수정 시도 후에도 해결되지 않는 문제에 직면했을 때 사용합니다. 또한 사용자가 ''이거 디버깅해줘'', ''왜 실패하는 거야?'', ''이 버그 좀 고쳐줘'', ''이 에러 추적해줘''라고 말하거나 스택 트레이스, 에러 메시지, 이슈 참조를 붙여넣을 때 사용합니다.'
+argument-hint: "[이슈 참조, 에러 메시지, 테스트 경로, 또는 버그 설명]"
+allowed-tools:
+  - gem
 ---
 
-# Debug and Fix
+# 디버그 및 수정 (Debug and Fix)
 
-Find root causes, then fix them. This skill investigates bugs systematically — tracing the full causal chain before proposing a fix — and optionally implements the fix with test-first discipline.
+근본 원인을 찾고 수정합니다. 이 스킬은 수정안을 제안하기 전에 트리거부터 증상까지의 전체 인과 관계를 추적하여 버그를 체계적으로 조사하며, 선택적으로 테스트 우선 원칙에 따라 수정을 구현합니다.
 
 <bug_description> #$ARGUMENTS </bug_description>
 
-## Core Principles
+## 다중 에이전트 협업 (Multi-Agent Collaboration)
 
-These principles govern every phase. They are repeated at decision points because they matter most when the pressure to skip them is highest.
+사용자의 입력(`$ARGUMENTS`) 내에 `--add <ai-이름>` 형태의 플래그가 포함되어 있는지 확인하십시오. 
+현재 지원되는 외부 AI 인터페이스는 `--add gemini` (또는 `--add gem`)입니다.
 
-1. **Investigate before fixing.** Do not propose a fix until you can explain the full causal chain from trigger to symptom with no gaps. "Somehow X leads to Y" is a gap.
-2. **Predictions for uncertain links.** When the causal chain has uncertain or non-obvious links, form a prediction — something in a different code path or scenario that must also be true. If the prediction is wrong but a fix "works," you found a symptom, not the cause. When the chain is obvious (missing import, clear null reference), the chain explanation itself is sufficient.
-3. **One change at a time.** Test one hypothesis, change one thing. If you're changing multiple things to "see if it helps," stop — that is shotgun debugging.
-4. **When stuck, diagnose why — don't just try harder.**
+만약 해당 플래그가 감지되면, 작업을 단독으로 확정하지 말고 다음 절차를 따르십시오:
+1. **의도 파악:** 플래그를 제외한 나머지 문자열을 실제 지시사항으로 간주합니다.
+2. **초안 작성:** 본인(주 에이전트)의 지식과 코드베이스 컨텍스트를 바탕으로 작업의 초기 뼈대나 접근법을 생각합니다.
+3. **MCP 협업 호출:** `gem` 도구를 호출하여 외부 Gemini 에이전트에게 조언이나 검토를 구합니다.
+   - 호출 시 전달할 메시지 예시: "나는 현재 이 작업에 대한 초안을 세우고 있어. 내 초안은 [초안 요약]이야. 이 접근 방식의 기술적 타당성을 검토하고 누락된 에지 케이스나 더 나은 패턴을 조언해줄 수 있어?"
+4. **결과 통합:** `gem` 도구가 반환한 피드백을 당신의 최종 결과물에 통합(Synthesis)합니다. 
+5. **명시적 표시:** 최종 산출물의 상단 또는 설명 부분에 "이 결과물은 Gemini와의 협업을 통해 검토 및 보완되었습니다."라는 문구를 추가하십시오.
 
-## Execution Flow
+이 협업 절차를 염두에 두고 아래의 본래 스킬 워크플로우를 진행하십시오.
 
-| Phase | Name | Purpose |
+
+## 핵심 원칙
+
+이 원칙들은 모든 단계를 지배합니다. 원칙을 건너뛰고 싶은 유혹이 강한 결정의 순간마다 반복하여 강조합니다.
+
+1. **수정하기 전에 조사하십시오.** 트리거부터 증상까지 공백 없는 전체 인과 관계를 설명할 수 있을 때까지 수정안을 제안하지 마십시오. "어찌어찌해서 X가 Y로 이어진다"는 것은 공백이 있는 설명입니다.
+2. **불확실한 연결 고리에 대해서는 예측하십시오.** 인과 관계의 연결 고리가 불확실하거나 자명하지 않을 때, 다른 코드 경로 나 시나리오에서도 반드시 참이어야 하는 "예측"을 세우십시오. 예측이 틀렸는데 수정이 "작동"한다면, 그것은 원인이 아닌 증상을 찾은 것입니다. 연결 고리가 명확할 때(import 누락, 명확한 null 참조 등)는 인과 관계 설명만으로 충분합니다.
+3. **한 번에 하나씩 변경하십시오.** 하나의 가설을 테스트하고 하나의 사항만 변경하십시오. "도움이 되는지 보려고" 여러 가지를 한꺼번에 바꾸고 있다면 멈추십시오. 그것은 '샷건 디버깅(shotgun debugging)'입니다.
+4. **막혔을 때는 단순히 더 노력하는 것이 아니라, 왜 막혔는지 진단하십시오.**
+
+## 실행 흐름
+
+| 단계 | 이름 | 목적 |
 |-------|------|---------|
-| 0 | Triage | Parse input, fetch issue if referenced, proceed to investigation |
-| 1 | Investigate | Reproduce the bug, trace the code path |
-| 2 | Root Cause | Form hypotheses with predictions for uncertain links, test them, **causal chain gate**, smart escalation |
-| 3 | Fix | Only if user chose to fix. Test-first fix with workspace safety checks |
-| 4 | Handoff | Structured summary, then prompt the user for the next action |
+| 0 | 분류 (Triage) | 입력을 파싱하고, 참조된 이슈를 가져오며, 조사 단계로 진행 |
+| 1 | 조사 (Investigate) | 버그 재현 및 코드 경로 추적 |
+| 2 | 근본 원인 (Root Cause) | 가설 수립 및 불확실한 고리 테스트, **인과 관계 게이트**, 스마트 에스컬레이션 |
+| 3 | 수정 (Fix) | 사용자가 수정을 선택한 경우에만 실행. 테스트 우선 수칙 및 안전 확인을 동반한 수정 |
+| 4 | 전달 (Handoff) | 구조화된 요약 제공 후 사용자의 다음 작업 확인 |
 
-All phases self-size — a simple bug flows through them in seconds, a complex bug spends more time in each naturally. No complexity classification, no phase skipping.
-
----
-
-### Phase 0: Triage
-
-Parse the input and reach a clear problem statement.
-
-**If the input references an issue tracker**, fetch it:
-- GitHub (`#123`, `org/repo#123`, github.com URL): Parse the issue reference from `<bug_description>` and fetch with `gh issue view <number> --json title,body,comments,labels`. For URLs, pass the URL directly to `gh`.
-- Other trackers (Linear URL/ID, Jira URL/key, any tracker URL): Attempt to fetch using available MCP tools or by fetching the URL content. If the fetch fails — auth, missing tool, non-public page — ask the user to paste the relevant issue content. Ensure the fetch includes the full comment thread, not just the opening description.
-
-Read the full conversation — the original description AND every comment, with particular attention to the latest ones. Comments frequently contain updated reproduction steps, narrowed scope, prior failed attempts, additional stack traces, or a pivot to a different suspected root cause; treating the opening post as the whole picture often sends the investigation in the wrong direction. Extract reported symptoms, expected behavior, reproduction steps, and environment details from the combined thread. Then proceed to Phase 1.
-
-**Everything else** (stack traces, test paths, error messages, descriptions of broken behavior): Proceed directly to Phase 1.
-
-**Questions:**
-- Do not ask questions by default — investigate first (read code, run tests, trace errors)
-- Only ask when a genuine ambiguity blocks investigation and cannot be resolved by reading code or running tests
-- When asking, ask one specific question
-
-**Prior-attempt awareness:** If the user indicates prior failed attempts ("I've been trying", "keeps failing", "stuck"), ask what they have already tried before investigating. This avoids repeating failed approaches and is one of the few cases where asking first is the right call.
+모든 단계는 스스로 규모를 조절합니다 — 간단한 버그는 몇 초 만에 단계를 통과하고, 복잡한 버그는 각 단계에서 자연스럽게 더 많은 시간을 보냅니다. 복잡도 분류나 단계 건너뛰기는 하지 않습니다.
 
 ---
 
-### Phase 1: Investigate
+### 단계 0: 분류 (Triage)
 
-#### 1.1 Reproduce the bug
+입력을 파싱하고 명확한 문제 정의에 도달합니다.
 
-Confirm the bug exists and understand its behavior. Run the test, trigger the error, follow reported reproduction steps — whatever matches the input.
+**입력이 이슈 트래커를 참조하는 경우**, 해당 내용을 가져옵니다:
+- GitHub (`#123`, `org/repo#123`, github.com URL): `<bug_description>`에서 이슈 참조를 파싱하고 `gh issue view <number> --json title,body,comments,labels` 명령으로 가져옵니다. URL인 경우 URL을 `gh`에 직접 전달합니다.
+- 기타 트래커 (Linear URL/ID, Jira URL/key 등): 사용 가능한 MCP 도구를 사용하거나 URL 내용을 직접 가져오기를 시도합니다. 인증 문제, 도구 부재, 비공개 페이지 등으로 실패할 경우 사용자에게 관련 이슈 내용을 붙여넣어 달라고 요청하십시오. 최초 설명뿐만 아니라 전체 댓글 스레드를 포함하여 가져와야 합니다.
 
-- **Browser bugs:** Prefer `agent-browser` if installed. Otherwise use whatever works — MCP browser tools, direct URL testing, screenshot capture, etc.
-- **Manual setup required:** If reproduction needs specific conditions the agent cannot create alone (data states, user roles, external services, environment config), document the exact setup steps and guide the user through them. Clear step-by-step instructions save significant time even when the process is fully manual.
-- **Does not reproduce after 2-3 attempts:** Read `references/investigation-techniques.md` for intermittent-bug techniques.
-- **Cannot reproduce at all in this environment:** Document what was tried and what conditions appear to be missing.
+대화 전체를 읽으십시오 — 최초 설명과 **모든 댓글**, 특히 가장 최신 댓글에 주의를 기울이십시오. 댓글에는 업데이트된 재현 단계, 좁혀진 범위, 이전의 실패한 시도들, 추가 스택 트레이스, 또는 다른 근본 원인으로의 전환 등이 포함되어 있는 경우가 많습니다. 최초 게시물만 보고 판단하면 조사가 잘못된 방향으로 흐를 수 있습니다. 수집된 스레드에서 보고된 증상, 기대 동작, 재현 단계, 환경 상세 정보를 추출하십시오. 그 후 단계 1로 진행합니다.
 
-#### 1.2 Verify environment sanity
+**그 외의 경우** (스택 트레이스, 테스트 경로, 에러 메시지, 버그 동작 설명): 바로 단계 1로 진행합니다.
 
-Before deep code tracing, confirm the environment is what you think it is:
+**질문 관련:**
+- 기본적으로 질문을 하지 마십시오 — 먼저 조사하십시오 (코드 읽기, 테스트 실행, 에러 추적).
+- 조사를 가로막는 실질적인 모호함이 있고 코드나 테스트만으로 해결할 수 없을 때만 질문하십시오.
+- 질문할 때는 구체적으로 하나만 하십시오.
 
-- Correct branch checked out; no unintended uncommitted changes
-- Dependencies installed and up to date (`bun install`, `npm install`, `bundle install`, etc.) — stale `node_modules`/`vendor` is a frequent false lead
-- Expected interpreter or runtime version (check `.tool-versions`, `.nvmrc`, `Gemfile`, etc. against what's actually active)
-- Required env vars present and non-empty
-- No stale build artifacts (`dist/`, `.next/`, compiled binaries from an earlier branch)
-- Dependent local services (database, cache, queue) running at expected versions *when the bug plausibly involves them*
-
-#### 1.3 Trace the code path
-
-Read the relevant source files. Follow the execution path from entry point to where the error manifests. Trace backward through the call chain:
-
-- Start at the error
-- Ask "where did this value come from?" and "who called this?"
-- Keep going upstream until finding the point where valid state first became invalid
-- Do not stop at the first function that looks wrong — the root cause is where bad state originates, not where it is first observed
-
-As you trace:
-- Check recent changes in files you are reading: `git log --oneline -10 -- [file]`
-- If the bug looks like a regression ("it worked before"), use `git bisect` (see `references/investigation-techniques.md`)
-- Check the project's observability tools for additional evidence:
-  - Error trackers (Sentry, AppSignal, Datadog, BetterStack, Bugsnag)
-  - Application logs
-  - Browser console output
-  - Database state
-- Each project has different systems available; use whatever gives a more complete picture
+**이전 시도 확인:** 사용자가 이전의 실패한 시도를 언급한다면 ("계속 해봤는데", "계속 실패해요", "막혔어요"), 조사 전에 무엇을 시도했는지 물어보십시오. 이는 실패한 접근 방식을 반복하는 것을 방지하며, 먼저 질문하는 것이 옳은 몇 안 되는 사례 중 하나입니다.
 
 ---
 
-### Phase 2: Root Cause
+### 단계 1: 조사 (Investigate)
 
-*Reminder: investigate before fixing. Do not propose a fix until you can explain the full causal chain from trigger to symptom with no gaps.*
+#### 1.1 버그 재현
 
-Read `references/anti-patterns.md` before forming hypotheses.
+버그가 존재함을 확인하고 그 동작을 이해합니다. 테스트를 실행하거나, 에러를 트리거하거나, 보고된 재현 단계를 따르는 등 입력 내용에 맞는 방법을 사용합니다.
 
-**Assumption audit (before hypothesis formation):** List the concrete "this must be true" beliefs your understanding depends on — the framework behaves as expected here, this function returns what its name implies, the config loads before this runs, the caller passes a non-null value, the database is in the state the test implies. For each, mark *verified* (you read the code, checked state, or ran it) or *assumed*. Assumptions are the most common source of stuck debugging. Many "wrong hypotheses" are actually correct hypotheses tested against a wrong assumption.
+- **브라우저 버그:** `agent-browser`가 설치되어 있다면 이를 우선 사용하십시오. 그렇지 않다면 MCP 브라우저 도구, 직접 URL 테스트, 스크린샷 캡처 등 작동하는 모든 수단을 동원하십시오.
+- **수동 설정이 필요한 경우:** 데이터 상태, 사용자 권한, 외부 서비스, 환경 설정 등 에이전트 혼자 만들 수 없는 특정 조건이 필요하다면 정확한 설정 단계를 문서화하고 사용자를 안내하십시오. 완전히 수동으로 진행되더라도 명확한 단계별 지침은 시간을 크게 단축해 줍니다.
+- **2~3번의 시도 후에도 재현되지 않는 경우:** 간헐적 버그(intermittent-bug) 기법을 위해 `references/investigation-techniques.md`를 읽으십시오.
+- **이 환경에서 전혀 재현할 수 없는 경우:** 시도한 내용과 누락된 것으로 보이는 조건을 문서화하십시오.
 
-**Form hypotheses** ranked by likelihood. For each, state:
-- What is wrong and where (file:line)
-- The causal chain: how the trigger leads to the observed symptom, step by step
-- **For uncertain links in the chain**: a prediction — something in a different code path or scenario that must also be true if this link is correct
+#### 1.2 환경 건전성 확인
 
-When the causal chain is obvious and has no uncertain links (missing import, clear type error, explicit null dereference), the chain explanation itself is the gate — no prediction required. Predictions are a tool for testing uncertain links, not a ritual for every hypothesis.
+심층적인 코드 추적 전에, 환경이 예상과 일치하는지 확인하십시오:
 
-Before forming a new hypothesis, review what has already been ruled out and why.
+- 올바른 브랜치가 체크아웃되어 있는지, 의도치 않은 변경 사항이 없는지 확인
+- 의존성 설치 및 최신 상태 확인 (`bun install`, `npm install`, `bundle install` 등) — 오래된 `node_modules`/`vendor` 폴더는 흔한 혼란의 원인입니다.
+- 예상되는 인터프리터 또는 런타임 버전 확인 (`.tool-versions`, `.nvmrc`, `Gemfile` 등을 실제 활성화된 버전과 대조)
+- 필요한 환경 변수가 존재하고 값이 비어 있지 않은지 확인
+- 오래된 빌드 산출물 확인 (`dist/`, `.next/`, 이전 브랜치에서 컴파일된 바이너리 등)
+- 버그와 관련이 있을 가능성이 있는 경우, 종속된 로컬 서비스(데이터베이스, 캐시, 큐)가 예상 버전으로 실행 중인지 확인
 
-**Causal chain gate:** Do not proceed to Phase 3 until you can explain the full causal chain — from the original trigger through every step to the observed symptom — with no gaps. The user can explicitly authorize proceeding with the best-available hypothesis if investigation is stuck.
+#### 1.3 코드 경로 추적
 
-*Reminder: if a prediction was wrong but the fix appears to work, you found a symptom. The real cause is still active.*
+관련 소스 파일을 읽습니다. 진입점부터 에러가 나타나는 지점까지의 실행 경로를 따라갑니다. 호출 체인을 따라 역방향으로 추적하십시오:
 
-#### Present findings
+- 에러 발생 지점에서 시작
+- "이 값은 어디서 왔는가?", "누가 이걸 호출했는가?"라고 자문하십시오.
+- 유효한 상태가 처음으로 유효하지 않게 된 지점을 찾을 때까지 상류로 계속 올라가십시오.
+- 단순히 처음으로 이상해 보이는 함수에서 멈추지 마십시오 — 근본 원인은 잘못된 상태가 처음 관찰된 곳이 아니라 처음 발생한 곳입니다.
 
-Once the root cause is confirmed, present:
-- The root cause (causal chain summary with file:line references)
-- The proposed fix and which files would change
-- Which tests to add or modify to prevent recurrence (specific test file, test case description, what the assertion should verify)
-- Whether existing tests should have caught this and why they did not
+추적 과정에서:
+- 읽고 있는 파일의 최근 변경 사항을 확인하십시오: `git log --oneline -10 -- [file]`
+- 버그가 회귀(regression, "이전에는 됐는데")인 것 같다면 `git bisect`를 사용하십시오 (`references/investigation-techniques.md` 참조).
+- 추가 증거를 위해 프로젝트의 관측 도구를 확인하십시오:
+  - 에러 트래커 (Sentry, AppSignal, Datadog, BetterStack, Bugsnag)
+  - 애플리케이션 로그
+  - 브라우저 콘솔 출력
+  - 데이터베이스 상태
+- 프로젝트마다 사용 가능한 시스템이 다르므로, 더 완전한 그림을 그려주는 모든 수단을 활용하십시오.
 
-Then offer next steps.
+---
 
-Use the platform's blocking question tool (`AskUserQuestion` in Claude Code, `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension)). In Claude Code, call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded — a pending schema load is not a reason to fall back. Fall back to numbered options in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes). Never silently skip the question.
+### 단계 2: 근본 원인 (Root Cause)
 
-Options to offer:
+*주의: 수정하기 전에 조사하십시오. 트리거부터 증상까지 공백 없는 전체 인과 관계를 설명할 수 있을 때까지 수정안을 제안하지 마십시오.*
 
-1. **Fix it now** — proceed to Phase 3
-2. **Diagnosis only — I'll take it from here** — skip the fix, proceed to Phase 4's summary, and end the skill
-3. **Rethink the design** (`/ce-brainstorm`) — only when the root cause reveals a design problem (see below)
+가설을 세우기 전에 `references/anti-patterns.md`를 읽으십시오.
 
-Do not assume the user wants action right now. The test recommendations are part of the diagnosis regardless of which path is chosen.
+**가정 감사 (가설 수립 전):** 현재의 이해가 의존하고 있는 구체적인 "이것은 반드시 참이어야 한다"는 믿음들을 나열하십시오 — 프레임워크가 여기서 예상대로 동작함, 이 함수는 이름이 뜻하는 바를 반환함, 설정이 실행 전에 로드됨, 호출자가 null이 아닌 값을 전달함, 데이터베이스가 테스트가 암시하는 상태임 등. 각 항목에 대해 *확인됨(verified)* (코드를 읽었거나, 상태를 확인했거나, 실행해 봄) 또는 *가정됨(assumed)*으로 표시하십시오. 가정은 디버깅이 막히는 가장 흔한 원인입니다. 많은 "잘못된 가설"은 사실 잘못된 가정 위에서 테스트된 올바른 가설인 경우가 많습니다.
 
-**When to suggest brainstorm:** Only when investigation reveals the bug cannot be properly fixed within the current design — the design itself needs to change. Concrete signals observable during debugging:
+가능성이 높은 순서대로 **가설을 수립**하십시오. 각 가설에 대해 다음을 명시하십시오:
+- 무엇이 어디서 잘못되었는가 (file:line)
+- 인과 관계: 트리거가 관찰된 증상으로 어떻게 이어지는지 단계별 설명
+- **인과 관계 중 불확실한 연결 고리에 대해**: 예측 — 이 고리가 맞다면 다른 코드 경로 나 시나리오에서 반드시 참이어야 하는 무언가
 
-- **The root cause is a wrong responsibility or interface**, not wrong logic. The module should not be doing this at all, or the boundary between components is in the wrong place. (Observable: the fix requires moving responsibility between modules, not correcting code within one.)
-- **The requirements are wrong or incomplete.** The system behaves as designed, but the design does not match what users actually need. The "bug" is really a product gap. (Observable: the code is doing exactly what it was written to do — the spec is the problem.)
-- **Every fix is a workaround.** You can patch the symptom, but cannot articulate a clean fix because the surrounding code was built on an assumption that no longer holds. (Observable: you keep wanting to add special cases or flags rather than a direct correction.)
+인과 관계가 자명하고 불확실한 고리가 없을 때(import 누락, 명확한 타입 에러, 명시적 null 참조 등)는 인과 관계 설명 그 자체가 통과 기준이 되며, 별도의 예측은 필요하지 않습니다. 예측은 불확실한 고리를 테스트하기 위한 도구이지, 모든 가설을 위한 요식 행위가 아닙니다.
 
-Do not suggest brainstorm for bugs that are large but have a clear fix — size alone does not make something a design problem.
+새로운 가설을 세우기 전에 이미 제외된 가설들이 무엇이고 왜 제외되었는지 검토하십시오.
 
-#### Smart escalation
+**인과 관계 게이트:** 최초의 트리거부터 모든 단계를 거쳐 관찰된 증상에 이르기까지 공백 없는 전체 인과 관계를 설명할 수 있을 때까지 단계 3으로 진행하지 마십시오. 조사가 막혔을 경우 사용자가 가용한 최선의 가설로 진행하도록 명시적으로 승인할 수 있습니다.
 
-If 2-3 hypotheses are exhausted without confirmation, diagnose why:
+*주의: 예측은 틀렸는데 수정이 작동하는 것처럼 보인다면, 증상을 찾은 것입니다. 진짜 원인은 여전히 남아 있습니다.*
 
-| Pattern | Diagnosis | Next move |
+#### 발견 사항 제시
+
+근본 원인이 확인되면 다음을 제시하십시오:
+- 근본 원인 (file:line 참조를 포함한 인과 관계 요약)
+- 제안된 수정안 및 변경될 파일들
+- 재발 방지를 위해 추가하거나 수정할 테스트 (구체적인 테스트 파일, 테스트 케이스 설명, 어설션이 검증해야 할 내용)
+- 기존 테스트가 왜 이를 잡지 못했는지에 대한 분석
+
+그 후 다음 단계를 제안하십시오.
+
+플랫폼의 질문 도구(`AskUserQuestion`, `request_user_input`, `ask_user`)를 사용하십시오. 도구가 없거나 오류가 발생하는 경우에만 채팅 창에 번호가 매겨진 옵션을 제시하십시오. 질문을 소리 없이 건너뛰지 마십시오.
+
+제시할 옵션:
+1. **지금 수정하기** — 단계 3으로 진행
+2. **진단만 수행 — 여기서부터는 직접 하겠음** — 수정을 건너뛰고 단계 4의 요약으로 진행 후 종료
+3. **설계 다시 생각하기** (`/ce-brainstorm`) — 근본 원인이 설계상의 결함을 드러내는 경우에만 제안 (아래 참조)
+
+사용자가 즉시 조치를 원한다고 단정하지 마십시오. 테스트 권장 사항은 어떤 경로를 선택하든 진단의 일부로 포함되어야 합니다.
+
+**브레인스토밍을 제안해야 하는 경우:** 조사를 통해 버그를 현재 설계 내에서 적절히 고칠 수 없다는 사실이 드러났을 때만 제안하십시오 — 설계 자체가 바뀌어야 하는 경우입니다. 디버깅 중 관찰 가능한 구체적인 신호들:
+- **근본 원인이 잘못된 로직이 아닌 잘못된 책임 소재나 인터페이스인 경우.** 모듈이 이 일을 수행해서는 안 되거나, 컴포넌트 간의 경계가 잘못 설정된 경우입니다. (관찰 결과: 수정을 위해 한 모듈 내의 코드를 고치는 것이 아니라 모듈 간의 책임 이동이 필요함.)
+- **요구사항이 잘못되었거나 불완전한 경우.** 시스템은 설계된 대로 작동하지만, 설계 자체가 사용자의 실제 요구와 일치하지 않는 경우입니다. "버그"는 사실상 제품의 기능적 결핍입니다. (관찰 결과: 코드는 정확히 작성된 대로 작동하고 있음 — 스펙이 문제임.)
+- **모든 수정이 임시방편(workaround)인 경우.** 증상을 패치할 수는 있지만, 주변 코드가 더 이상 유효하지 않은 가정 위에 빌드되어 있어 깔끔한 수정을 정의할 수 없는 경우입니다. (관찰 결과: 직접적인 수정 대신 계속 특수한 케이스나 플래그를 추가하고 싶어짐.)
+
+버그의 규모가 크더라도 명확한 수정안이 있다면 브레인스토밍을 제안하지 마십시오 — 규모가 크다고 해서 반드시 설계상의 문제인 것은 아닙니다.
+
+#### 스마트 에스컬레이션 (Smart escalation)
+
+2~3개의 가설이 확인 없이 소진된 경우, 왜 그런지 진단하십시오:
+
+| 패턴 | 진단 | 다음 조치 |
 |---------|-----------|-----------|
-| Hypotheses point to different subsystems | Architecture/design problem, not a localized bug | Present findings, suggest `/ce-brainstorm` |
-| Evidence contradicts itself | Wrong mental model of the code | Step back, re-read the code path without assumptions |
-| Works locally, fails in CI/prod | Environment problem | Focus on env differences, config, dependencies, timing |
-| Fix works but prediction was wrong | Symptom fix, not root cause | The real cause is still active — keep investigating |
+| 가설들이 서로 다른 하위 시스템을 가리킴 | 국소적 버그가 아닌 아키텍처/설계 문제 | 발견 사항을 제시하고 `/ce-brainstorm` 제안 |
+| 증거들이 서로 모순됨 | 코드에 대한 잘못된 멘탈 모델 | 한 걸음 물러나 가정 없이 코드 경로 재독 |
+| 로컬에서는 되는데 CI/운영에서 실패함 | 환경 문제 | 환경 차이, 설정, 의존성, 타이밍에 집중 |
+| 수정은 됐는데 예측이 틀림 | 원인이 아닌 증상 수정 | 진짜 원인은 여전히 활성 상태 — 조사 계속 |
 
-**Parallel investigation option:** When hypotheses are evidence-bottlenecked across clearly independent subsystems, dispatch read-only sub-agents in parallel, each with an explicit hypothesis and structured evidence-return format. No code edits by sub-agents, and skip this when hypotheses depend on each other's outcomes. If the platform does not support parallel sub-agent dispatch, run the same hypothesis probes sequentially in ranked-likelihood order instead — the parallelism is a latency optimization, not a correctness requirement.
+**병렬 조사 옵션:** 가설들이 명확히 독립적인 하위 시스템들에 걸쳐 증거 부족으로 막혀 있을 때, 각각 명확한 가설과 구조화된 결과 형식을 가진 읽기 전용 하위 에이전트들을 병렬로 실행하십시오. 하위 에이전트에 의한 코드 수정은 금지하며, 가설들이 서로의 결과에 의존하는 경우는 이 방식을 사용하지 마십시오.
 
-Present the diagnosis to the user before proceeding.
-
----
-
-### Phase 3: Fix
-
-*Reminder: one change at a time. If you are changing multiple things, stop.*
-
-If the user chose "Diagnosis only" at the end of Phase 2, skip this phase and go straight to Phase 4 for the summary — the skill's job was the diagnosis. If they chose "Rethink the design", control has transferred to `/ce-brainstorm` and this skill ends.
-
-**Workspace and branch check:** Before editing files:
-
-- Check for uncommitted changes (`git status`). If the user has unstaged work in files that need modification, confirm before editing — do not overwrite in-progress changes.
-- If the current branch is the default branch, ask whether to create a feature branch first using the platform's blocking question tool (see Phase 2 for the per-platform names). To detect the default branch, compare against `main`, `master`, or the value of `git rev-parse --abbrev-ref origin/HEAD` with its `origin/` prefix stripped (the raw output is `origin/<name>`, so an unstripped comparison will never match the local branch name). Default to creating one; derive a name from the bug and run `git checkout -b <name>`. On any other branch, proceed.
-
-**Test-first:**
-1. Write a failing test that captures the bug (or use the existing failing test)
-2. Verify it fails for the right reason — the root cause, not unrelated setup
-3. Implement the minimal fix — address the root cause and nothing else
-4. Verify the test passes
-5. Run the broader test suite for regressions
-
-**3 failed fix attempts = smart escalation.** Diagnose using the same table from Phase 2. If fixes keep failing, the root cause identification was likely wrong. Return to Phase 2.
-
-**Conditional defense-in-depth** (trigger: grep for the root-cause pattern found it in 3+ other files, OR the bug would have been catastrophic if it reached production): Read `references/defense-in-depth.md` for the four-layer model (entry validation, invariant check, environment guard, diagnostic breadcrumb) and choose which layers apply. Skip when the root cause is a one-off error with no realistic recurrence path.
-
-**Conditional post-mortem** (trigger: the bug was in production, OR the pattern appears in 3+ locations):
-Analyze how this was introduced and what allowed it to survive. Note any systemic gap or repeated pattern found — it informs Phase 4's decision on whether to offer learning capture.
+진행하기 전에 사용자에게 진단 내용을 제시하십시오.
 
 ---
 
-### Phase 4: Handoff
+### 단계 3: 수정 (Fix)
 
-**Structured summary** — always write this first:
+*주의: 한 번에 하나씩 변경하십시오. 여러 가지를 바꾸고 있다면 멈추십시오.*
+
+사용자가 단계 2 마지막에 "진단만 수행"을 선택했다면, 이 단계를 건너뛰고 바로 단계 4 요약으로 이동합니다 — 스킬의 임무는 진단까지였습니다. "설계 다시 생각하기"를 선택했다면 제어권이 `/ce-brainstorm`으로 넘어갔으므로 이 스킬은 종료됩니다.
+
+**워크스페이스 및 브랜치 확인:** 파일을 편집하기 전에:
+- 커밋되지 않은 변경 사항이 있는지 확인합니다 (`git status`). 수정이 필요한 파일에 사용자가 작업 중인 내용이 있다면 편집 전에 확인하십시오 — 진행 중인 작업을 덮어쓰지 마십시오.
+- 현재 브랜치가 기본 브랜치라면, 먼저 기능 브랜치를 만들지 플랫폼의 질문 도구를 통해 물어보십시오. 기본 브랜치를 감지하려면 `main`, `master` 또는 `git rev-parse --abbrev-ref origin/HEAD`에서 `origin/` 접두사를 제거한 값과 비교하십시오. 기본적으로 생성하는 쪽을 권장하며, 버그 내용으로부터 이름을 유도하여 `git checkout -b <name>`을 실행합니다. 그 외의 브랜치에서는 그대로 진행합니다.
+
+**테스트 우선 (Test-first):**
+1. 버그를 잡아내는 실패하는 테스트를 작성합니다 (또는 기존의 실패하는 테스트 사용).
+2. 관련 없는 설정 때문이 아니라 근본 원인 때문에 실패하는 것인지 확인합니다.
+3. 최소한의 수정을 구현합니다 — 근본 원인만 해결하고 다른 것은 건드리지 마십시오.
+4. 테스트가 통과하는지 확인합니다.
+5. 회귀 테스트를 위해 전체 테스트 스위트를 실행합니다.
+
+**3번의 수정 시도 실패 = 스마트 에스컬레이션.** 단계 2의 표를 사용하여 진단하십시오. 수정이 계속 실패한다면 근본 원인 파악이 잘못되었을 가능성이 높습니다. 단계 2로 돌아가십시오.
+
+**조건부 심층 방어 (Trigger: 근본 원인 패턴이 3개 이상의 다른 파일에서 발견됨, 또는 운영 환경에 도달했을 때 치명적일 버그인 경우):** 4단계 레이어 모델(입력 검증, 불변성 체크, 환경 가드, 진단 로그)을 위해 `references/defense-in-depth.md`를 읽고 적용할 레이어를 선택하십시오. 근본 원인이 재발 가능성이 없는 일회성 에러라면 건너뜁니다.
+
+**조건부 사후 분석 (Trigger: 운영 환경 버그였거나 패턴이 3개 이상의 위치에서 나타나는 경우):**
+이 버그가 어떻게 도입되었고 왜 걸러지지 않았는지 분석하십시오. 발견된 시스템적 격차나 반복되는 패턴을 기록하십시오 — 이는 단계 4에서 학습 내용 캡처를 제안할지 결정하는 기준이 됩니다.
+
+---
+
+### 단계 4: 전달 (Handoff)
+
+**구조화된 요약** — 항상 이를 먼저 작성하십시오:
 
 ```
-## Debug Summary
-**Problem**: [What was broken]
-**Root Cause**: [Full causal chain, with file:line references]
-**Recommended Tests**: [Tests to add/modify to prevent recurrence, with specific file and assertion guidance]
-**Fix**: [What was changed — or "diagnosis only" if Phase 3 was skipped]
-**Prevention**: [Test coverage added; defense-in-depth if applicable]
-**Confidence**: [High/Medium/Low]
+## 디버그 요약
+**Problem (문제)**: [무엇이 고장 났었는지]
+**Root Cause (근본 원인)**: [file:line 참조를 포함한 전체 인과 관계]
+**Recommended Tests (권장 테스트)**: [재발 방지를 위해 추가/수정할 테스트, 특정 파일 및 어설션 가이드]
+**Fix (수정)**: [무엇을 변경했는지 — 또는 단계 3을 건너뛴 경우 "진단만 수행"]
+**Prevention (예방)**: [추가된 테스트 커버리지, 해당되는 경우 심층 방어 조치]
+**Confidence (확신도)**: [High/Medium/Low]
 ```
 
-**If Phase 3 was skipped** (user chose "Diagnosis only" in Phase 2), stop after the summary — the user already told you they were taking it from here. Do not prompt.
+**단계 3을 건너뛴 경우** (사용자가 단계 2에서 "진단만 수행" 선택), 요약 후 중단하십시오 — 사용자가 이미 여기서부터는 직접 하겠다고 했습니다. 질문하지 마십시오.
 
-**If Phase 3 ran**, the next move depends on whether the skill created the branch in Phase 3.
+**단계 3을 실행한 경우**, 다음 동작은 단계 3에서 스킬이 브랜치를 생성했는지 여부에 따라 달라집니다.
 
-#### Skill-owned branch (created in Phase 3): default to commit-and-PR without prompting
+#### 스킬이 생성한 브랜치 (단계 3에서 생성됨): 묻지 않고 커밋 및 PR 생성을 기본으로 함
 
-1. **Check for contextual overrides first.** Look at the user's original prompt, loaded memories, and the user/repo `AGENTS.md` or `CLAUDE.md` for preferences that conflict with auto commit-and-PR — for example, "always review before pushing", "open PRs as drafts", or "don't open PRs from skills". A signal must be an explicit instruction or a clearly applicable rule, not a vague tonal cue. If any apply, honor them — switch to the pre-existing-branch menu below, or skip the PR step entirely, whichever matches the user's stated preference.
-2. **Briefly preview what will happen** — what will be committed, on what branch, and that a PR will be opened — then proceed without waiting for confirmation. The preview exists so the user can interrupt; it is not a blocking question. Format and length are your call; keep it scannable.
-3. **Run `/ce-commit-push-pr`.** When the entry came from an issue tracker, include the appropriate auto-close syntax for that tracker in the location it requires — most trackers parse PR descriptions (e.g., `Fixes #N` for GitHub, `Closes ABC-123` for Linear), but some only parse commit messages (e.g., Jira Smart Commits) — so the diagnosis and fix flow back to the issue and it closes on merge. Surface the resulting PR URL.
+1. **컨텍스트 기반 오버라이드 확인.** 사용자의 최초 프롬프트, 로드된 메모, 그리고 사용자/저장소의 `AGENTS.md` 또는 `CLAUDE.md`에서 자동 커밋/PR과 상충되는 선호 사항이 있는지 확인하십시오 — 예: "푸시하기 전에 항상 리뷰받기", "PR은 항상 초안(draft)으로 열기", "스킬에서 PR 열지 않기". 이 신호는 모호한 톤이 아니라 명시적인 지시나 명확히 적용 가능한 규칙이어야 합니다. 해당되는 사항이 있다면 이를 준수하십시오 — 아래의 기존 브랜치 메뉴로 전환하거나 PR 단계를 건너뛰는 등 사용자의 선호에 맞춥니다.
+2. **수행될 작업을 간략히 미리보기** — 무엇이 커밋될 것인지, 어떤 브랜치인지, 그리고 PR이 열릴 것임을 안내한 후 확인을 기다리지 않고 진행하십시오. 미리보기는 사용자가 중단할 수 있게 하기 위함이지 차단형 질문이 아닙니다. 형식과 길이는 자유이며 훑어보기 좋아야 합니다.
+3. **`/ce-commit-push-pr` 실행.** 이슈 트래커를 통해 시작된 작업인 경우, 해당 트래커에 맞는 자동 종료 구문을 포함하십시오 — 대부분의 트래커는 PR 설명을 파싱하지만(`Fixes #N` for GitHub, `Closes ABC-123` for Linear), 일부는 커밋 메시지만 파싱합니다(예: Jira Smart Commits). 진단과 수정 내용이 이슈로 전달되고 머지 시 자동 종료되도록 하십시오. 생성된 PR URL을 표시합니다.
 
-#### Pre-existing branch (skill did not create it): ask the user
+#### 이미 존재하던 브랜치 (스킬이 만들지 않음): 사용자에게 확인
 
-Use the platform's blocking question tool (`AskUserQuestion` in Claude Code, `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension)). In Claude Code, call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded — a pending schema load is not a reason to fall back. Fall back to numbered options in chat only when no blocking tool exists in the harness or the call errors. Never end the phase without collecting a response.
+플랫폼의 질문 도구(`AskUserQuestion`, `request_user_input`, `ask_user`)를 사용하십시오. 도구가 없거나 오류가 발생하는 경우에만 채팅 창에 번호가 매겨진 옵션을 제시하십시오. 응답을 받지 않고 단계를 끝내지 마십시오.
 
-Options:
+옵션:
+1. **커밋하고 PR 열기 (`/ce-commit-push-pr`)** — 대부분의 경우 기본값
+2. **수정 사항 커밋 (`/ce-commit`)** — 로컬 커밋만 수행
+3. **여기서 중단** — 사용자가 여기서부터 직접 처리
 
-1. **Commit and open a PR (`/ce-commit-push-pr`)** — default for most cases
-2. **Commit the fix (`/ce-commit`)** — local commit only
-3. **Stop here** — user takes it from there
+#### PR이 열린 후 (어떤 경로든): 학습 내용 캡처 제안 검토
 
-#### After a PR is open (either path): consider offering learning capture
+대부분의 버그는 단순한 기계적 수정(오타, null 체크 누락, import 누락)이며, 유일한 "교훈"은 버그 그 자체입니다. 이런 것들을 축적하는 것은 가치 없이 `docs/solutions/`를 어지럽히기만 합니다. 다음 중 어떤 경로가 맞는지 결정하십시오:
 
-Most bugs are localized mechanical fixes (typo, missed null check, missing import) where the only "lesson" is the bug itself. Compounding those clutters `docs/solutions/` without adding value. Decide which path applies:
+- **조용히 건너뛰기** 수정이 기계적이고 일반화할 수 있는 통찰이 없는 경우입니다. 확실하지 않을 때는 이를 기본으로 합니다.
+- **중립적으로 제안** 교훈을 한 문장으로 표현할 수 있는 경우입니다 — 예: "X.foo()는 Y일 때 T 뿐만 아니라 undefined를 반환한다", 또는 "진단 경로가 자명하지 않아 기록할 가치가 있다." 교훈을 명확히 말할 수 없다면 제안하지 말고 건너뛰십시오.
+- **적극적으로 제안** 패턴이 3개 이상의 위치에서 나타나거나, 근본 원인이 다른 코드에서도 반복될 가능성이 높은 공통 의존성, 프레임워크 또는 컨벤션에 대한 잘못된 가정을 드러내는 경우입니다.
 
-- **Skip silently** when the fix is mechanical and there's no generalizable insight. Default to this when in doubt.
-- **Offer neutrally** when the lesson can be stated in one sentence — e.g., "X.foo() returns T | undefined when Y, not just T", or "the diagnostic path was non-obvious and worth recording." If you cannot articulate the lesson, skip rather than offer.
-- **Lean into the offer** when the pattern appears in 3+ locations OR the root cause reveals a wrong assumption about a shared dependency, framework, or convention that other code is likely to repeat.
-
-When offering, use the blocking question tool described above. If the user accepts, run `/ce-compound`, then commit the resulting learning doc to the same branch and push so the open PR picks up the new commit.
+제안할 때는 위에서 설명한 질문 도구를 사용하십시오. 사용자가 수락하면 `/ce-compound`를 실행한 후 생성된 학습 문서를 동일 브랜치에 커밋하고 푸시하여 열려 있는 PR에 포함되도록 하십시오.

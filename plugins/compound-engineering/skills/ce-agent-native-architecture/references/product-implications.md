@@ -1,143 +1,142 @@
 <overview>
-Agent-native architecture has consequences for how products feel, not just how they're built. This document covers progressive disclosure of complexity, discovering latent demand through agent usage, and designing approval flows that match stakes and reversibility.
+에이전트 네이티브 아키텍처는 제품이 어떻게 구축되는지뿐만 아니라, 제품이 어떻게 느껴지는지에도 영향을 미칩니다. 이 문서는 복잡성의 점진적 공개, 에이전트 사용을 통한 잠재적 수요 발견, 그리고 중요도와 가역성에 따른 승인 흐름 설계에 대해 다룹니다.
 </overview>
 
 <progressive_disclosure>
-## Progressive Disclosure of Complexity
+## 복잡성의 점진적 공개 (Progressive Disclosure of Complexity)
 
-The best agent-native applications are simple to start but endlessly powerful.
+가장 뛰어난 에이전트 네이티브 애플리케이션은 시작은 간단하지만 끝없이 강력합니다.
 
-### The Excel Analogy
+### Excel의 비유
 
-Excel is the canonical example: you can use it for a grocery list, or you can build complex financial models. The same tool, radically different depths of use.
+Excel은 전형적인 예시입니다. 장보기 목록을 만드는 데 사용할 수도 있고, 복잡한 금융 모델을 구축할 수도 있습니다. 동일한 도구이지만 사용 깊이는 근본적으로 다릅니다.
 
-Claude Code has this quality: fix a typo, or refactor an entire codebase. The interface is the same—natural language—but the capability scales with the ask.
+Claude Code도 이러한 특성을 가지고 있습니다. 오타를 수정할 수도 있고, 전체 코드베이스를 리팩토링할 수도 있습니다. 인터페이스는 자연어라는 점에서 동일하지만, 기능은 요청에 따라 확장됩니다.
 
-### The Pattern
+### 패턴
 
-Agent-native applications should aspire to this:
+에이전트 네이티브 애플리케이션은 다음을 지향해야 합니다:
 
-**Simple entry:** Basic requests work immediately with no learning curve
+**간단한 진입:** 학습 곡선 없이 기본 요청이 즉시 작동함
 ```
-User: "Organize my downloads"
-Agent: [Does it immediately, no configuration needed]
-```
-
-**Discoverable depth:** Users find they can do more as they explore
-```
-User: "Organize my downloads by project"
-Agent: [Adapts to preference]
-
-User: "Every Monday, review last week's downloads"
-Agent: [Sets up recurring workflow]
+사용자: "내 다운로드 폴더 정리해줘"
+에이전트: [설정 없이 즉시 수행]
 ```
 
-**No ceiling:** Power users can push the system in ways you didn't anticipate
+**발견 가능한 깊이:** 사용자가 탐색함에 따라 더 많은 것을 할 수 있음을 발견함
 ```
-User: "Cross-reference my downloads with my calendar and flag
-       anything I downloaded during a meeting that I haven't
-       followed up on"
-Agent: [Composes capabilities to accomplish this]
+사용자: "내 다운로드 폴더를 프로젝트별로 정리해줘"
+에이전트: [사용자 선호도에 맞춰 조정]
+
+사용자: "매주 월요일마다 지난주 다운로드 항목을 검토해줘"
+에이전트: [반복적인 워크플로우 설정]
 ```
 
-### How This Emerges
+**한계 없음:** 파워 유저는 개발자가 예상하지 못한 방식으로 시스템을 밀어붙일 수 있음
+```
+사용자: "내 다운로드 항목을 캘린더와 교차 참조해서, 회의 중에 다운로드했지만
+       아직 팔로우업하지 않은 항목들에 플래그를 달아줘"
+에이전트: [기능들을 조합하여 이를 수행]
+```
 
-This isn't something you design directly. It **emerges naturally from the architecture:**
+### 이것이 나타나는 방식
 
-1. When features are prompts and tools are composable...
-2. Users can start simple ("organize my downloads")...
-3. And gradually discover complexity ("every Monday, review last week's...")...
-4. Without you having to build each level explicitly
+이는 직접 설계하는 것이 아닙니다. **아키텍처에서 자연스럽게 파생됩니다:**
 
-The agent meets users where they are.
+1. 기능이 프롬프트이고 도구가 조합 가능할 때...
+2. 사용자는 간단하게 시작할 수 있고 ("다운로드 정리해줘")...
+3. 점진적으로 복잡성을 발견하며 ("매주 월요일마다 검토해줘")...
+4. 개발자는 각 단계를 명시적으로 구축할 필요가 없습니다.
 
-### Design Implications
+에이전트는 사용자가 있는 곳에서 사용자를 만납니다.
 
-- **Don't force configuration upfront** - Let users start immediately
-- **Don't hide capabilities** - Make them discoverable through use
-- **Don't cap complexity** - If the agent can do it, let users ask for it
-- **Do provide hints** - Help users discover what's possible
+### 디자인 함의 (Design Implications)
+
+- **초기에 설정을 강제하지 마십시오** - 사용자가 즉시 시작할 수 있게 하십시오.
+- **기능을 숨기지 마십시오** - 사용을 통해 발견할 수 있게 하십시오.
+- **복잡성에 제한을 두지 마십시오** - 에이전트가 할 수 있는 일이라면 사용자가 요청하게 하십시오.
+- **힌트를 제공하십시오** - 사용자가 무엇이 가능한지 발견하도록 도와주십시오.
 </progressive_disclosure>
 
 <latent_demand_discovery>
-## Latent Demand Discovery
+## 잠재적 수요 발견 (Latent Demand Discovery)
 
-Traditional product development: imagine what users want, build it, see if you're right.
+전통적인 제품 개발: 사용자가 원하는 것을 상상하고, 구축하고, 맞는지 확인합니다.
 
-Agent-native product development: build a capable foundation, observe what users ask the agent to do, formalize the patterns that emerge.
+에이전트 네이티브 제품 개발: 유능한 토대를 구축하고, 사용자가 에이전트에게 무엇을 요청하는지 관찰하며, 나타나는 패턴을 공식화합니다.
 
-### The Shift
+### 변화
 
-**Traditional approach:**
+**전통적인 접근 방식:**
 ```
-1. Imagine features users might want
-2. Build them
-3. Ship
-4. Hope you guessed right
-5. If wrong, rebuild
-```
-
-**Agent-native approach:**
-```
-1. Build capable foundation (atomic tools, parity)
-2. Ship
-3. Users ask agent for things
-4. Observe what they're asking for
-5. Patterns emerge
-6. Formalize patterns into domain tools or prompts
-7. Repeat
+1. 사용자가 원할 것 같은 기능을 상상함
+2. 구축함
+3. 출시함
+4. 추측이 맞기를 바람
+5. 틀렸다면 다시 구축함
 ```
 
-### The Flywheel
+**에이전트 네이티브 접근 방식:**
+```
+1. 유능한 토대 구축 (원자적 도구, 액션 패리티)
+2. 출시함
+3. 사용자가 에이전트에게 요청함
+4. 요청 내용을 관찰함
+5. 패턴이 나타남
+6. 패턴을 도메인 도구 또는 프롬프트로 공식화함
+7. 반복함
+```
+
+### 플라이휠 (The Flywheel)
 
 ```
-Build with atomic tools and parity
+원자적 도구와 액션 패리티로 구축
            ↓
-Users ask for things you didn't anticipate
+예상치 못한 것들을 사용자가 요청함
            ↓
-Agent composes tools to accomplish them
-(or fails, revealing a capability gap)
+에이전트가 도구들을 조합하여 수행함
+(또는 실패하여 기능 공백을 드러냄)
            ↓
-You observe patterns in what's being requested
+요청되는 패턴을 관찰함
            ↓
-Add domain tools or prompts to optimize common patterns
+공통 패턴을 최적화하기 위해 도메인 도구 또는 프롬프트 추가
            ↓
-(Repeat)
+(반복)
 ```
 
-### What You Learn
+### 학습하는 내용
 
-**When users ask and the agent succeeds:**
-- This is a real need
-- Your architecture supports it
-- Consider optimizing with a domain tool if it's common
+**사용자가 요청하고 에이전트가 성공했을 때:**
+- 이것은 실제 요구 사항입니다.
+- 아키텍처가 이를 지원합니다.
+- 공통적인 경우라면 도메인 도구로 최적화를 고려하십시오.
 
-**When users ask and the agent fails:**
-- This is a real need
-- You have a capability gap
-- Fix the gap: add tool, fix parity, improve context
+**사용자가 요청하고 에이전트가 실패했을 때:**
+- 이것은 실제 요구 사항입니다.
+- 기능 공백이 있습니다.
+- 공백을 메우십시오: 도구 추가, 패리티 수정, 컨텍스트 개선.
 
-**When users don't ask for something:**
-- Maybe they don't need it
-- Or maybe they don't know it's possible (capability hiding)
+**사용자가 아무것도 요청하지 않을 때:**
+- 아마도 필요하지 않은 기능일 수 있습니다.
+- 또는 사용자에게 기능이 숨겨져 있어 가능한지 모를 수 있습니다 (기능 은폐).
 
-### Implementation
+### 구현
 
-**Log agent requests:**
+**에이전트 요청 로깅:**
 ```typescript
 async function handleAgentRequest(request: string) {
-  // Log what users are asking for
+  // 사용자가 무엇을 요청하는지 로깅
   await analytics.log({
     type: 'agent_request',
     request: request,
     timestamp: Date.now(),
   });
 
-  // Process request...
+  // 요청 처리...
 }
 ```
 
-**Track success/failure:**
+**성공/실패 추적:**
 ```typescript
 async function completeAgentSession(session: AgentSession) {
   await analytics.log({
@@ -150,95 +149,95 @@ async function completeAgentSession(session: AgentSession) {
 }
 ```
 
-**Review patterns:**
-- What are users asking for most?
-- What's failing? Why?
-- What would benefit from a domain tool?
-- What needs better context injection?
+**패턴 검토:**
+- 사용자가 가장 많이 요청하는 것은 무엇인가?
+- 무엇이 실패하고 있는가? 왜?
+- 도메인 도구가 있으면 이득을 볼 영역은 어디인가?
+- 더 나은 컨텍스트 주입이 필요한 부분은 어디인가?
 
-### Example: Discovering "Weekly Review"
+### 예시: "주간 검토" 발견
 
 ```
-Week 1: Users start asking "summarize my activity this week"
-        Agent: Composes list_files + read_file, works but slow
+1주차: 사용자들이 "이번 주 내 활동 요약해줘"라고 묻기 시작함
+      에이전트: list_files + read_file을 조합함. 작동은 하지만 느림.
 
-Week 2: More users asking similar things
-        Pattern emerges: weekly review is common
+2주차: 더 많은 사용자가 비슷한 요청을 함
+      패턴 발견: 주간 검토가 흔한 요구 사항임.
 
-Week 3: Add prompt section for weekly review
-        Faster, more consistent, still flexible
+3주차: 주간 검토를 위한 프롬프트 섹션 추가
+      더 빠르고 일관적이지만 여전히 유연함.
 
-Week 4: If still common and performance matters
-        Add domain tool: generate_weekly_summary
+4주차: 여전히 흔하고 성능이 중요하다면
+      도메인 도구 추가: generate_weekly_summary
 ```
 
-You didn't have to guess that weekly review would be popular. You discovered it.
+주간 검토가 인기가 있을지 추측할 필요가 없었습니다. 그것을 발견한 것입니다.
 </latent_demand_discovery>
 
 <approval_and_agency>
-## Approval and User Agency
+## 승인 및 사용자 주체성 (Approval and User Agency)
 
-When agents take unsolicited actions—doing things on their own rather than responding to explicit requests—you need to decide how much autonomy to grant.
+에이전트가 명시적인 요청에 응답하는 것이 아니라 스스로 행동(unsolicited actions)을 취할 때, 어느 정도의 자율성을 부여할지 결정해야 합니다.
 
-> **Note:** This framework applies to unsolicited agent actions. If the user explicitly asks the agent to do something ("send that email"), that's already approval—the agent just does it.
+> **참고:** 이 프레임워크는 요청되지 않은 에이전트 행동에 적용됩니다. 사용자가 명시적으로 에이전트에게 지시한 경우("그 이메일 보내줘")는 이미 승인된 것이므로 에이전트가 즉시 수행합니다.
 
-### The Stakes/Reversibility Matrix
+### 중요도/가역성 매트릭스 (Stakes/Reversibility Matrix)
 
-Consider two dimensions:
-- **Stakes:** How much does it matter if this goes wrong?
-- **Reversibility:** How easy is it to undo?
+두 가지 차원을 고려하십시오:
+- **중요도 (Stakes):** 잘못되었을 때 얼마나 큰 영향이 있는가?
+- **가역성 (Reversibility):** 되돌리기가 얼마나 쉬운가?
 
-| Stakes | Reversibility | Pattern | Example |
+| 중요도 | 가역성 | 패턴 | 예시 |
 |--------|---------------|---------|---------|
-| Low | Easy | **Auto-apply** | Organizing files |
-| Low | Hard | **Quick confirm** | Publishing to a private feed |
-| High | Easy | **Suggest + apply** | Code changes with undo |
-| High | Hard | **Explicit approval** | Sending emails, payments |
+| 낮음 | 쉬움 | **자동 적용 (Auto-apply)** | 파일 정리 |
+| 낮음 | 어려움 | **빠른 확인 (Quick confirm)** | 비공개 피드에 게시 |
+| 높음 | 쉬움 | **제안 후 적용 (Suggest + apply)** | 실행 취소가 가능한 코드 변경 |
+| 높음 | 어려움 | **명시적 승인 (Explicit approval)** | 이메일 전송, 결제 |
 
-### Patterns in Detail
+### 상세 패턴
 
-**Auto-apply (low stakes, easy reversal):**
+**자동 적용 (중요도 낮음, 가역성 쉬움):**
 ```
-Agent: [Organizes files into folders]
-Agent: "I organized your downloads into folders by type.
-        You can undo with Cmd+Z or move them back."
+에이전트: [파일을 폴더별로 정리함]
+에이전트: "다운로드 항목을 파일 유형별 폴더로 정리했습니다.
+        Cmd+Z로 취소하거나 다시 옮길 수 있습니다."
 ```
-User doesn't need to approve—it's easy to undo and doesn't matter much.
+사용자가 승인할 필요가 없습니다. 되돌리기 쉽고 큰 영향이 없기 때문입니다.
 
-**Quick confirm (low stakes, hard reversal):**
+**빠른 확인 (중요도 낮음, 가역성 어려움):**
 ```
-Agent: "I've drafted a post about your reading insights.
-        Publish to your feed?"
-        [Publish] [Edit first] [Cancel]
+에이전트: "당신의 독서 인사이트에 대한 포스트 초안을 작성했습니다.
+        피드에 게시할까요?"
+        [게시] [먼저 수정] [취소]
 ```
-One-tap confirm because stakes are low, but it's hard to un-publish.
+중요도는 낮지만 게시 취소는 어렵기 때문에 원탭 확인을 거칩니다.
 
-**Suggest + apply (high stakes, easy reversal):**
+**제안 후 적용 (중요도 높음, 가역성 쉬움):**
 ```
-Agent: "I recommend these code changes to fix the bug:
-        [Shows diff]
-        Apply? Changes can be reverted with git."
-        [Apply] [Modify] [Cancel]
+에이전트: "버그 수정을 위해 다음 코드 변경을 권장합니다:
+        [diff 표시]
+        적용할까요? 변경 사항은 git으로 되돌릴 수 있습니다."
+        [적용] [수정] [취소]
 ```
-Shows what will happen, makes reversal clear.
+어떤 일이 일어날지 보여주고, 가역성을 명확히 합니다.
 
-**Explicit approval (high stakes, hard reversal):**
+**명시적 승인 (중요도 높음, 가역성 어려움):**
 ```
-Agent: "I've drafted this email to your team about the deadline change:
-        [Shows full email]
-        This will send immediately and cannot be unsent.
-        Type 'send' to confirm."
+에이전트: "마감일 변경에 대해 팀원들에게 보낼 이메일 초안입니다:
+        [이메일 전문 표시]
+        이 메일은 즉시 전송되며 취소할 수 없습니다.
+        확인을 위해 'send'라고 입력해 주세요."
 ```
-Requires explicit action, makes consequences clear.
+명시적인 행동을 요구하며, 결과를 명확히 알립니다.
 
-### Implementation
+### 구현
 
 ```swift
 enum ApprovalLevel {
-    case autoApply       // Just do it
-    case quickConfirm    // One-tap approval
-    case suggestApply    // Show preview, ask to apply
-    case explicitApproval // Require explicit confirmation
+    case autoApply       // 즉시 수행
+    case quickConfirm    // 원탭 승인
+    case suggestApply    // 미리보기 표시 후 적용 확인
+    case explicitApproval // 명시적 확인 요구
 }
 
 func approvalLevelFor(action: AgentAction) -> ApprovalLevel {
@@ -265,179 +264,178 @@ func assessStakes(_ action: AgentAction) -> Stakes {
 
 func assessReversibility(_ action: AgentAction) -> Reversibility {
     switch action {
-    case .organizeFiles: return .easy  // Can move back
-    case .publishToFeed: return .hard  // People might see it
-    case .modifyCode: return .easy     // Git revert
-    case .sendEmail: return .hard      // Can't unsend
-    case .makePayment: return .hard    // Money moved
+    case .organizeFiles: return .easy  // 다시 옮길 수 있음
+    case .publishToFeed: return .hard  // 다른 사람이 볼 수 있음
+    case .modifyCode: return .easy     // git revert 가능
+    case .sendEmail: return .hard      // 전송 취소 불가
+    case .makePayment: return .hard    // 돈이 이동함
     }
 }
 ```
 
-### Self-Modification Considerations
+### 자가 수정 (Self-Modification) 고려 사항
 
-When agents can modify their own behavior—changing prompts, updating preferences, adjusting workflows—the goals are:
+에이전트가 자신의 행동을 수정할 때(프롬프트 변경, 환경 설정 업데이트, 워크플로우 조정 등) 목표는 다음과 같습니다:
 
-1. **Visibility:** User can see what changed
-2. **Understanding:** User understands the effects
-3. **Rollback:** User can undo changes
+1. **가시성:** 사용자가 무엇이 변했는지 볼 수 있어야 함
+2. **이해:** 사용자가 그 영향을 이해해야 함
+3. **롤백:** 사용자가 변경을 되돌릴 수 있어야 함
 
-Approval flows are one way to achieve this. Audit logs with easy rollback could be another. **The principle is: make it legible.**
+승인 흐름은 이를 달성하는 한 가지 방법입니다. 쉬운 롤백 기능이 포함된 감사 로그(audit logs)가 또 다른 방법이 될 수 있습니다. **원칙은: 판독 가능하게 만드는 것(make it legible)입니다.**
 
 ```swift
-// When agent modifies its own prompt
+// 에이전트가 자신의 프롬프트를 수정할 때
 func agentSelfModify(change: PromptChange) async {
-    // Log the change
+    // 변경 사항 기록
     await auditLog.record(change)
 
-    // Create checkpoint for rollback
+    // 롤백을 위한 체크포인트 생성
     await createCheckpoint(currentState)
 
-    // Notify user (could be async/batched)
-    await notifyUser("I've adjusted my approach: \(change.summary)")
+    // 사용자에게 알림 (비동기/배치 처리 가능)
+    await notifyUser("접근 방식을 조정했습니다: \(change.summary)")
 
-    // Apply change
+    // 변경 적용
     await applyChange(change)
 }
 ```
 </approval_and_agency>
 
 <capability_visibility>
-## Capability Visibility
+## 기능 가시성 (Capability Visibility)
 
-Users need to discover what the agent can do. Hidden capabilities lead to underutilization.
+사용자는 에이전트가 무엇을 할 수 있는지 발견해야 합니다. 숨겨진 기능은 활용도 저하로 이어집니다.
 
-### The Problem
+### 문제점
 
 ```
-User: "Help me with my reading"
-Agent: "What would you like help with?"
-// Agent doesn't mention it can publish to feed, research books,
-// generate introductions, analyze themes...
+사용자: "독서를 좀 도와줘"
+에이전트: "무엇을 도와드릴까요?"
+// 에이전트는 피드 게시, 도서 조사, 서문 작성, 테마 분석 등을
+// 할 수 있다는 점을 언급하지 않음...
 ```
 
-The agent can do these things, but the user doesn't know.
+에이전트는 이 일들을 할 수 있지만, 사용자는 그 사실을 모릅니다.
 
-### Solutions
+### 해결책
 
-**Onboarding hints:**
+**온보딩 힌트:**
 ```
-Agent: "I can help you with your reading in several ways:
-        - Research any book (web search + save findings)
-        - Generate personalized introductions
-        - Publish insights to your reading feed
-        - Analyze themes across your library
-        What interests you?"
-```
-
-**Contextual suggestions:**
-```
-User: "I just finished reading 1984"
-Agent: "Great choice! Would you like me to:
-        - Research historical context?
-        - Compare it to other books in your library?
-        - Publish an insight about it to your feed?"
+에이전트: "독서와 관련해 여러 방면으로 도와드릴 수 있습니다:
+        - 모든 도서 조사 (웹 검색 + 결과 저장)
+        - 개인화된 서문 생성
+        - 독서 피드에 인사이트 게시
+        - 라이브러리 전체의 테마 분석
+        어떤 것에 관심이 있으신가요?"
 ```
 
-**Progressive revelation:**
+**맥락에 맞는 제안 (Contextual suggestions):**
 ```
-// After user uses basic features
-Agent: "By the way, you can also ask me to set up
-        recurring tasks, like 'every Monday, review my
-        reading progress.' Just let me know!"
+사용자: "방금 '1984'를 다 읽었어"
+에이전트: "좋은 선택이네요! 다음과 같은 일을 해드릴까요?
+        - 역사적 배경 조사
+        - 라이브러리의 다른 책들과 비교
+        - 피드에 인사이트 게시"
 ```
 
-### Balance
+**점진적 노출:**
+```
+// 사용자가 기본 기능을 사용한 후
+에이전트: "참고로, '매주 월요일마다 독서 진행 상황 검토해줘'와 같이
+        반복적인 작업도 요청하실 수 있습니다. 필요하면 말씀해주세요!"
+```
 
-- **Don't overwhelm** with all capabilities upfront
-- **Do reveal** capabilities naturally through use
-- **Don't assume** users will discover things on their own
-- **Do make** capabilities visible when relevant
+### 균형
+
+- 초기에 모든 기능을 나열하여 사용자를 **압도하지 마십시오.**
+- 사용을 통해 기능을 **자연스럽게 드러내십시오.**
+- 사용자가 스스로 모든 것을 발견할 것이라고 **가정하지 마십시오.**
+- 관련이 있을 때 기능을 **가시화하십시오.**
 </capability_visibility>
 
 <designing_for_trust>
-## Designing for Trust
+## 신뢰를 위한 설계 (Designing for Trust)
 
-Agent-native apps require trust. Users are giving an AI significant capability. Build trust through:
+에이전트 네이티브 앱은 신뢰를 필요로 합니다. 사용자는 AI에게 상당한 능력을 부여하고 있습니다. 다음을 통해 신뢰를 구축하십시오:
 
-### Transparency
+### 투명성
 
-- Show what the agent is doing (tool calls, progress)
-- Explain reasoning when it matters
-- Make all agent work inspectable (files, logs)
+- 에이전트가 무엇을 하고 있는지 보여주기 (도구 호출, 진행 상황)
+- 중요할 때는 추론 과정 설명하기
+- 에이전트의 모든 작업을 검사 가능하게 만들기 (파일, 로그)
 
-### Predictability
+### 예측 가능성
 
-- Consistent behavior for similar requests
-- Clear patterns for when approval is needed
-- No surprises in what the agent can access
+- 유사한 요청에 대한 일관된 행동
+- 승인이 필요한 시점에 대한 명확한 패턴
+- 에이전트가 접근할 수 있는 범위에 대한 놀라움 없음
 
-### Reversibility
+### 가역성
 
-- Easy undo for agent actions
-- Checkpoints before significant changes
-- Clear rollback paths
+- 에이전트 행동에 대한 쉬운 실행 취소(undo)
+- 중요한 변경 전 체크포인트 생성
+- 명확한 롤백 경로
 
-### Control
+### 제어권
 
-- User can stop agent at any time
-- User can adjust agent behavior (prompts, preferences)
-- User can restrict capabilities if desired
+- 사용자는 언제든 에이전트를 중지할 수 있음
+- 사용자는 에이전트의 행동(프롬프트, 선호도)을 조정할 수 있음
+- 원하는 경우 기능을 제한할 수 있음
 
-### Implementation
+### 구현
 
 ```swift
 struct AgentTransparency {
-    // Show what's happening
+    // 진행 상황 표시
     func onToolCall(_ tool: ToolCall) {
-        showInUI("Using \(tool.name)...")
+        showInUI("\(tool.name) 사용 중...")
     }
 
-    // Explain reasoning
+    // 추론 설명
     func onDecision(_ decision: AgentDecision) {
         if decision.needsExplanation {
-            showInUI("I chose this because: \(decision.reasoning)")
+            showInUI("이유: \(decision.reasoning)")
         }
     }
 
-    // Make work inspectable
+    // 작업 검사 가능성
     func onOutput(_ output: AgentOutput) {
-        // All output is in files user can see
-        // Or in visible UI state
+        // 모든 출력은 사용자가 볼 수 있는 파일에 있거나
+        // 가시적인 UI 상태에 있음
     }
 }
 ```
 </designing_for_trust>
 
 <checklist>
-## Product Design Checklist
+## 제품 설계 체크리스트
 
-### Progressive Disclosure
-- [ ] Basic requests work immediately (no config)
-- [ ] Depth is discoverable through use
-- [ ] No artificial ceiling on complexity
-- [ ] Capability hints provided
+### 복잡성의 점진적 공개
+- [ ] 기본 요청이 즉시 작동함 (설정 불필요)
+- [ ] 사용을 통해 깊이 있는 기능을 발견할 수 있음
+- [ ] 복잡성에 인위적인 한계가 없음
+- [ ] 기능 힌트가 제공됨
 
-### Latent Demand Discovery
-- [ ] Agent requests are logged
-- [ ] Success/failure is tracked
-- [ ] Patterns are reviewed regularly
-- [ ] Common patterns formalized into tools/prompts
+### 잠재적 수요 발견
+- [ ] 에이전트 요청이 로깅됨
+- [ ] 성공/실패가 추적됨
+- [ ] 패턴을 정기적으로 검토함
+- [ ] 공통 패턴이 도구/프롬프트로 공식화됨
 
-### Approval & Agency
-- [ ] Stakes assessed for each action type
-- [ ] Reversibility assessed for each action type
-- [ ] Approval pattern matches stakes/reversibility
-- [ ] Self-modification is legible (visible, understandable, reversible)
+### 승인 및 주체성
+- [ ] 각 액션 유형에 대해 중요도 평가됨
+- [ ] 각 액션 유형에 대해 가역성 평가됨
+- [ ] 승인 패턴이 중요도/가역성과 일치함
+- [ ] 자가 수정이 판독 가능함 (가시적, 이해 가능, 가역적)
 
-### Capability Visibility
-- [ ] Onboarding reveals key capabilities
-- [ ] Contextual suggestions provided
-- [ ] Users aren't expected to guess what's possible
+### 기능 가시성
+- [ ] 온보딩에서 핵심 기능을 드러냄
+- [ ] 맥락에 맞는 제안이 제공됨
+- [ ] 사용자가 가능한 것을 추측하게 만들지 않음
 
-### Trust
-- [ ] Agent actions are transparent
-- [ ] Behavior is predictable
-- [ ] Actions are reversible
-- [ ] User has control
+### 신뢰
+- [ ] 에이전트 행동이 투명함
+- [ ] 행동이 예측 가능함
+- [ ] 행동이 가역적임
+- [ ] 사용자가 제어권을 가짐
 </checklist>

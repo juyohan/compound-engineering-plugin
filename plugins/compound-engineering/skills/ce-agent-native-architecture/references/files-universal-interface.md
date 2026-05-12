@@ -1,223 +1,223 @@
 <overview>
-Files are the universal interface for agent-native applications. Agents are naturally fluent with file operations—they already know how to read, write, and organize files. This document covers why files work so well, how to organize them, and the context.md pattern for accumulated knowledge.
+파일은 에이전트 네이티브 애플리케이션을 위한 유니버설 인터페이스(universal interface)입니다. 에이전트는 본능적으로 파일 조작에 능숙합니다 — 그들은 이미 파일을 읽고, 쓰고, 구성하는 방법을 알고 있습니다. 이 문서는 왜 파일이 그렇게 잘 작동하는지, 파일을 어떻게 구성해야 하는지, 그리고 누적된 지식을 위한 context.md 패턴에 대해 다룹니다.
 </overview>
 
 <why_files>
-## Why Files
+## 왜 파일인가?
 
-Agents are naturally good at files. Claude Code works because bash + filesystem is the most battle-tested agent interface. When building agent-native apps, lean into this.
+에이전트는 천성적으로 파일 처리에 강합니다. Claude Code가 잘 작동하는 이유는 bash와 파일 시스템이 가장 검증된 에이전트 인터페이스이기 때문입니다. 에이전트 네이티브 앱을 구축할 때 이 점을 적극 활용하십시오.
 
-### Agents Already Know How
+### 에이전트는 이미 방법을 알고 있습니다
 
-You don't need to teach the agent your API—it already knows `cat`, `grep`, `mv`, `mkdir`. File operations are the primitives it's most fluent with.
+에이전트에게 여러분의 API를 가르칠 필요가 없습니다 — 에이전트는 이미 `cat`, `grep`, `mv`, `mkdir`을 알고 있습니다. 파일 조작은 에이전트가 가장 능숙하게 다루는 프리미티브(primitives)입니다.
 
-### Files Are Inspectable
+### 파일은 검사 가능합니다
 
-Users can see what the agent created, edit it, move it, delete it. No black box. Complete transparency into agent behavior.
+사용자는 에이전트가 무엇을 생성했는지 보고, 수정하고, 이동하고, 삭제할 수 있습니다. 블랙박스가 아닙니다. 에이전트의 행동에 대한 완전한 투명성을 제공합니다.
 
-### Files Are Portable
+### 파일은 이식성이 좋습니다
 
-Export is trivial. Backup is trivial. Users own their data. No vendor lock-in, no complex migration paths.
+내보내기가 사소합니다. 백업도 사소합니다. 사용자가 자신의 데이터를 소유합니다. 특정 벤더에 종속되지 않으며 복잡한 마이그레이션 경로가 필요하지 않습니다.
 
-### App State Stays in Sync
+### 앱 상태가 동기화된 상태로 유지됩니다
 
-On mobile, if you use the file system with iCloud, all devices share the same file system. The agent's work on one device appears on all devices—without you having to build a server.
+모바일에서 iCloud와 함께 파일 시스템을 사용하면 모든 기기가 동일한 파일 시스템을 공유합니다. 한 기기에서의 에이전트 작업이 별도의 서버를 구축하지 않고도 모든 기기에 나타납니다.
 
-### Directory Structure Is Information Architecture
+### 디렉토리 구조가 곧 정보 아키텍처입니다
 
-The filesystem gives you hierarchy for free. `/projects/acme/notes/` is self-documenting in a way that `SELECT * FROM notes WHERE project_id = 123` isn't.
+파일 시스템은 계층 구조를 무료로 제공합니다. `/projects/acme/notes/` 경로는 `SELECT * FROM notes WHERE project_id = 123` 쿼리보다 훨씬 더 직관적이고 자기 문서화적(self-documenting)인 방식입니다.
 </why_files>
 
 <file_organization>
-## File Organization Patterns
+## 파일 구성 패턴
 
-> **Needs validation:** These conventions are one approach that's worked so far, not a prescription. Better solutions should be considered.
+> **검증 필요:** 이 컨벤션들은 지금까지 효과가 있었던 하나의 접근 방식일 뿐이며, 절대적인 규정은 아닙니다. 더 나은 해결책이 고려되어야 합니다.
 
-A general principle of agent-native design: **Design for what agents can reason about.** The best proxy for that is what would make sense to a human. If a human can look at your file structure and understand what's going on, an agent probably can too.
+에이전트 네이티브 설계의 일반 원칙: **에이전트가 추론할 수 있는 방식으로 설계하십시오.** 이를 위한 가장 좋은 기준은 인간에게 상식적으로 이해되는 방식입니다. 인간이 여러분의 파일 구조를 보고 무슨 일이 일어나고 있는지 이해할 수 있다면, 에이전트도 아마 그럴 수 있을 것입니다.
 
-### Entity-Scoped Directories
+### 엔티티 범위 디렉토리 (Entity-Scoped Directories)
 
-Organize files around entities, not actors or file types:
+파일을 행위자나 파일 유형이 아닌 엔티티(entity)를 중심으로 구성하십시오:
 
 ```
 {entity_type}/{entity_id}/
-├── primary content
-├── metadata
-└── related materials
+├── 기본 콘텐츠
+├── 메타데이터
+└── 관련 자료
 ```
 
-**Example:** `Research/books/{bookId}/` contains everything about one book—full text, notes, sources, agent logs.
+**예시:** `Research/books/{bookId}/` 폴더는 한 권의 책에 관한 모든 것 — 전체 텍스트, 노트, 출처, 에이전트 로그 — 을 포함합니다.
 
-### Naming Conventions
+### 명명 규칙 (Naming Conventions)
 
-| File Type | Naming Pattern | Example |
+| 파일 유형 | 명명 패턴 | 예시 |
 |-----------|---------------|---------|
-| Entity data | `{entity}.json` | `library.json`, `status.json` |
-| Human-readable content | `{content_type}.md` | `introduction.md`, `profile.md` |
-| Agent reasoning | `agent_log.md` | Per-entity agent history |
-| Primary content | `full_text.txt` | Downloaded/extracted text |
-| Multi-volume | `volume{N}.txt` | `volume1.txt`, `volume2.txt` |
-| External sources | `{source_name}.md` | `wikipedia.md`, `sparknotes.md` |
-| Checkpoints | `{sessionId}.checkpoint` | UUID-based |
-| Configuration | `config.json` | Feature settings |
+| 엔티티 데이터 | `{entity}.json` | `library.json`, `status.json` |
+| 인간이 읽을 수 있는 콘텐츠 | `{content_type}.md` | `introduction.md`, `profile.md` |
+| 에이전트 추론 | `agent_log.md` | 엔티티별 에이전트 기록 |
+| 기본 콘텐츠 | `full_text.txt` | 다운로드/추출된 텍스트 |
+| 다권 구성 | `volume{N}.txt` | `volume1.txt`, `volume2.txt` |
+| 외부 소스 | `{source_name}.md` | `wikipedia.md`, `sparknotes.md` |
+| 체크포인트 | `{sessionId}.checkpoint` | UUID 기반 |
+| 구성 (Config) | `config.json` | 기능 설정 |
 
-### Directory Naming
+### 디렉토리 명명
 
-- **Entity-scoped:** `{entityType}/{entityId}/` (e.g., `Research/books/{bookId}/`)
-- **Type-scoped:** `{type}/` (e.g., `AgentCheckpoints/`, `AgentLogs/`)
-- **Convention:** Lowercase with underscores, not camelCase
+- **엔티티 범위:** `{entityType}/{entityId}/` (예: `Research/books/{bookId}/`)
+- **유형 범위:** `{type}/` (예: `AgentCheckpoints/`, `AgentLogs/`)
+- **컨벤션:** 소문자와 언더스코어(snake_case) 사용, camelCase 지양
 
-### Ephemeral vs. Durable Separation
+### 일시적 데이터와 영구적 데이터의 분리 (Ephemeral vs. Durable Separation)
 
-Separate agent working files from user's permanent data:
+에이전트의 작업용 파일과 사용자의 영구 데이터를 분리하십시오:
 
 ```
 Documents/
-├── AgentCheckpoints/     # Ephemeral (can delete)
+├── AgentCheckpoints/     # 일시적 (삭제 가능)
 │   └── {sessionId}.checkpoint
-├── AgentLogs/            # Ephemeral (debugging)
+├── AgentLogs/            # 일시적 (디버깅용)
 │   └── {type}/{sessionId}.md
-└── Research/             # Durable (user's work)
+└── Research/             # 영구적 (사용자 작업물)
     └── books/{bookId}/
 ```
 
-### The Split: Markdown vs JSON
+### 구분: Markdown vs JSON
 
-- **Markdown:** For content users might read or edit
-- **JSON:** For structured data the app queries
+- **Markdown:** 사용자가 읽거나 편집할 수 있는 콘텐츠용
+- **JSON:** 앱이 쿼리하는 구조화된 데이터용
 </file_organization>
 
 <context_md_pattern>
-## The context.md Pattern
+## context.md 패턴
 
-A file the agent reads at the start of each session and updates as it learns:
+에이전트가 각 세션 시작 시 읽고 학습함에 따라 업데이트하는 파일입니다:
 
 ```markdown
-# Context
+# 컨텍스트 (Context)
 
-## Who I Am
-Reading assistant for the Every app.
+## 나의 정체성
+Every 앱을 위한 독서 어시스턴트입니다.
 
-## What I Know About This User
-- Interested in military history and Russian literature
-- Prefers concise analysis
-- Currently reading War and Peace
+## 이 사용자에 대해 알고 있는 것
+- 군사사와 러시아 문학에 관심이 있음
+- 간결한 분석을 선호함
+- 현재 '전쟁과 평화'를 읽고 있음
 
-## What Exists
-- 12 notes in /notes
-- 3 active projects
-- User preferences at /preferences.md
+## 존재하는 자원
+- /notes 폴더에 12개의 노트가 있음
+- 3개의 활성 프로젝트가 있음
+- /preferences.md에 사용자 설정이 있음
 
-## Recent Activity
-- User created "Project kickoff" (2 hours ago)
-- Analyzed passage about Austerlitz (yesterday)
+## 최근 활동
+- 사용자가 "프로젝트 킥오프" 생성함 (2시간 전)
+- 아우스터리츠 전투에 관한 문구 분석함 (어제)
 
-## My Guidelines
-- Don't spoil books they're reading
-- Use their interests to personalize insights
+## 나의 지침
+- 읽고 있는 책의 내용을 스포일러하지 마십시오.
+- 사용자의 관심사를 활용하여 통찰을 개인화하십시오.
 
-## Current State
-- No pending tasks
-- Last sync: 10 minutes ago
+## 현재 상태
+- 대기 중인 작업 없음
+- 마지막 동기화: 10분 전
 ```
 
-### Benefits
+### 장점
 
-- **Agent behavior evolves without code changes** - Update the context, behavior changes
-- **Users can inspect and modify** - Complete transparency
-- **Natural place for accumulated context** - Learnings persist across sessions
-- **Portable across sessions** - Restart agent, knowledge preserved
+- **코드 변경 없이 에이전트 동작이 진화함** - 컨텍스트를 업데이트하면 동작이 바뀝니다.
+- **사용자가 검사하고 수정할 수 있음** - 완전한 투명성 제공.
+- **누적된 컨텍스트를 위한 자연스러운 장소** - 학습 내용이 세션 간에 유지됩니다.
+- **세션 간 이식성** - 에이전트를 재시작해도 지식이 보존됩니다.
 
-### How It Works
+### 작동 방식
 
-1. Agent reads `context.md` at session start
-2. Agent updates it when learning something important
-3. System can also update it (recent activity, new resources)
-4. Context persists across sessions
+1. 에이전트가 세션 시작 시 `context.md`를 읽습니다.
+2. 에이전트가 중요한 내용을 학습했을 때 이를 업데이트합니다.
+3. 시스템도 이를 업데이트할 수 있습니다 (최근 활동, 새로운 자원 등).
+4. 컨텍스트가 세션 간에 영구적으로 유지됩니다.
 
-### What to Include
+### 포함할 내용
 
-| Section | Purpose |
+| 섹션 | 목적 |
 |---------|---------|
-| Who I Am | Agent identity and role |
-| What I Know About This User | Learned preferences, interests |
-| What Exists | Available resources, data |
-| Recent Activity | Context for continuity |
-| My Guidelines | Learned rules and constraints |
-| Current State | Session status, pending items |
+| 나의 정체성 | 에이전트의 정체성과 역할 |
+| 사용자에 대해 알고 있는 것 | 학습된 취향, 관심사 |
+| 존재하는 자원 | 가용한 자원 및 데이터 |
+| 최근 활동 | 연속성을 위한 문맥 |
+| 나의 지침 | 학습된 규칙 및 제약 사항 |
+| 현재 상태 | 세션 상태, 대기 항목 |
 </context_md_pattern>
 
 <files_vs_database>
-## Files vs. Database
+## 파일 vs 데이터베이스
 
-> **Needs validation:** This framing is informed by mobile development. For web apps, the tradeoffs are different.
+> **검증 필요:** 이 프레임워크는 모바일 개발 경험을 바탕으로 합니다. 웹 앱의 경우 트레이드오프가 다를 수 있습니다.
 
-| Use files for... | Use database for... |
+| 파일을 사용해야 할 때... | 데이터베이스를 사용해야 할 때... |
 |------------------|---------------------|
-| Content users should read/edit | High-volume structured data |
-| Configuration that benefits from version control | Data that needs complex queries |
-| Agent-generated content | Ephemeral state (sessions, caches) |
-| Anything that benefits from transparency | Data with relationships |
-| Large text content | Data that needs indexing |
+| 사용자가 읽고 편집해야 하는 콘텐츠 | 대량의 구조화된 데이터 |
+| 버전 관리가 유리한 설정(config) | 복잡한 쿼리가 필요한 데이터 |
+| 에이전트가 생성한 콘텐츠 | 일시적인 상태 (세션, 캐시) |
+| 투명성이 중요한 모든 것 | 관계형 데이터 |
+| 대용량 텍스트 콘텐츠 | 인덱싱이 필요한 데이터 |
 
-**The principle:** Files for legibility, databases for structure. When in doubt, files—they're more transparent and users can always inspect them.
+**원칙:** 가독성을 위해서는 파일을, 구조를 위해서는 데이터베이스를 사용하십시오. 확신이 서지 않는다면 파일을 선택하십시오 — 파일이 더 투명하며 사용자가 언제든 검사할 수 있습니다.
 
-### When Files Work Best
+### 파일이 가장 잘 작동하는 경우
 
-- Scale is small (one user's library, not millions of records)
-- Transparency is valued over query speed
-- Cloud sync (iCloud, Dropbox) works well with files
+- 규모가 작을 때 (수백만 개의 레코드가 아닌, 한 사용자의 라이브러리 수준)
+- 쿼리 속도보다 투명성이 가치 있을 때
+- 클라우드 동기화(iCloud, Dropbox)가 파일과 잘 작동할 때
 
-### Hybrid Approach
+### 하이브리드 접근 방식
 
-Even if you need a database for performance, consider maintaining a file-based "source of truth" that the agent works with, synced to the database for the UI:
+성능을 위해 데이터베이스가 필요하더라도, 에이전트가 작업하는 파일 기반의 "단일 진실 공급원(source of truth)"을 유지하고 이를 UI를 위해 데이터베이스와 동기화하는 것을 고려하십시오:
 
 ```
-Files (agent workspace):
+파일 (에이전트 작업 공간):
   Research/book_123/introduction.md
 
-Database (UI queries):
+데이터베이스 (UI 쿼리용):
   research_index: { bookId, path, title, createdAt }
 ```
-</files_vs_database>
+</hybrid_approach>
 
 <conflict_model>
-## Conflict Model
+## 충돌 모델 (Conflict Model)
 
-If agents and users write to the same files, you need a conflict model.
+에이전트와 사용자가 동일한 파일에 쓰는 경우, 충돌 모델이 필요합니다.
 
-### Current Reality
+### 현재의 실제 사례
 
-Most implementations use **last-write-wins** via atomic writes:
+대부분의 구현은 원자적 쓰기(atomic write)를 통한 **최종 쓰기 승리(last-write-wins)** 방식을 사용합니다:
 
 ```swift
 try data.write(to: url, options: [.atomic])
 ```
 
-This is simple but can lose changes.
+이는 단순하지만 변경 사항을 잃을 수 있습니다.
 
-### Options
+### 옵션들
 
-| Strategy | Pros | Cons |
+| 전략 | 장점 | 단점 |
 |----------|------|------|
-| **Last write wins** | Simple | Changes can be lost |
-| **Agent checks before writing** | Preserves user edits | More complexity |
-| **Separate spaces** | No conflicts | Less collaboration |
-| **Append-only logs** | Never overwrites | Files grow forever |
-| **File locking** | Safe concurrent access | Complexity, can block |
+| **최종 쓰기 승리** | 단순함 | 변경 사항 유실 가능 |
+| **에이전트가 쓰기 전 확인** | 사용자 편집 내용 보존 | 복잡성 증가 |
+| **공간 분리** | 충돌 없음 | 협업 효율 저하 |
+| **추가 전용 로그** | 절대 덮어쓰지 않음 | 파일이 무한히 커짐 |
+| **파일 잠금 (Locking)** | 안전한 동시 접근 | 복잡하며 블로킹 발생 가능 |
 
-### Recommended Approaches
+### 권장 접근 방식
 
-**For files agents write frequently (logs, status):** Last-write-wins is fine. Conflicts are rare.
+**에이전트가 자주 쓰는 파일 (로그, 상태):** 최종 쓰기 승리 방식으로도 충분합니다. 충돌이 드뭅니다.
 
-**For files users edit (profiles, notes):** Consider explicit handling:
-- Agent checks modification time before overwriting
-- Or keep agent output separate from user-editable content
-- Or use append-only pattern
+**사용자가 편집하는 파일 (프로필, 노트):** 명시적인 처리를 고려하십시오:
+- 에이전트가 덮어쓰기 전에 수정 시간을 확인합니다.
+- 또는 에이전트 출력을 사용자가 편집 가능한 콘텐츠와 분리합니다.
+- 또는 추가 전용(append-only) 패턴을 사용합니다.
 
-### iCloud Considerations
+### iCloud 고려 사항
 
-iCloud sync adds complexity. It creates `{filename} (conflict).md` files when sync conflicts occur. Monitor for these:
+iCloud 동기화는 복잡성을 더합니다. 동기화 충돌이 발생하면 `{filename} (conflict).md` 파일들을 생성합니다. 이를 모니터링하십시오:
 
 ```swift
 NotificationCenter.default.addObserver(
@@ -226,76 +226,76 @@ NotificationCenter.default.addObserver(
 )
 ```
 
-### System Prompt Guidance
+### 시스템 프롬프트 지침
 
-Tell the agent about the conflict model:
+에이전트에게 충돌 모델에 대해 알려주십시오:
 
 ```markdown
-## Working with User Content
+## 사용자 콘텐츠 작업 시 주의사항
 
-When you create content, the user may edit it afterward. Always read
-existing files before modifying them—the user may have made improvements
-you should preserve.
+당신이 콘텐츠를 생성한 후 사용자가 이를 편집할 수 있습니다. 파일을 수정하기 전에는
+항상 기존 파일을 먼저 읽으십시오 — 사용자가 보존해야 할 개선 사항을 만들었을 수
+있습니다.
 
-If a file has been modified since you last wrote it, ask before overwriting.
+당신이 마지막으로 쓴 이후에 파일이 수정되었다면, 덮어쓰기 전에 물어보십시오.
 ```
 </conflict_model>
 
 <examples>
-## Example: Reading App File Structure
+## 예시: 독서 앱 파일 구조
 
 ```
 Documents/
 ├── Library/
-│   └── library.json              # Book metadata
+│   └── library.json              # 책 메타데이터
 ├── Research/
 │   └── books/
 │       └── {bookId}/
-│           ├── full_text.txt     # Downloaded content
-│           ├── introduction.md   # Agent-generated, user-editable
-│           ├── notes.md          # User notes
+│           ├── full_text.txt     # 다운로드된 콘텐츠
+│           ├── introduction.md   # 에이전트 생성, 사용자 편집 가능
+│           ├── notes.md          # 사용자 노트
 │           └── sources/
-│               ├── wikipedia.md  # Research gathered by agent
+│               ├── wikipedia.md  # 에이전트가 수집한 조사 자료
 │               └── reviews.md
 ├── Chats/
-│   └── {conversationId}.json     # Chat history
+│   └── {conversationId}.json     # 채팅 기록
 ├── Profile/
-│   └── profile.md                # User reading profile
-└── context.md                    # Agent's accumulated knowledge
+│   └── profile.md                # 사용자 독서 프로필
+└── context.md                    # 에이전트의 누적된 지식
 ```
 
-**How it works:**
+**작동 방식:**
 
-1. User adds book → creates entry in `library.json`
-2. Agent downloads text → saves to `Research/books/{id}/full_text.txt`
-3. Agent researches → saves to `sources/`
-4. Agent generates intro → saves to `introduction.md`
-5. User edits intro → agent sees changes on next read
-6. Agent updates `context.md` with learnings
+1. 사용자가 책을 추가함 → `library.json`에 엔트리 생성
+2. 에이전트가 텍스트 다운로드함 → `Research/books/{id}/full_text.txt`에 저장
+3. 에이전트가 조사함 → `sources/` 폴더에 저장
+4. 에이전트가 서론을 생성함 → `introduction.md`에 저장
+5. 사용자가 서론을 편집함 → 에이전트가 다음 읽기 때 변경 사항을 확인
+6. 에이전트가 학습 내용을 바탕으로 `context.md`를 업데이트함
 </examples>
 
 <checklist>
-## Files as Universal Interface Checklist
+## 파일 유니버설 인터페이스 체크리스트
 
-### Organization
-- [ ] Entity-scoped directories (`{type}/{id}/`)
-- [ ] Consistent naming conventions
-- [ ] Ephemeral vs durable separation
-- [ ] Markdown for human content, JSON for structured data
+### 구성 (Organization)
+- [ ] 엔티티 범위 디렉토리 구조 사용 (`{type}/{id}/`)
+- [ ] 일관된 명명 규칙 준수
+- [ ] 일시적 데이터와 영구적 데이터 분리
+- [ ] 인간용 콘텐츠는 Markdown, 구조화 데이터는 JSON 사용
 
 ### context.md
-- [ ] Agent reads context at session start
-- [ ] Agent updates context when learning
-- [ ] Includes: identity, user knowledge, what exists, guidelines
-- [ ] Persists across sessions
+- [ ] 에이전트가 세션 시작 시 컨텍스트를 읽음
+- [ ] 에이전트가 학습 시 컨텍스트를 업데이트함
+- [ ] 포함 내용: 정체성, 사용자 지식, 자원 현황, 지침
+- [ ] 세션 간 보존됨
 
-### Conflict Handling
-- [ ] Conflict model defined (last-write-wins, check-before-write, etc.)
-- [ ] Agent guidance in system prompt
-- [ ] iCloud conflict monitoring (if applicable)
+### 충돌 처리 (Conflict Handling)
+- [ ] 충돌 모델 정의 완료 (최종 쓰기 승리, 쓰기 전 확인 등)
+- [ ] 시스템 프롬프트에 에이전트 지침 포함
+- [ ] iCloud 충돌 모니터링 (해당하는 경우)
 
-### Integration
-- [ ] UI observes file changes (or shared service)
-- [ ] Agent can read user edits
-- [ ] User can inspect agent output
+### 통합 (Integration)
+- [ ] UI가 파일 변경을 관찰함 (또는 공유 서비스 사용)
+- [ ] 에이전트가 사용자의 편집 내용을 읽을 수 있음
+- [ ] 사용자가 에이전트의 출력을 검사할 수 있음
 </checklist>

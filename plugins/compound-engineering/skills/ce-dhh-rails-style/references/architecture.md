@@ -1,9 +1,9 @@
-# Architecture - DHH Rails Style
+# 아키텍처 (Architecture) - DHH Rails 스타일
 
 <routing>
-## Routing
+## 라우팅 (Routing)
 
-Everything maps to CRUD. Nested resources for related actions:
+모든 것은 CRUD로 매핑됩니다. 관련된 액션은 중첩된 리소스(nested resources)를 사용하십시오:
 
 ```ruby
 Rails.application.routes.draw do
@@ -19,40 +19,40 @@ Rails.application.routes.draw do
 end
 ```
 
-**Verb-to-noun conversion:**
-| Action | Resource |
+**동사에서 명사로의 변환:**
+| 액션 | 리소스 |
 |--------|----------|
-| close a card | `card.closure` |
-| watch a board | `board.watching` |
-| mark as golden | `card.goldness` |
-| archive a card | `card.archival` |
+| 카드를 닫기 | `card.closure` |
+| 보드를 주시(watch)하기 | `board.watching` |
+| 골든(golden)으로 표시하기 | `card.goldness` |
+| 카드를 아카이브하기 | `card.archival` |
 
-**Shallow nesting** - avoid deep URLs:
+**얕은 중첩(Shallow nesting)** - 깊은 URL을 피하십시오:
 ```ruby
 resources :boards do
-  resources :cards, shallow: true  # /boards/:id/cards, but /cards/:id
+  resources :cards, shallow: true  # /boards/:id/cards 이지만, 개별 카드는 /cards/:id
 end
 ```
 
-**Singular resources** for one-per-parent:
+**단수 리소스(Singular resources)** - 부모 당 하나만 존재하는 경우:
 ```ruby
-resource :closure   # not resources
+resource :closure   # resources가 아님
 resource :goldness
 ```
 
-**Resolve for URL generation:**
+**URL 생성을 위한 resolve:**
 ```ruby
 # config/routes.rb
 resolve("Comment") { |comment| [comment.card, anchor: dom_id(comment)] }
 
-# Now url_for(@comment) works correctly
+# 이제 url_for(@comment)가 올바르게 작동합니다.
 ```
 </routing>
 
 <multi_tenancy>
-## Multi-Tenancy (Path-Based)
+## 멀티 테넌시 (경로 기반)
 
-**Middleware extracts tenant** from URL prefix:
+**미들웨어가 URL 접두사에서 테넌트를 추출합니다:**
 
 ```ruby
 # lib/tenant_extractor.rb
@@ -72,16 +72,16 @@ class TenantExtractor
 end
 ```
 
-**Cookie scoping** per tenant:
+**테넌트 경로별 쿠키 범위(scoping):**
 ```ruby
-# Cookies scoped to tenant path
+# 테넌트 경로로 범위가 지정된 쿠키
 cookies.signed[:session_id] = {
   value: session.id,
   path: "/#{Current.account.id}"
 }
 ```
 
-**Background job context** - serialize tenant:
+**백그라운드 작업 컨텍스트** - 테넌트 직렬화:
 ```ruby
 class ApplicationJob < ActiveJob::Base
   around_perform do |job, block|
@@ -90,7 +90,7 @@ class ApplicationJob < ActiveJob::Base
 end
 ```
 
-**Recurring jobs** must iterate all tenants:
+**반복 작업(Recurring jobs)**은 모든 테넌트를 순회해야 합니다:
 ```ruby
 class DailyDigestJob < ApplicationJob
   def perform
@@ -103,20 +103,20 @@ class DailyDigestJob < ApplicationJob
 end
 ```
 
-**Controller security** - always scope through tenant:
+**컨트롤러 보안** - 항상 테넌트를 통해 범위를 제한하십시오:
 ```ruby
-# Good - scoped through user's accessible records
+# 권장 - 사용자가 접근 가능한 레코드를 통해 범위 제한
 @card = Current.user.accessible_cards.find(params[:id])
 
-# Avoid - direct lookup
+# 지양 - 직접 조회
 @card = Card.find(params[:id])
 ```
 </multi_tenancy>
 
 <authentication>
-## Authentication
+## 인증 (Authentication)
 
-Custom passwordless magic link auth (~150 lines total):
+커스텀 패스워드리스 매직 링크 인증 (총 ~150라인):
 
 ```ruby
 # app/models/session.rb
@@ -141,13 +141,13 @@ class MagicLink < ApplicationRecord
 end
 ```
 
-**Why not Devise:**
-- ~150 lines vs massive dependency
-- No password storage liability
-- Simpler UX for users
-- Full control over flow
+**Devise를 사용하지 않는 이유:**
+- 거대한 의존성 대신 ~150라인의 코드로 구현 가능
+- 패스워드 저장에 따른 책임(liability) 없음
+- 사용자에게 더 단순한 UX 제공
+- 흐름을 완전히 제어 가능
 
-**Bearer token** for APIs:
+**API용 Bearer 토큰:**
 ```ruby
 module Authentication
   extend ActiveSupport::Concern
@@ -171,9 +171,9 @@ end
 </authentication>
 
 <background_jobs>
-## Background Jobs
+## 백그라운드 작업 (Background Jobs)
 
-Jobs are shallow wrappers calling model methods:
+Job은 모델 메서드를 호출하는 얇은 래퍼(wrapper)입니다:
 
 ```ruby
 class NotifyWatchersJob < ApplicationJob
@@ -183,9 +183,9 @@ class NotifyWatchersJob < ApplicationJob
 end
 ```
 
-**Naming convention:**
-- `_later` suffix for async: `card.notify_watchers_later`
-- `_now` suffix for immediate: `card.notify_watchers_now`
+**명명 규칙:**
+- 비동기 실행 시 `_later` 접미사: `card.notify_watchers_later`
+- 즉시 실행 시 `_now` 접미사: `card.notify_watchers_now`
 
 ```ruby
 module Watchable
@@ -205,40 +205,40 @@ module Watchable
 end
 ```
 
-**Database-backed** with Solid Queue:
-- No Redis required
-- Same transactional guarantees as your data
-- Simpler infrastructure
+**Solid Queue를 이용한 데이터베이스 기반 작업:**
+- Redis 불필요
+- 데이터와 동일한 트랜잭션 보장
+- 단순한 인프라 구성
 
-**Transaction safety:**
+**트랜잭션 안전성:**
 ```ruby
 # config/application.rb
 config.active_job.enqueue_after_transaction_commit = true
 ```
 
-**Error handling** by type:
+**유형별 에러 처리:**
 ```ruby
 class DeliveryJob < ApplicationJob
-  # Transient errors - retry with backoff
+  # 일시적 에러 - backoff와 함께 재시도
   retry_on Net::OpenTimeout, Net::ReadTimeout,
            Resolv::ResolvError,
            wait: :polynomially_longer
 
-  # Permanent errors - log and discard
+  # 영구적 에러 - 로그 기록 후 폐기
   discard_on Net::SMTPSyntaxError do |job, error|
     Sentry.capture_exception(error, level: :info)
   end
 end
 ```
 
-**Batch processing** with continuable:
+**Continuable을 이용한 배치 처리:**
 ```ruby
 class ProcessCardsJob < ApplicationJob
   include ActiveJob::Continuable
 
   def perform
     Card.in_batches.each_record do |card|
-      checkpoint!  # Resume from here if interrupted
+      checkpoint!  # 중단될 경우 여기서부터 재개
       process(card)
     end
   end
@@ -247,9 +247,9 @@ end
 </background_jobs>
 
 <database_patterns>
-## Database Patterns
+## 데이터베이스 패턴
 
-**UUIDs as primary keys** (time-sortable UUIDv7):
+**기본 키로 UUID 사용** (시간순 정렬 가능한 UUIDv7):
 ```ruby
 # migration
 create_table :cards, id: :uuid do |t|
@@ -257,42 +257,42 @@ create_table :cards, id: :uuid do |t|
 end
 ```
 
-Benefits: No ID enumeration, distributed-friendly, client-side generation.
+장점: ID 추측 불가, 분산 환경 친화적, 클라이언트 측 생성 가능.
 
-**State as records** (not booleans):
+**상태를 레코드로 관리** (불리언이 아님):
 ```ruby
-# Instead of closed: boolean
+# closed: boolean 대신
 class Card::Closure < ApplicationRecord
   belongs_to :card
   belongs_to :creator, class_name: "User"
 end
 
-# Queries become joins
-Card.joins(:closure)          # closed
-Card.where.missing(:closure)  # open
+# 쿼리는 조인이 됨
+Card.joins(:closure)          # 닫힌 카드
+Card.where.missing(:closure)  # 열린 카드
 ```
 
-**Hard deletes** - no soft delete:
+**영구 삭제(Hard deletes)** - 소프트 삭제 지양:
 ```ruby
-# Just destroy
+# 그냥 삭제
 card.destroy!
 
-# Use events for history
+# 이력을 위해 이벤트를 기록
 card.record_event(:deleted, by: Current.user)
 ```
 
-Simplifies queries, uses event logs for auditing.
+쿼리를 단순화하고 감사를 위해 이벤트 로그를 사용합니다.
 
-**Counter caches** for performance:
+**성능을 위한 카운터 캐시(Counter caches):**
 ```ruby
 class Comment < ApplicationRecord
   belongs_to :card, counter_cache: true
 end
 
-# card.comments_count available without query
+# 쿼리 없이 card.comments_count 사용 가능
 ```
 
-**Account scoping** on every table:
+**모든 테이블에 계정 범위(Account scoping) 적용:**
 ```ruby
 class Card < ApplicationRecord
   belongs_to :account
@@ -304,7 +304,7 @@ end
 <current_attributes>
 ## Current Attributes
 
-Use `Current` for request-scoped state:
+요청 범위(request-scoped) 상태를 위해 `Current`를 사용하십시오:
 
 ```ruby
 # app/models/current.rb
@@ -320,7 +320,7 @@ class Current < ActiveSupport::CurrentAttributes
 end
 ```
 
-Set in controller:
+컨트롤러에서 설정:
 ```ruby
 class ApplicationController < ActionController::Base
   before_action :set_current_request
@@ -334,7 +334,7 @@ class ApplicationController < ActionController::Base
 end
 ```
 
-Use throughout app:
+앱 전반에서 사용:
 ```ruby
 class Card < ApplicationRecord
   belongs_to :creator, default: -> { Current.user }
@@ -343,21 +343,21 @@ end
 </current_attributes>
 
 <caching>
-## Caching
+## 캐싱 (Caching)
 
-**HTTP caching** with ETags:
+**ETag을 이용한 HTTP 캐싱:**
 ```ruby
 fresh_when etag: [@card, Current.user.timezone]
 ```
 
-**Fragment caching:**
+**조각 캐싱(Fragment caching):**
 ```erb
 <% cache card do %>
   <%= render card %>
 <% end %>
 ```
 
-**Russian doll caching:**
+**러시아 인형 캐싱 (Russian doll caching):**
 ```erb
 <% cache @board do %>
   <% @board.cards.each do |card| %>
@@ -368,30 +368,30 @@ fresh_when etag: [@card, Current.user.timezone]
 <% end %>
 ```
 
-**Cache invalidation** via `touch: true`:
+**`touch: true`를 통한 캐시 무효화:**
 ```ruby
 class Card < ApplicationRecord
   belongs_to :board, touch: true
 end
 ```
 
-**Solid Cache** - database-backed:
-- No Redis required
-- Consistent with application data
-- Simpler infrastructure
+**Solid Cache - 데이터베이스 기반 캐시:**
+- Redis 불필요
+- 애플리케이션 데이터와 일관성 유지
+- 단순한 인프라 구성
 </caching>
 
 <configuration>
-## Configuration
+## 설정 (Configuration)
 
-**ENV.fetch with defaults:**
+**기본값을 포함한 ENV.fetch:**
 ```ruby
 # config/application.rb
 config.active_job.queue_adapter = ENV.fetch("QUEUE_ADAPTER", "solid_queue").to_sym
 config.cache_store = ENV.fetch("CACHE_STORE", "solid_cache").to_sym
 ```
 
-**Multiple databases:**
+**다중 데이터베이스:**
 ```yaml
 # config/database.yml
 production:
@@ -408,12 +408,12 @@ production:
     migrations_paths: db/cache_migrate
 ```
 
-**Switch between SQLite and MySQL via ENV:**
+**ENV를 통한 SQLite와 MySQL 간 전환:**
 ```ruby
 adapter = ENV.fetch("DATABASE_ADAPTER", "sqlite3")
 ```
 
-**CSP extensible via ENV:**
+**ENV를 통해 확장 가능한 CSP:**
 ```ruby
 config.content_security_policy do |policy|
   policy.default_src :self
@@ -423,9 +423,9 @@ end
 </configuration>
 
 <testing>
-## Testing
+## 테스트 (Testing)
 
-**Minitest**, not RSpec:
+RSpec 대신 **Minitest**:
 ```ruby
 class CardTest < ActiveSupport::TestCase
   test "closing a card creates a closure" do
@@ -439,7 +439,7 @@ class CardTest < ActiveSupport::TestCase
 end
 ```
 
-**Fixtures** instead of factories:
+Factory 대신 **Fixture**:
 ```yaml
 # test/fixtures/cards.yml
 one:
@@ -453,7 +453,7 @@ two:
   creator: bob
 ```
 
-**Integration tests** for controllers:
+컨트롤러용 **통합 테스트**:
 ```ruby
 class CardsControllerTest < ActionDispatch::IntegrationTest
   test "closing a card" do
@@ -468,15 +468,15 @@ class CardsControllerTest < ActionDispatch::IntegrationTest
 end
 ```
 
-**Tests ship with features** - same commit, not TDD-first but together.
+**기능과 함께 테스트를 배포** - TDD가 우선은 아니더라도 동일한 커밋에 함께 포함되어야 합니다.
 
-**Regression tests for security fixes** - always.
+**보안 수정 시 항상 회귀 테스트(regression tests) 포함.**
 </testing>
 
 <events>
-## Event Tracking
+## 이벤트 트래킹 (Event Tracking)
 
-Events are the single source of truth:
+이벤트는 단일 진실 공급원(single source of truth)입니다:
 
 ```ruby
 class Event < ApplicationRecord
@@ -506,13 +506,13 @@ module Eventable
 end
 ```
 
-**Webhooks driven by events** - events are the canonical source.
+**이벤트 기반 웹훅** - 이벤트가 정식 소스가 됩니다.
 </events>
 
 <email_patterns>
-## Email Patterns
+## 이메일 패턴
 
-**Multi-tenant URL helpers:**
+**멀티 테넌트 URL 헬퍼:**
 ```ruby
 class ApplicationMailer < ActionMailer::Base
   def default_url_options
@@ -525,7 +525,7 @@ class ApplicationMailer < ActionMailer::Base
 end
 ```
 
-**Timezone-aware delivery:**
+**타임존 인식 배달:**
 ```ruby
 class NotificationMailer < ApplicationMailer
   def daily_digest(user)
@@ -538,13 +538,13 @@ class NotificationMailer < ApplicationMailer
 end
 ```
 
-**Batch delivery:**
+**배치 배달:**
 ```ruby
 emails = users.map { |user| NotificationMailer.digest(user) }
 ActiveJob.perform_all_later(emails.map(&:deliver_later))
 ```
 
-**One-click unsubscribe (RFC 8058):**
+**원클릭 구독 취소 (RFC 8058):**
 ```ruby
 class ApplicationMailer < ActionMailer::Base
   after_action :set_unsubscribe_headers
@@ -559,27 +559,27 @@ end
 </email_patterns>
 
 <security_patterns>
-## Security Patterns
+## 보안 패턴
 
-**XSS prevention** - escape in helpers:
+**XSS 방지** - 헬퍼에서 이스케이프:
 ```ruby
 def formatted_content(text)
-  # Escape first, then mark safe
+  # 먼저 이스케이프한 뒤, safe로 표시
   simple_format(h(text)).html_safe
 end
 ```
 
-**SSRF protection:**
+**SSRF 보호:**
 ```ruby
-# Resolve DNS once, pin the IP
+# DNS를 한 번 해결하고 IP를 고정
 def fetch_safely(url)
   uri = URI.parse(url)
   ip = Resolv.getaddress(uri.host)
 
-  # Block private networks
+  # 사설 네트워크 차단
   raise "Private IP" if private_ip?(ip)
 
-  # Use pinned IP for request
+  # 고정된 IP로 요청 수행
   Net::HTTP.start(uri.host, uri.port, ipaddr: ip) { |http| ... }
 end
 
@@ -589,7 +589,7 @@ def private_ip?(ip)
 end
 ```
 
-**Content Security Policy:**
+**콘텐츠 보안 정책 (CSP):**
 ```ruby
 # config/initializers/content_security_policy.rb
 Rails.application.configure do
@@ -604,7 +604,7 @@ Rails.application.configure do
 end
 ```
 
-**ActionText sanitization:**
+**ActionText 새니타이제이션(Sanitization):**
 ```ruby
 # config/initializers/action_text.rb
 Rails.application.config.after_initialize do
@@ -616,9 +616,9 @@ end
 </security_patterns>
 
 <active_storage>
-## Active Storage Patterns
+## Active Storage 패턴
 
-**Variant preprocessing:**
+**변형(Variant) 전처리:**
 ```ruby
 class User < ApplicationRecord
   has_one_attached :avatar do |attachable|
@@ -628,13 +628,13 @@ class User < ApplicationRecord
 end
 ```
 
-**Direct upload expiry** - extend for slow connections:
+**직접 업로드 만료** - 느린 연결을 위해 확장:
 ```ruby
 # config/initializers/active_storage.rb
 Rails.application.config.active_storage.service_urls_expire_in = 48.hours
 ```
 
-**Avatar optimization** - redirect to blob:
+**아바타 최적화** - blob으로 리다이렉트:
 ```ruby
 def show
   expires_in 1.year, public: true
@@ -642,7 +642,7 @@ def show
 end
 ```
 
-**Mirror service** for migrations:
+**마이그레이션을 위한 미러 서비스:**
 ```yaml
 # config/storage.yml
 production:

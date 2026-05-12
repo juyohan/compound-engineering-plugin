@@ -1,116 +1,116 @@
-# Compound Engineering Feedback Format
+# Compound Engineering 피드백 형식 (Compound Engineering Feedback Format)
 
-Use this shape when converting Riffrec evidence into a durable brainstorm or planning input.
+Riffrec 증거를 내구성이 있는 브레인스토밍 또는 계획 입력값으로 변환할 때 이 형식을 사용하십시오.
 
-## Finding
+## 발견 사항 (Finding)
 
 ```markdown
-### F1. <Short problem title>
+### F1. <문제 요약 제목>
 
 - **Severity:** P0/P1/P2/P3
-- **Observed:** <What happened, grounded in transcript/events/screenshots>
-- **Expected:** <What the user appeared to expect or what the product should do>
-- **Evidence:** <Moment IDs and screenshot links>
-- **Confidence:** High/Medium/Low, with reason
+- **Observed:** <기록/이벤트/스크린샷에 근거하여 실제로 발생한 상황>
+- **Expected:** <사용자가 기대한 것으로 보이는 동작 또는 제품의 정상 동작>
+- **Evidence:** <Moment ID 및 스크린샷 링크>
+- **Confidence:** High/Medium/Low 및 그 이유
 - **Requirement candidates:** R1, R2
 ```
 
-## Requirements Kickoff
+## 요구 사항 킥오프 (Requirements Kickoff)
 
 ```markdown
 ---
 date: YYYY-MM-DD
-topic: <topic>
+topic: <주제>
 ---
 
-# <Topic Title>
+# <주제 제목>
 
-## Problem Frame
+## 문제 프레임 (Problem Frame)
 
-<Who is affected, what is changing, and why it matters.>
-
----
-
-## Actors
-
-- A1. User: <Role in the recorded workflow>
-- A2. Product surface: <System under test>
-- A3. Agent/assistant, if relevant: <Role in the workflow>
+<누가 영향을 받는지, 무엇이 변하는지, 그리고 왜 중요한지 작성합니다.>
 
 ---
 
-## Key Flows
+## 행위자 (Actors)
 
-- F1. Recorded feedback triage
-  - **Trigger:** A Riffrec zip is available for review.
+- A1. User: <녹화된 워크플로우에서의 역할>
+- A2. Product surface: <테스트 대상 시스템>
+- A3. Agent/assistant (해당되는 경우): <워크플로우에서의 역할>
+
+---
+
+## 주요 흐름 (Key Flows)
+
+- F1. 녹화된 피드백 분류
+  - **Trigger:** 리뷰 가능한 Riffrec zip 파일이 준비됨.
   - **Actors:** A1, A2
-  - **Steps:** <3-7 product steps seen in the recording>
-  - **Outcome:** <What should be true after the fix>
+  - **Steps:** <녹화에서 확인된 3-7단계의 제품 동작 단계>
+  - **Outcome:** <수정 후 달성되어야 하는 상태>
   - **Covered by:** R1, R2
 
 ---
 
-## Requirements
+## 요구 사항 (Requirements)
 
-**Observed product behavior**
-- R1. <Concrete product behavior requirement>
+**관찰된 제품 동작**
+- R1. <구체적인 제품 동작 요구 사항>
 
-**Feedback evidence and reviewability**
-- R2. <Requirement about making the issue observable or preventing recurrence>
-
----
-
-## Acceptance Examples
-
-- AE1. **Covers R1.** Given <state>, when <action>, <outcome>.
+**피드백 증거 및 리뷰 가능성**
+- R2. <문제를 관찰 가능하게 만들거나 재발을 방지하기 위한 요구 사항>
 
 ---
 
-## Success Criteria
+## 수락 예시 (Acceptance Examples)
 
-- <Human outcome>
-- <Downstream agent handoff quality>
-
----
-
-## Scope Boundaries
-
-- <Deliberate non-goal>
+- AE1. **R1 충족 여부 확인.** Given <상태>, When <동작>, <결과>.
 
 ---
 
-## Key Decisions
+## 성공 기준 (Success Criteria)
 
-- <Decision>: <Rationale>
-
----
-
-## Dependencies / Assumptions
-
-- <Material dependency or assumption>
+- <사용자 측면의 결과>
+- <하류 에이전트 전달 품질>
 
 ---
 
-## Outstanding Questions
+## 범위 경계 (Scope Boundaries)
 
-### Resolve Before Planning
-
-- <Only product questions that block planning>
-
-### Deferred to Planning
-
-- [Technical] <Questions better answered during codebase exploration>
+- <의도적인 비목표(non-goal)>
 
 ---
 
-## Next Steps
+## 주요 결정 사항 (Key Decisions)
 
--> /ce-brainstorm to confirm, correct, and regroup the captured requirements before any planning.
+- <결정 사항>: <근거>
+
+---
+
+## 의존성 / 가정 (Dependencies / Assumptions)
+
+- <중요한 의존성 또는 가정>
+
+---
+
+## 남은 질문 (Outstanding Questions)
+
+### 계획 수립 전 해결 필요
+
+- <계획 수립을 가로막는 제품 관련 질문만 작성>
+
+### 계획 수립 단계로 이월
+
+- [Technical] <코드베이스 탐색 중에 답변하는 것이 더 적절한 질문>
+
+---
+
+## 다음 단계 (Next Steps)
+
+-> /ce-brainstorm 을 호출하여 계획 수립 전 수집된 요구 사항을 확인, 수정 및 재정리하십시오.
 ```
 
-## Evidence Rules
+## 증거 규칙 (Evidence Rules)
 
-- Prefer moment IDs and screenshot links over prose-only claims.
-- Mark visual interpretation as an inference when the screenshot does not prove intent.
-- Requirements should describe product behavior, not implementation details.
-- Do not include absolute local paths in CE docs; use repo-relative paths when possible.
+- 서술형 주장보다는 Moment ID와 스크린샷 링크를 우선적으로 사용하십시오.
+- 스크린샷이 의도를 명확히 증명하지 못하는 경우, 시각적 해석을 추론(inference)으로 표시하십시오.
+- 요구 사항은 구현 세부 정보가 아닌 제품의 동작을 설명해야 합니다.
+- CE 문서에 로컬 절대 경로를 포함하지 마십시오. 가능한 경우 리포지토리 상대 경로를 사용하십시오.

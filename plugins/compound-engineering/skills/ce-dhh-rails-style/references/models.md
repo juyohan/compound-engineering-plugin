@@ -1,9 +1,9 @@
-# Models - DHH Rails Style
+# 모델 (Models) - DHH Rails 스타일
 
 <model_concerns>
-## Concerns for Horizontal Behavior
+## 수평적 동작을 위한 Concern
 
-Models heavily use concerns. A typical Card model includes 14+ concerns:
+모델은 concern을 집중적으로 사용합니다. 전형적인 Card 모델에는 14개 이상의 concern이 포함될 수 있습니다:
 
 ```ruby
 class Card < ApplicationRecord
@@ -25,23 +25,23 @@ class Card < ApplicationRecord
 end
 ```
 
-Each concern is self-contained with associations, scopes, and methods.
+각 concern은 연관 관계(associations), scope, 메서드를 포함하며 독립적으로 구성됩니다.
 
-**Naming:** Adjectives describing capability (`Closeable`, `Publishable`, `Watchable`)
+**명명:** 능력을 설명하는 형용사 (`Closeable`, `Publishable`, `Watchable`)
 </model_concerns>
 
 <state_records>
-## State as Records, Not Booleans
+## 불리언이 아닌 레코드로 상태 관리
 
-Instead of boolean columns, create separate records:
+불리언 컬럼 대신 별도의 레코드를 생성하십시오:
 
 ```ruby
-# Instead of:
+# 지양:
 closed: boolean
 is_golden: boolean
 postponed: boolean
 
-# Create records:
+# 레코드 생성:
 class Card::Closure < ApplicationRecord
   belongs_to :card
   belongs_to :creator, class_name: "User"
@@ -58,13 +58,13 @@ class Card::NotNow < ApplicationRecord
 end
 ```
 
-**Benefits:**
-- Automatic timestamps (when it happened)
-- Track who made changes
-- Easy filtering via joins and `where.missing`
-- Enables rich UI showing when/who
+**장점:**
+- 자동 타임스탬프 (언제 발생했는지)
+- 변경을 수행한 사람 추적 가능
+- 조인과 `where.missing`을 통한 손쉬운 필터링
+- 언제/누가 수행했는지 보여주는 풍부한 UI 가능
 
-**In the model:**
+**모델 내부:**
 ```ruby
 module Closeable
   extend ActiveSupport::Concern
@@ -87,27 +87,27 @@ module Closeable
 end
 ```
 
-**Querying:**
+**쿼리:**
 ```ruby
-Card.joins(:closure)         # closed cards
-Card.where.missing(:closure) # open cards
+Card.joins(:closure)         # 닫힌 카드
+Card.where.missing(:closure) # 열린 카드
 ```
 </state_records>
 
 <callbacks>
-## Callbacks - Used Sparingly
+## 콜백 - 절제해서 사용
 
-Only 38 callback occurrences across 30 files in Fizzy. Guidelines:
+Fizzy 앱의 30개 파일 중 콜백 발생 횟수는 단 38회에 불과합니다. 지침:
 
-**Use for:**
-- `after_commit` for async work
-- `before_save` for derived data
-- `after_create_commit` for side effects
+**사용 권장:**
+- 비동기 작업을 위한 `after_commit`
+- 유도된 데이터(derived data)를 위한 `before_save`
+- 부수 효과를 위한 `after_create_commit`
 
-**Avoid:**
-- Complex callback chains
-- Business logic in callbacks
-- Synchronous external calls
+**지양:**
+- 복잡한 콜백 체인
+- 콜백 내의 비즈니스 로직
+- 동기적인 외부 호출
 
 ```ruby
 class Card < ApplicationRecord
@@ -123,9 +123,9 @@ end
 </callbacks>
 
 <scopes>
-## Scope Naming
+## Scope 명명
 
-Standard scope names:
+표준적인 scope 이름들:
 
 ```ruby
 class Card < ApplicationRecord
@@ -134,10 +134,10 @@ class Card < ApplicationRecord
   scope :alphabetically, -> { order(title: :asc) }
   scope :latest, -> { reverse_chronologically.limit(10) }
 
-  # Standard eager loading
+  # 표준적인 지연 로딩
   scope :preloaded, -> { includes(:creator, :assignees, :tags) }
 
-  # Parameterized
+  # 매개변수화된 scope
   scope :indexed_by, ->(column) { order(column => :asc) }
   scope :sorted_by, ->(column, direction = :asc) { order(column => direction) }
 end
@@ -145,9 +145,9 @@ end
 </scopes>
 
 <poros>
-## Plain Old Ruby Objects
+## 순수 루비 객체 (POROs)
 
-POROs namespaced under parent models:
+부모 모델 아래에 네임스페이스로 구분된 PORO들:
 
 ```ruby
 # app/models/event/description.rb
@@ -157,7 +157,7 @@ class Event::Description
   end
 
   def to_s
-    # Presentation logic for event description
+    # 이벤트 설명을 위한 프레젠테이션 로직
   end
 end
 
@@ -168,63 +168,63 @@ class Card::Eventable::SystemCommenter
   end
 
   def comment(message)
-    # Business logic
+    # 비즈니스 로직
   end
 end
 
 # app/models/user/filtering.rb
 class User::Filtering
-  # View context bundling
+  # 뷰 컨텍스트 번들링
 end
 ```
 
-**NOT used for service objects.** Business logic stays in models.
+**서비스 객체용으로 사용하지 않습니다.** 비즈니스 로직은 모델에 머뭅니다.
 </poros>
 
 <verbs_predicates>
-## Method Naming
+## 메서드 명명
 
-**Verbs** - Actions that change state:
+**동사(Verbs)** - 상태를 변경하는 액션:
 ```ruby
 card.close
 card.reopen
-card.gild      # make golden
+card.gild      # 골든으로 만들기
 card.ungild
 board.publish
 board.archive
 ```
 
-**Predicates** - Queries derived from state:
+**술어(Predicates)** - 상태에서 유도된 쿼리:
 ```ruby
 card.closed?    # closure.present?
 card.golden?    # goldness.present?
 board.published?
 ```
 
-**Avoid** generic setters:
+범용 setter를 **피하십시오**:
 ```ruby
-# Bad
+# 나쁨
 card.set_closed(true)
 card.update_golden_status(false)
 
-# Good
+# 좋음
 card.close
 card.ungild
 ```
 </verbs_predicates>
 
 <validation_philosophy>
-## Validation Philosophy
+## 검증 철학 (Validation Philosophy)
 
-Minimal validations on models. Use contextual validations on form/operation objects:
+모델에는 최소한의 검증만 둡니다. 폼이나 오퍼레이션 객체에서 컨텍스트별 검증을 사용하십시오:
 
 ```ruby
-# Model - minimal
+# 모델 - 최소한의 검증
 class User < ApplicationRecord
   validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }
 end
 
-# Form object - contextual
+# 폼 객체 - 컨텍스트별 검증
 class Signup
   include ActiveModel::Model
 
@@ -240,7 +240,7 @@ class Signup
 end
 ```
 
-**Prefer database constraints** over model validations for data integrity:
+데이터 무결성을 위해 모델 검증보다는 **데이터베이스 제약 조건**을 선호하십시오:
 ```ruby
 # migration
 add_index :users, :email, unique: true
@@ -249,30 +249,30 @@ add_foreign_key :cards, :boards
 </validation_philosophy>
 
 <error_handling>
-## Let It Crash Philosophy
+## "Let It Crash" 철학
 
-Use bang methods that raise exceptions on failure:
+실패 시 예외를 발생시키는 bang(!) 메서드를 사용하십시오:
 
 ```ruby
-# Preferred - raises on failure
+# 권장 - 실패 시 예외 발생
 @card = Card.create!(card_params)
 @card.update!(title: new_title)
 @comment.destroy!
 
-# Avoid - silent failures
-@card = Card.create(card_params)  # returns false on failure
+# 지양 - 소리 없는 실패
+@card = Card.create(card_params)  # 실패 시 false 반환
 if @card.save
   # ...
 end
 ```
 
-Let errors propagate naturally. Rails handles ActiveRecord::RecordInvalid with 422 responses.
+에러가 자연스럽게 전파되도록 두십시오. Rails는 `ActiveRecord::RecordInvalid`를 422 응답으로 처리합니다.
 </error_handling>
 
 <default_values>
-## Default Values with Lambdas
+## Lambda를 이용한 기본값
 
-Use lambda defaults for associations with Current:
+Current를 사용하는 연관 관계에는 lambda 기본값을 사용하십시오:
 
 ```ruby
 class Card < ApplicationRecord
@@ -285,13 +285,13 @@ class Comment < ApplicationRecord
 end
 ```
 
-Lambdas ensure dynamic resolution at creation time.
+Lambda는 생성 시점에 동적으로 해결됨을 보장합니다.
 </default_values>
 
 <rails_71_patterns>
-## Rails 7.1+ Model Patterns
+## Rails 7.1+ 모델 패턴
 
-**Normalizes** - clean data before validation:
+**Normalizes** - 검증 전 데이터 정규화:
 ```ruby
 class User < ApplicationRecord
   normalizes :email, with: ->(email) { email.strip.downcase }
@@ -299,19 +299,19 @@ class User < ApplicationRecord
 end
 ```
 
-**Delegated Types** - replace polymorphic associations:
+**Delegated Types** - 다형성 연관 관계(polymorphic associations) 대체:
 ```ruby
 class Message < ApplicationRecord
   delegated_type :messageable, types: %w[Comment Reply Announcement]
 end
 
-# Now you get:
-message.comment?        # true if Comment
-message.comment         # returns the Comment
-Message.comments        # scope for Comment messages
+# 이제 다음을 얻을 수 있습니다:
+message.comment?        # Comment인 경우 true
+message.comment         # Comment 반환
+Message.comments        # Comment 메시지용 scope
 ```
 
-**Store Accessor** - structured JSON storage:
+**Store Accessor** - 구조화된 JSON 저장:
 ```ruby
 class User < ApplicationRecord
   store :settings, accessors: [:theme, :notifications_enabled], coder: JSON
@@ -323,15 +323,15 @@ user.notifications_enabled = true
 </rails_71_patterns>
 
 <concern_guidelines>
-## Concern Guidelines
+## Concern 지침
 
-- **50-150 lines** per concern (most are ~100)
-- **Cohesive** - related functionality only
-- **Named for capabilities** - `Closeable`, `Watchable`, not `CardHelpers`
-- **Self-contained** - associations, scopes, methods together
-- **Not for mere organization** - create when genuine reuse needed
+- concern당 **50-150라인** (대부분 ~100라인)
+- **응집력** - 관련된 기능만 포함
+- **능력 중심의 명명** - `CardHelpers`가 아닌 `Closeable`, `Watchable`
+- **독립성** - 연관 관계, scope, 메서드를 함께 구성
+- **단순 조직화가 아님** - 진정한 재사용이 필요할 때 생성
 
-**Touch chains** for cache invalidation:
+캐시 무효화를 위한 **Touch 체인**:
 ```ruby
 class Comment < ApplicationRecord
   belongs_to :card, touch: true
@@ -342,9 +342,9 @@ class Card < ApplicationRecord
 end
 ```
 
-When comment updates, card's `updated_at` changes, which cascades to board.
+댓글이 업데이트되면 카드의 `updated_at`이 변경되고, 이것이 보드까지 전파됩니다.
 
-**Transaction wrapping** for related updates:
+관련된 업데이트를 위한 **트랜잭션 래핑**:
 ```ruby
 class Card < ApplicationRecord
   def close(creator: Current.user)

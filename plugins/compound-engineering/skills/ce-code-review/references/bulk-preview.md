@@ -1,26 +1,26 @@
-# Bulk Action Preview
+# 일괄 작업 미리보기 (Bulk Action Preview)
 
-This reference defines the compact plan preview that Interactive mode shows before the file-tickets routing option (option C) executes. The preview gives the user a single-screen view of what the agent is about to do, with exactly two options to Proceed or Cancel.
+이 레퍼런스는 파일-티켓 라우팅 옵션(옵션 C)이 실행되기 전 Interactive 모드에서 보여주는 컴팩트한 플랜 미리보기를 정의합니다. 이 미리보기는 에이전트가 수행하려는 작업을 단일 화면으로 사용자에게 보여주며, 진행(Proceed) 또는 취소(Cancel)의 정확히 두 가지 옵션을 제공합니다.
 
-Interactive mode only. Option C only.
+Interactive 모드 전용입니다. 옵션 C에만 해당됩니다.
 
-The best-judgment path (routing option B and the walk-through's `Auto-resolve with best judgment on the rest`) does **not** use the bulk preview. The best-judgment path dispatches the fixer immediately and surfaces failures in a post-run question, per the `(B)` handler in `SKILL.md` Step 2 Interactive mode. Filing tickets is the one bulk action that benefits from a preview because filing produces durable external state that is expensive to undo — applying local fixes on uncommitted edits is not.
-
----
-
-## When the preview fires
-
-One call site:
-
-- **Routing option C (top-level File tickets)** — after the user picks `File a [TRACKER] ticket per finding without applying fixes` but before any ticket is filed. Scope: every pending `gated_auto` / `manual` finding. Every finding appears under `Filing [TRACKER] tickets (N):` regardless of the agent's natural recommendation, because option C is batch-defer.
-
-The user confirms with `Proceed` or backs out with `Cancel`. No per-item decisions inside the preview — per-item decisioning is the walk-through's role (option A).
+최선의 판단 경로(라우팅 옵션 B 및 워크스루의 `Auto-resolve with best judgment on the rest`)는 일괄 미리보기를 사용하지 **않습니다**. 최선의 판단 경로는 즉시 수정을 실행하고 실행 후 질문에서 실패를 표면화합니다(`SKILL.md` Step 2 Interactive 모드의 `(B)` 핸들러 참조). 티켓 생성은 되돌리기 비용이 큰 영구적인 외부 상태를 생성하므로 미리보기가 유익한 반면, 커밋되지 않은 편집에 로컬 수정을 적용하는 것은 그렇지 않습니다.
 
 ---
 
-## Preview structure
+## 미리보기가 실행되는 시점
 
-The preview is grouped by the action the agent intends to take. Bucket headers appear only when their bucket is non-empty.
+호출 지점은 하나입니다:
+
+- **라우팅 옵션 C (최상위 티켓 생성 - File tickets)** — 사용자가 수정 사항을 적용하지 않고 발견 사항당 `File a [TRACKER] ticket per finding without applying fixes`를 선택한 후, 티켓이 생성되기 전입니다. 범위: 모든 보류 중인 `gated_auto` / `manual` 발견 사항. 에이전트의 권장 사항과 관계없이 옵션 C는 일괄 지연(batch-defer)이므로 모든 발견 사항이 `Filing [TRACKER] tickets (N):` 아래에 표시됩니다.
+
+사용자는 `Proceed`로 확인하거나 `Cancel`로 중단합니다. 미리보기 내부에서 항목별 결정은 내리지 않으며, 항목별 결정은 워크스루(옵션 A)의 역할입니다.
+
+---
+
+## 미리보기 구조
+
+미리보기는 에이전트가 취하려는 작업별로 그룹화됩니다. 버킷 헤더는 해당 버킷이 비어 있지 않을 때만 표시됩니다.
 
 ```
 <Path label> — <scope summary>[ (tracker: <name>)]:
@@ -39,7 +39,7 @@ Acknowledging (N):
   [P3] <file>:<line> — <one-line plain-English summary>
 ```
 
-Worked example, for routing option C (file tickets):
+라우팅 옵션 C (티켓 생성)의 예시:
 
 ```
 File plan — 8 findings as Linear tickets:
@@ -57,56 +57,56 @@ Filing Linear tickets (8):
 
 ---
 
-## Scope summary wording
+## 범위 요약 문구 (Scope summary wording)
 
-- **Routing option C (top-level File tickets):** header reads `File plan — N findings as [TRACKER] tickets:`. Every finding lands in the `Filing [TRACKER] tickets (N):` bucket. Option C is batch-defer — no Apply / Skip / Acknowledge buckets render in the preview, since every finding is being filed.
+- **라우팅 옵션 C (최상위 티켓 생성):** 헤더는 `File plan — N findings as [TRACKER] tickets:`로 표시됩니다. 모든 발견 사항은 `Filing [TRACKER] tickets (N):` 버킷에 들어갑니다. 옵션 C는 일괄 지연이므로 Apply / Skip / Acknowledge 버킷은 미리보기에 렌더링되지 않습니다.
 
-When the detected tracker is low-confidence or generic (see `tracker-defer.md`), the `(tracker: <name>)` annotation is omitted from the header and the `Filing [TRACKER] tickets` bucket header uses the generic form (`Filing tickets (N):`).
-
----
-
-## Per-finding line format
-
-Each line uses the compressed form of the framing-quality bar from the plan (R22-R25 — observable-behavior-first, no function / variable names unless needed to locate). The one-line summary is drawn from the persona-produced `why_it_matters` by taking the first sentence (and, when the first sentence is too long for the preview width, paraphrasing it tightly to fit).
-
-- **Shape:** `[<severity>] <file>:<line> — <one-line summary>`
-- **Width target:** keep lines near 80 columns so the preview renders cleanly in narrow terminals. Truncate with ellipsis when necessary.
-- **No function / variable names inline** unless the reader needs them to locate the issue.
-- **Advisory bucket phrasing:** the `Acknowledging (N):` bucket describes the advisory content in one line. No "fix" phrase — advisory findings have no concrete fix.
-
-When no `why_it_matters` is available for a finding (e.g., Unit 2's template upgrade hasn't fully propagated through the persona run, or the artifact file was unreadable), fall back to the finding's title directly. Note the gap in the completion report's Coverage section if it affects more than a few findings in the same run.
+감지된 트래커의 신뢰도가 낮거나 일반적인 경우(`tracker-defer.md` 참조), 헤더에서 `(tracker: <name>)` 주석은 생략되며 `Filing [TRACKER] tickets` 버킷 헤더는 일반적인 형식(`Filing tickets (N):`)을 사용합니다.
 
 ---
 
-## Question and options
+## 발견 사항별 라인 형식
 
-After the preview body is rendered, ask the user using the platform's blocking question tool (`AskUserQuestion` in Claude Code, `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension)). In Claude Code, the tool should already be loaded from the Interactive-mode pre-load step — if it isn't, call `ToolSearch` with query `select:AskUserQuestion` now. The text fallback below applies only when the harness genuinely lacks a blocking tool — `ToolSearch` returns no match, the tool call explicitly fails, or the runtime mode does not expose it (e.g., Codex edit modes without `request_user_input`). A pending schema load is not a fallback trigger. Never silently skip the question.
+각 라인은 플랜의 프레이밍 품질 바의 압축된 형식을 사용합니다(R22-R25 — 관찰 가능한 동작 우선, 위치 확인에 필요한 경우가 아니면 함수/변수 이름 제외). 한 줄 요약은 페르소나가 생성한 `why_it_matters`에서 첫 번째 문장을 가져와 사용합니다(첫 문장이 미리보기 너비에 비해 너무 길 경우 내용을 간결하게 패러프레이징합니다).
 
-Stem: `The agent is about to file the tickets above. Proceed?`
+- **형태:** `[<severity>] <file>:<line> — <one-line summary>`
+- **너비 목표:** 좁은 터미널에서도 깔끔하게 렌더링되도록 80자 내외로 유지합니다. 필요한 경우 생략 부호(...)로 자릅니다.
+- **인라인 함수/변수 이름 제외:** 독자가 이슈 위치를 찾는 데 필요한 경우가 아니면 제외합니다.
+- **Advisory 버킷 문구:** `Acknowledging (N):` 버킷은 권고 내용을 한 줄로 설명합니다. 권고 발견 사항에는 구체적인 수정 사항이 없으므로 "fix" 문구를 사용하지 않습니다.
 
-Options (exactly two):
-- `Proceed` — file every ticket in the preview
-- `Cancel` — do nothing, return to the routing question
-
-Only when `ToolSearch` explicitly returns no match or the tool call errors — or on a platform with no blocking question tool — fall back to presenting numbered options and waiting for the user's next reply.
-
----
-
-## Cancel semantics
-
-`Cancel` returns the user to the routing question (the four-option menu in `SKILL.md` Step 2 Interactive mode). No tickets are filed; no state is recorded. The session's cached tracker-detection tuple is preserved.
+발견 사항에 대해 `why_it_matters`를 사용할 수 없는 경우(예: Unit 2의 템플릿 업그레이드가 페르소나 실행에 완전히 반영되지 않았거나 아티팩트 파일을 읽을 수 없는 경우), 발견 사항의 제목을 직접 사용합니다. 동일한 실행에서 여러 발견 사항에 영향을 미치는 경우 완료 보고서의 Coverage 섹션에 해당 공백을 기록하십시오.
 
 ---
 
-## Proceed semantics
+## 질문 및 옵션
 
-When the user picks `Proceed`, every finding in the preview routes through `references/tracker-defer.md` for ticket creation. No fixes are applied. After all tickets have been filed (or failed), emit the unified completion report (see `references/walkthrough.md`).
+미리보기 본문이 렌더링된 후, 플랫폼의 차단 질문 도구(Claude Code의 `AskUserQuestion`, Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user` (pi-ask-user 확장 필요))를 사용하여 사용자에게 질문합니다. Claude Code에서는 Interactive 모드 프리로드 단계에서 도구가 이미 로드되어 있어야 합니다. 로드되지 않은 경우 지금 `select:AskUserQuestion` 쿼리로 `ToolSearch`를 호출하십시오. 아래의 텍스트 폴백은 하네스에 차단 도구가 실제로 없는 경우(예: `ToolSearch` 결과 없음, 도구 호출 실패, 또는 `request_user_input`이 없는 Codex 편집 모드)에만 적용됩니다. 스키마 로드 대기는 폴백 트리거가 아닙니다. 질문을 무시하고 넘어가서는 안 됩니다.
 
-Failure during `Proceed` (e.g., ticket creation fails for one finding during a batch Defer) follows the failure path defined in `tracker-defer.md` — surface the failure inline with Retry / Fallback / Skip, continue with the rest of the plan, and capture the failure in the completion report's failure section.
+질문 문구: `The agent is about to file the tickets above. Proceed?`
+
+옵션 (정확히 두 가지):
+- `Proceed` — 미리보기의 모든 티켓 생성
+- `Cancel` — 아무 작업도 하지 않고 라우팅 질문으로 복귀
+
+`ToolSearch`가 명시적으로 매치를 반환하지 않거나 도구 호출 오류가 발생하는 경우, 또는 차단 질문 도구가 없는 플랫폼에서만 번호가 매겨진 옵션을 제시하고 사용자의 다음 응답을 기다리는 방식으로 폴백합니다.
 
 ---
 
-## Edge cases
+## 취소(Cancel) 의미론
 
-- **N=1 preview (only one finding in scope):** the preview still renders with a single-line bucket. `Proceed` / `Cancel` still apply.
-- **No tracker available:** option C is not offered upstream (see `tracker-defer.md` no sink handling). The bulk preview is therefore never invoked when `any_sink_available` is false.
+`Cancel`은 사용자를 라우팅 질문(`SKILL.md` Step 2 Interactive 모드의 4가지 옵션 메뉴)으로 되돌립니다. 티켓은 생성되지 않으며 상태도 기록되지 않습니다. 세션의 캐시된 트래커 감지 튜플은 유지됩니다.
+
+---
+
+## 진행(Proceed) 의미론
+
+사용자가 `Proceed`를 선택하면 미리보기의 모든 발견 사항이 티켓 생성을 위해 `references/tracker-defer.md`를 통해 라우팅됩니다. 수정 사항은 적용되지 않습니다. 모든 티켓이 생성된(또는 실패한) 후 통합 완료 보고서를 내보냅니다(`references/walkthrough.md` 참조).
+
+`Proceed` 중 실패(예: 배치 지연 중 한 발견 사항에 대해 티켓 생성이 실패한 경우)는 `tracker-defer.md`에 정의된 실패 경로를 따릅니다. Retry / Fallback / Skip을 인라인으로 표시하고 나머지 플랜을 계속 진행하며, 완료 보고서의 실패 섹션에 실패를 기록합니다.
+
+---
+
+## 예외 케이스 (Edge cases)
+
+- **N=1 미리보기 (범위 내에 발견 사항이 하나인 경우):** 미리보기는 여전히 한 줄 버킷으로 렌더링됩니다. `Proceed` / `Cancel`이 동일하게 적용됩니다.
+- **트래커를 사용할 수 없음:** 업스트림에서 옵션 C가 제공되지 않습니다(`tracker-defer.md`의 sink 없음 처리 참조). 따라서 `any_sink_available`이 false인 경우 일괄 미리보기가 호출되지 않습니다.

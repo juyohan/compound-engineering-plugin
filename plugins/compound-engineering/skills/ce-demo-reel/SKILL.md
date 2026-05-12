@@ -1,184 +1,202 @@
 ---
 name: ce-demo-reel
-description: "Capture a visual demo reel (GIF, terminal recording, screenshots) for PR descriptions. Use when shipping UI changes, CLI features, or any work with observable behavior that benefits from visual proof. Also use when asked to add a demo, record a GIF, screenshot a feature, show what changed visually, create a demo reel, capture evidence, add proof to a PR, or create a before/after comparison."
-argument-hint: "[what to capture, e.g. 'the new settings page' or 'CLI output of the migrate command']"
+description: "PR 설명을 위해 시각적 데모 릴(GIF, 터미널 녹화, 스크린샷)을 캡처합니다. UI 변경 사항, CLI 기능 또는 시각적 증거가 도움이 되는 관찰 가능한 동작이 포함된 작업을 제출할 때 사용합니다. 또한 데모 추가, GIF 녹화, 기능 스크린샷, 시각적 변경 사항 표시, 데모 릴 생성, 증거 캡처, PR에 증거 추가 또는 전후 비교 생성을 요청받았을 때도 사용합니다."
+argument-hint: "[캡처할 내용, 예: '새로운 설정 페이지' 또는 'migrate 명령의 CLI 출력']"
+allowed-tools:
+  - gem
 ---
 
-# Demo Reel
+# 데모 릴 (Demo Reel)
 
-Detect project type, recommend a capture tier, record visual evidence, upload to a public URL, and return markdown for PR inclusion.
+## 다중 에이전트 협업 (Multi-Agent Collaboration)
 
-**Evidence means USING THE PRODUCT, not running tests.** "I ran npm test" is test evidence. Evidence capture is running the actual CLI command, opening the web app, making the API call, or triggering the feature. The distinction is absolute -- test output is never labeled "Demo" or "Screenshots."
+사용자의 입력(`$ARGUMENTS`) 내에 `--add <ai-이름>` 형태의 플래그가 포함되어 있는지 확인하십시오. 
+현재 지원되는 외부 AI 인터페이스는 `--add gemini` (또는 `--add gem`)입니다.
 
-If real product usage is impractical (requires API keys, cloud deploy, paid services, bot tokens), say so explicitly: "Real evidence would require [X]. Recommending [fallback approach] instead." Do not silently skip to "no evidence needed" or substitute test output.
+만약 해당 플래그가 감지되면, 작업을 단독으로 확정하지 말고 다음 절차를 따르십시오:
+1. **의도 파악:** 플래그를 제외한 나머지 문자열을 실제 지시사항으로 간주합니다.
+2. **초안 작성:** 본인(주 에이전트)의 지식과 코드베이스 컨텍스트를 바탕으로 작업의 초기 뼈대나 접근법을 생각합니다.
+3. **MCP 협업 호출:** `gem` 도구를 호출하여 외부 Gemini 에이전트에게 조언이나 검토를 구합니다.
+   - 호출 시 전달할 메시지 예시: "나는 현재 이 작업에 대한 초안을 세우고 있어. 내 초안은 [초안 요약]이야. 이 접근 방식의 기술적 타당성을 검토하고 누락된 에지 케이스나 더 나은 패턴을 조언해줄 수 있어?"
+4. **결과 통합:** `gem` 도구가 반환한 피드백을 당신의 최종 결과물에 통합(Synthesis)합니다. 
+5. **명시적 표시:** 최종 산출물의 상단 또는 설명 부분에 "이 결과물은 Gemini와의 협업을 통해 검토 및 보완되었습니다."라는 문구를 추가하십시오.
 
-Never generate fake or placeholder image/GIF URLs. If upload fails, report the failure.
+이 협업 절차를 염두에 두고 아래의 본래 스킬 워크플로우를 진행하십시오.
 
-## Never Record Secrets
 
-Recordings must never contain credentials — not in commands, output, URL bars, or on-screen UI. If the demo needs a credential, set it before the recording starts, outside the recorded region.
+프로젝트 유형을 감지하고, 캡처 티어(tier)를 추천하며, 시각적 증거를 기록하고, 공개 URL에 업로드한 뒤 PR에 포함할 마크다운을 반환합니다.
 
-**Core principle:** secrets should affect the environment, not the visible transcript. Hidden *real* setup beats visible *fake* setup — fake setup breaks the demo and still leaks the secret's shape.
+**증거란 테스트 실행이 아니라 제품을 사용하는 것을 의미합니다.** "npm test를 실행했다"는 테스트 증거입니다. 증거 캡처는 실제 CLI 명령을 실행하거나, 웹 앱을 열거나, API 호출을 하거나, 기능을 트리거하는 것을 의미합니다. 이 구분은 절대적입니다 — 테스트 출력은 결코 "데모(Demo)"나 "스크린샷(Screenshots)"으로 라벨링되지 않습니다.
 
-- **Plan it out of frame.** Route every surface where a secret could appear (env exports, CLI flag values, command output, auth headers, URL params, DevTools, config pages) out of the recorded region. Use VHS `Hide`/`Show`; invoke CLIs via env vars, not secret flag values; stay on user-facing pages. Show the authenticated result, not the auth step.
-- **Do not substitute placeholders inside the recording.** Typing a fake `sk-xxxxx` produces a misleading artifact; recapture with the real credential set out of frame instead. Two specific failures:
-  - Re-exporting a fake value visibly (`export API_KEY=REDACTED`) overwrites the real env var, so the demo breaks (401, `Unauthorized`, `0 credits remaining`, empty output). You leak the variable name *and* ship a broken product.
-  - Planning to blur or crop later. Assume anything shown is leaked; recapture is the only remediation.
-- **Scan before upload.** Look for `sk-`, `ghp_`, `ghs_`, `xoxb-`, `Bearer `, `Authorization:`, `?token=`, `api_key=`, long hex/base64 near credential-sounding labels, or visible `.env` contents. If any appear, discard and recapture. Never blur or crop.
+실제 제품 사용이 불가능한 경우(API 키, 클라우드 배포, 유료 서비스, 봇 토큰 필요 등)에는 "실제 증거를 위해서는 [X]가 필요합니다. 대신 [폴백 접근 방식]을 권장합니다."라고 명시적으로 말하십시오. "증거 필요 없음"으로 소리 없이 넘어가거나 테스트 출력을 대체물로 사용하지 마십시오.
 
-## Arguments
+가짜 또는 플레이스홀더 이미지/GIF URL을 생성하지 마십시오. 업로드에 실패하면 실패를 보고하십시오.
 
-Parse `$ARGUMENTS`:
-- **What to capture**: A description of the feature or behavior to demonstrate. If provided, use it to guide which pages to visit, commands to run, or states to capture.
-- If blank, infer what to capture from recoverable branch or PR context. If the target remains ambiguous after that, ask the user what they want to demonstrate before proceeding.
+## 비밀 정보 기록 금지
 
-## Step 0: Discover Capture Target
+녹화물에는 명령, 출력, URL 표시줄 또는 화면 UI에 자격 증명(credentials)이 포함되어서는 안 됩니다. 데모에 자격 증명이 필요한 경우, 녹화가 시작되기 전 녹화 영역 밖에서 설정하십시오.
 
-Treat target discovery as stateless and branch-aware. The agent may be invoked in a fresh session after the work was already done, so do not rely on conversation history or assume the caller knows the right artifact.
+**핵심 원칙:** 비밀 정보는 가시적인 트랜스크립트가 아니라 환경에 영향을 미쳐야 합니다. 숨겨진 *실제* 설정이 눈에 보이는 *가짜* 설정보다 낫습니다 — 가짜 설정은 데모를 망가뜨리고 비밀 정보의 형태를 노출시킬 수 있습니다.
 
-If invoked by another skill, treat the caller-provided target as a hint, not proof. Rerun target discovery and validation before capturing anything.
+- **프레임 밖에서 계획하십시오.** 비밀 정보가 나타날 수 있는 모든 표면(env export, CLI 플래그 값, 명령 출력, 인증 헤더, URL 파라미터, DevTools, 설정 페이지)을 녹화 영역 밖으로 돌리십시오. VHS `Hide`/`Show`를 사용하고, 비밀 플래그 값이 아닌 환경 변수를 통해 CLI를 호출하며, 사용자용 페이지에 머무르십시오. 인증 단계가 아닌 인증된 결과를 보여주십시오.
+- **녹화 중에 플레이스홀더로 대체하지 마십시오.** 가짜 `sk-xxxxx`를 입력하는 것은 오해의 소지가 있는 결과물을 만듭니다. 대신 실제 자격 증명을 프레임 밖에서 설정하고 다시 캡처하십시오. 두 가지 구체적인 실패 사례:
+  - 가짜 값을 가시적으로 다시 내보내는 경우(`export API_KEY=REDACTED`) 실제 환경 변수를 덮어쓰게 되어 데모가 깨집니다(401, `Unauthorized`, `0 credits remaining`, 빈 출력). 변수 이름을 노출하면서 고장 난 제품을 보여주게 됩니다.
+  - 나중에 흐리게 처리(blur)하거나 자르기(crop)로 계획하는 경우. 보여지는 모든 것은 유출된 것으로 간주하십시오. 다시 캡처하는 것만이 유일한 해결책입니다.
+- **업로드 전 스캔하십시오.** `sk-`, `ghp_`, `ghs_`, `xoxb-`, `Bearer `, `Authorization:`, `?token=`, `api_key=`, 자격 증명처럼 보이는 라벨 근처의 긴 16진수/base64, 또는 가시적인 `.env` 내용을 찾으십시오. 발견되면 폐기하고 다시 캡처하십시오. 절대 흐리게 처리하거나 자르지 마십시오.
 
-Use the lightest available context to identify the best evidence target:
+## 인자 (Arguments)
 
-- Current branch name
-- Open PR title and description, if one exists
-- Changed files and diff against the base branch
-- Recent commits
-- A plan file only when it is obviously referenced by the branch, PR, arguments, or caller context
+`$ARGUMENTS`를 파싱합니다:
+- **캡처할 내용**: 시연할 기능이나 동작에 대한 설명입니다. 제공된 경우 방문할 페이지, 실행할 명령 또는 캡처할 상태를 결정하는 가이드로 사용하십시오.
+- 비어 있는 경우, 복구 가능한 브랜치 또는 PR 컨텍스트에서 캡처할 내용을 유추합니다. 그래도 대상이 모호하다면 진행하기 전에 사용자에게 무엇을 시연하고 싶은지 물어보십시오.
 
-Form a capture hypothesis: "The best evidence appears to be [behavior]."
+## 단계 0: 캡처 대상 발견
 
-Proceed without asking only when there is exactly one high-confidence observable behavior and a plausible way to exercise it from the workspace. Ask the user what to demonstrate when multiple behaviors are plausible, the diff does not reveal how to exercise the behavior, or the requested target cannot be mapped to a product surface.
+대상 발견을 스테이트리스(stateless)하고 브랜치 인식 방식으로 처리하십시오. 에이전트는 작업이 이미 완료된 후 새 세션에서 호출될 수 있으므로, 대화 히스토리에 의존하거나 호출자가 올바른 아티팩트를 알고 있다고 가정하지 마십시오.
 
-Skip evidence with a clear reason when the diff is docs-only, markdown-only, config-only, CI-only, test-only, or a pure internal refactor with no observable output change.
+다른 스킬에 의해 호출된 경우, 호출자가 제공한 대상을 증거가 아닌 힌트로 취급하십시오. 무엇이든 캡처하기 전에 대상 발견 및 검증을 다시 실행하십시오.
 
-## Step 1: Exercise the Feature
+가장 가벼운 컨텍스트를 사용하여 최적의 증거 대상을 식별하십시오:
 
-Before capturing anything, verify the feature works by actually using it:
+- 현재 브랜치 이름
+- 열려 있는 PR 제목 및 설명 (있는 경우)
+- 기본 브랜치 대비 변경된 파일 및 diff
+- 최근 커밋
+- 브랜치, PR, 인자 또는 호출자 컨텍스트에 의해 명확히 참조되는 경우에만 계획 파일 확인
 
-- **CLI tool**: Run the new/changed command and confirm the output is correct
-- **Web app**: Navigate to the new/changed page and confirm it renders correctly
-- **Library**: Run example code using the new/changed API
-- **Bug fix**: Reproduce the original bug scenario and confirm it's fixed
+캡처 가설을 세웁니다: "최적의 증거는 [동작]인 것으로 보입니다."
 
-Use the workspace where the feature was built. Do not reinstall from scratch. If setup requires credentials or services, use the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to asking in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question.
+확신할 수 있는 관찰 가능한 동작이 정확히 하나 있고 워크스페이스에서 이를 실행할 수 있는 타당한 방법이 있는 경우에만 묻지 않고 진행하십시오. 여러 동작이 가능하거나, diff만으로 동작을 실행하는 방법을 알 수 없거나, 요청된 대상을 제품 표면으로 매핑할 수 없는 경우에는 사용자에게 무엇을 시연할지 물어보십시오.
 
-## Step 2: Detect Project Type
+diff가 문서 전용, 마크다운 전용, 설정 전용, CI 전용, 테스트 전용이거나 관찰 가능한 출력 변경이 없는 순수 내부 리팩토링인 경우 명확한 이유와 함께 증거 제출을 건너뜁니다.
 
-Use the capture target from Step 0 to decide which directory to classify. If the diff touches a specific subdirectory with its own package manifest (e.g., `packages/cli/`, `apps/web/`), pass that as the root. Otherwise use the repo root.
+## 단계 1: 기능 실행
+
+무엇이든 캡처하기 전에 실제로 기능을 사용하여 작동 여부를 확인하십시오:
+
+- **CLI 도구**: 새로운/변경된 명령을 실행하고 출력이 올바른지 확인합니다.
+- **웹 앱**: 새로운/변경된 페이지로 이동하여 올바르게 렌더링되는지 확인합니다.
+- **라이브러리**: 새로운/변경된 API를 사용하여 예제 코드를 실행합니다.
+- **버그 수정**: 원래 버그 시나리오를 재현하고 수정되었는지 확인합니다.
+
+기능이 빌드된 워크스페이스를 사용하십시오. 처음부터 다시 설치하지 마십시오. 설정에 자격 증명이나 서비스가 필요한 경우 플랫폼의 차단형 질문 도구를 사용하십시오: Claude Code의 `AskUserQuestion` (스키마가 로드되지 않은 경우 `ToolSearch`로 `select:AskUserQuestion` 먼저 호출), Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user` (`pi-ask-user` 확장 필요). 도구가 없거나 오류가 발생하는 경우에만 채팅 창에 옵션을 제시하십시오. 질문을 소리 없이 건너뛰지 마십시오.
+
+## 단계 2: 프로젝트 유형 감지
+
+단계 0의 캡처 대상을 사용하여 분류할 디렉토리를 결정합니다. diff가 자체 패키지 매니페스트를 가진 특정 서브디렉토리(예: `packages/cli/`, `apps/web/`)를 건드린다면 해당 디렉토리를 루트로 전달합니다. 그렇지 않으면 저장소 루트를 사용합니다.
 
 ```bash
 python3 scripts/capture-demo.py detect --repo-root [TARGET_DIR]
 ```
 
-This outputs JSON with `type` and `reason`. The result is a signal, not a gate. If the agent's understanding from Step 0 contradicts the script's classification (e.g., the diff clearly changes CLI behavior but the repo root classifies as `web-app` because of a sibling Next.js app), the agent's judgment wins.
+이 명령은 `type`과 `reason`이 포함된 JSON을 출력합니다. 결과는 신호일 뿐 절대적인 기준은 아닙니다. 단계 0에서의 에이전트의 이해가 스크립트의 분류와 상충되는 경우(예: diff가 명백히 CLI 동작을 변경하지만 형제 Next.js 앱 때문에 저장소 루트가 `web-app`으로 분류된 경우), 에이전트의 판단이 우선합니다.
 
-## Step 3: Assess Change Type
+## 단계 3: 변경 유형 평가
 
-Step 0 already handled the "no observable behavior" early exit. This step classifies changes that DO have observable behavior into `motion` or `states` to guide tier selection.
+단계 0에서 "관찰 가능한 동작 없음"으로 조기 종료되는 경우를 이미 처리했습니다. 이 단계는 관찰 가능한 동작이 있는 변경 사항을 티어 선택 가이드를 위해 `motion` 또는 `states`로 분류합니다.
 
-If arguments describe what to capture, classify based on the description. Otherwise, use the diff context from Step 0.
+인자에 캡처할 내용이 설명되어 있다면 그 설명을 바탕으로 분류하십시오. 그렇지 않으면 단계 0의 diff 컨텍스트를 사용합니다.
 
-**Change classification:**
+**변경 분류:**
 
-1. **Involves motion or interaction?** (animations, typing flows, drag-and-drop, real-time updates, continuous CLI output) -> classify as `motion`.
-2. **Involves discrete states?** (before/after UI, new page, command with output, API response) -> classify as `states`.
+1. **움직임이나 상호작용이 포함됩니까?** (애니메이션, 타이핑 흐름, 드래그 앤 드롭, 실시간 업데이트, 연속적인 CLI 출력) -> `motion`으로 분류.
+2. **이산적인 상태가 포함됩니까?** (UI 전후 비교, 새로운 페이지, 출력이 있는 명령, API 응답) -> `states`로 분류.
 
-| Change characteristic | Classification |
+| 변경 특성 | 분류 |
 |---|---|
-| Animations, typing, drag-and-drop, streaming output | `motion` |
-| New UI, before/after, command output, API responses | `states` |
+| 애니메이션, 타이핑, 드래그 앤 드롭, 스트리밍 출력 | `motion` |
+| 새로운 UI, 전후 비교, 명령 출력, API 응답 | `states` |
 
-**Feature vs bug fix -- what to demonstrate:**
+**기능 vs 버그 수정 -- 시연할 내용:**
 
-- **New feature (`feat`)**: Demonstrate the feature working. Show the hero moment -- the feature doing its thing.
-- **Bug fix (`fix`)**: Show before AND after. Reproduce the original broken state (if possible) then show the fix. If the broken state can't be reproduced (already fixed in the workspace), capture the fixed state and describe what was broken.
+- **새로운 기능 (`feat`)**: 기능이 작동하는 모습을 보여줍니다. 기능의 핵심적인 순간(hero moment)을 보여주십시오.
+- **버그 수정 (`fix`)**: 전(before)과 후(after)를 모두 보여줍니다. 가능하면 원래의 고장 난 상태를 재현한 뒤 수정을 보여주십시오. 고장 난 상태를 재현할 수 없는 경우(워크스페이스에서 이미 수정됨), 수정된 상태를 캡처하고 무엇이 고장 났었는지 설명하십시오.
 
-Infer feat vs fix from commit messages, branch name, or plan file frontmatter (`type: feat` or `type: fix`). If unclear, ask.
+커밋 메시지, 브랜치 이름 또는 계획 파일의 frontmatter(`type: feat` 또는 `type: fix`)에서 feat vs fix를 유추하십시오. 불분명하면 물어보십시오.
 
-## Step 4: Tool Preflight
+## 단계 4: 도구 사전 점검 (Preflight)
 
-Run the preflight check:
+사전 점검을 실행합니다:
 
 ```bash
 python3 scripts/capture-demo.py preflight
 ```
 
-This outputs JSON with boolean availability for each tool: `agent_browser`, `vhs`, `silicon`, `ffmpeg`, `ffprobe`. Print a human-readable summary for the user based on the result, noting install commands for missing tools (e.g., `brew install charmbracelet/tap/vhs` for vhs, `brew install silicon` for silicon, `brew install ffmpeg` for ffmpeg).
+이 명령은 각 도구(`agent_browser`, `vhs`, `silicon`, `ffmpeg`, `ffprobe`)의 사용 가능 여부를 불리언(boolean)으로 포함한 JSON을 출력합니다. 결과를 바탕으로 사용자에게 읽기 쉬운 요약을 출력하고, 누락된 도구에 대한 설치 명령을 기재하십시오 (예: vhs의 경우 `brew install charmbracelet/tap/vhs`, silicon의 경우 `brew install silicon`, ffmpeg의 경우 `brew install ffmpeg`).
 
-## Step 5: Create Run Directory
+## 단계 5: 실행 디렉토리 생성
 
-Create a per-run scratch directory in the OS temp location:
+OS 임시 위치에 실행당 하나의 스크래치 디렉토리를 생성합니다:
 
 ```bash
 mktemp -d -t demo-reel-XXXXXX
 ```
 
-Use the output as `RUN_DIR`. Pass this concrete run directory to every tier reference. Evidence artifacts are ephemeral — they get uploaded to a public URL and then discarded. The OS temp directory is the right place for them, not the repo tree.
+출력된 경로를 `RUN_DIR`로 사용하십시오. 모든 티어 참조에 이 구체적인 실행 디렉토리를 전달하십시오. 증거 아티팩트는 일시적입니다 — 공개 URL에 업로드된 후 폐기됩니다. 저장소 트리 안이 아니라 OS 임시 디렉토리가 적절한 장소입니다.
 
-## Step 6: Recommend Tier and Ask User
+## 단계 6: 티어 추천 및 사용자 확인
 
-Run the recommendation script with the project type from Step 2, change classification from Step 3, and preflight JSON from Step 4:
+단계 2의 프로젝트 유형, 단계 3의 변경 분류, 단계 4의 preflight JSON을 사용하여 추천 스크립트를 실행합니다:
 
 ```bash
 python3 scripts/capture-demo.py recommend --project-type [TYPE] --change-type [motion|states] --tools '[PREFLIGHT_JSON]'
 ```
 
-This outputs JSON with `recommended` (the best tier), `available` (list of tiers whose tools are present), and `reasoning`.
+이 명령은 `recommended`(최적의 티어), `available`(도구가 준비된 티어 목록), `reasoning`이 포함된 JSON을 출력합니다.
 
-Present the available tiers to the user via the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to numbered options in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question. Mark the recommended tier. Always include "No evidence needed" as a final option.
+사용 가능한 티어를 플랫폼의 차단형 질문 도구를 통해 사용자에게 제시하십시오: Claude Code의 `AskUserQuestion` (스키마가 로드되지 않은 경우 `ToolSearch`로 `select:AskUserQuestion` 먼저 호출), Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user` (`pi-ask-user` 확장 필요). 도구가 없거나 오류가 발생하는 경우에만 채팅 창에 옵션을 제시하십시오. 질문을 소리 없이 건너뛰지 마십시오. 추천된 티어를 표시하십시오. 항상 마지막 옵션으로 "증거 필요 없음"을 포함하십시오.
 
-**Question:** "How should evidence be captured for this change?"
+**질문:** "이 변경 사항에 대한 증거를 어떻게 캡처할까요?"
 
-**Options** (show only tiers from the `available` list, order by recommendation):
-1. **Browser reel** -- Agent-browser screenshots stitched into animated GIF. Best for web apps.
-2. **Terminal recording** -- VHS terminal recording to GIF. Best for CLI tools with interaction/motion.
-3. **Screenshot reel** -- Styled terminal frames stitched into animated GIF. Best for discrete CLI steps.
-4. **Static screenshots** -- Individual PNGs. Fallback when other tools are unavailable.
-5. **No evidence needed** -- The diff speaks for itself. Best for text-only or config changes.
+**옵션** (`available` 목록에 있는 티어만 표시, 추천 순으로 정렬):
+1. **브라우저 릴 (Browser reel)** -- Agent-browser 스크린샷을 애니메이션 GIF로 결합. 웹 앱에 적합.
+2. **터미널 녹화 (Terminal recording)** -- VHS 터미널 녹화를 GIF로. 상호작용/움직임이 있는 CLI 도구에 적합.
+3. **스크린샷 릴 (Screenshot reel)** -- 스타일이 적용된 터미널 프레임을 애니메이션 GIF로 결합. 이산적인 CLI 단계에 적합.
+4. **정적 스크린샷 (Static screenshots)** -- 개별 PNG 파일들. 다른 도구를 사용할 수 없을 때의 폴백.
+5. **증거 필요 없음** -- diff 자체가 증거임. 텍스트 전용 또는 설정 변경에 적합.
 
-If the question tool is unavailable (background agent, batch mode), present the numbered options and wait for the user's reply before proceeding.
+질문 도구를 사용할 수 없는 경우(백그라운드 에이전트, 배치 모드), 번호가 매겨진 옵션을 제시하고 사용자의 응답을 기다린 후 진행하십시오.
 
-## Step 7: Execute Selected Tier
+## 단계 7: 선택된 티어 실행
 
-Carry the capture hypothesis from Step 0 and the feature exercise results from Step 1 into tier execution — these determine which specific pages to visit, commands to run, or states to screenshot. Substitute `[RUN_DIR]` in the tier reference with the concrete path from Step 5.
+단계 0의 캡처 가설과 단계 1의 기능 실행 결과를 티어 실행으로 가져오십시오 — 이들이 방문할 특정 페이지, 실행할 명령 또는 스크린샷을 찍을 상태를 결정합니다. 티어 참조의 `[RUN_DIR]`를 단계 5의 구체적인 경로로 대체하십시오.
 
-Load the appropriate reference file for the selected tier:
+선택된 티어에 맞는 참조 파일을 읽으십시오:
 
-- **Browser reel** -> Read `references/tier-browser-reel.md`
-- **Terminal recording** -> Read `references/tier-terminal-recording.md`
-- **Screenshot reel** -> Read `references/tier-screenshot-reel.md`
-- **Static screenshots** -> Read `references/tier-static-screenshots.md`
-- **No evidence needed** -> Skip to output. Set `evidence_url` to null, `evidence_label` to null.
+- **브라우저 릴** -> `references/tier-browser-reel.md` 읽기
+- **터미널 녹화** -> `references/tier-terminal-recording.md` 읽기
+- **스크린샷 릴** -> `references/tier-screenshot-reel.md` 읽기
+- **정적 스크린샷** -> `references/tier-static-screenshots.md` 읽기
+- **증거 필요 없음** -> 출력으로 건너뜀. `evidence_url`을 null로, `evidence_label`을 null로 설정.
 
-**Runtime failure fallback:** If the selected tier fails during execution (tool crashes, server not accessible, recording produces empty output), fall back to the next available tier rather than failing entirely. The fallback order is: browser reel -> static screenshots, terminal recording -> screenshot reel -> static screenshots, screenshot reel -> static screenshots. Static screenshots is the terminal fallback -- if even that fails, report the failure and let the user decide.
+**런타임 실패 폴백:** 실행 중 선택된 티어가 실패하면(도구 충돌, 서버 접속 불가, 녹화 결과물 비어 있음 등) 완전히 실패하는 대신 다음으로 사용 가능한 티어로 폴백하십시오. 폴백 순서: 브라우저 릴 -> 정적 스크린샷, 터미널 녹화 -> 스크린샷 릴 -> 정적 스크린샷, 스크린샷 릴 -> 정적 스크린샷. 정적 스크린샷이 최종 폴백입니다 — 이것마저 실패하면 실패를 보고하고 사용자가 결정하게 하십시오.
 
-## Step 8: Upload and Approval
+## 단계 8: 업로드 및 승인
 
-After the selected tier produces an artifact, read `references/upload-and-approval.md` for upload to a public host, user approval gate, and markdown embed generation.
+선택된 티어가 아티팩트를 생성한 후, 공개 호스트 업로드, 사용자 승인 게이트 및 마크다운 임베드 생성을 위해 `references/upload-and-approval.md`를 읽으십시오.
 
-## Output
+## 출력
 
-Return these values to the caller (e.g., ce-commit-push-pr):
+호출자(예: ce-commit-push-pr)에게 다음 값을 반환합니다:
 
 ```
 === Evidence Capture Complete ===
 Tier: [browser-reel / terminal-recording / screenshot-reel / static / skipped]
-Description: [1 sentence describing what the evidence shows]
-URL: [public URL or "none" (multiple URLs comma-separated for static screenshots)]
-Path: [local file path or "none" (multiple paths comma-separated for static screenshots)]
+Description: [증거가 무엇을 보여주는지 설명하는 1문장]
+URL: [공개 URL 또는 "none" (정적 스크린샷의 경우 쉼표로 구분된 여러 URL)]
+Path: [로컬 파일 경로 또는 "none" (정적 스크린샷의 경우 쉼표로 구분된 여러 경로)]
 === End Evidence ===
 ```
 
-The `Description` is a 1-line summary derived from the capture hypothesis in Step 0 (e.g., "CLI detect command classifying 3 project types and recommending capture tiers"). The caller decides how to format the URL(s) into the PR description.
+`Description`은 단계 0의 캡처 가설에서 유도된 1줄 요약입니다 (예: "3가지 프로젝트 유형을 분류하고 캡처 티어를 추천하는 CLI detect 명령"). 호출자가 URL을 PR 설명의 마크다운 형식으로 어떻게 구성할지 결정합니다.
 
-- `Tier: skipped` means no evidence was captured; both `URL` and `Path` are `"none"`.
-- When uploaded to catbox: `URL` has the public URL, `Path` is `"none"`.
-- When saved locally: `Path` has the local file path, `URL` is `"none"`.
-- For all non-skipped tiers, exactly one of `URL` or `Path` contains a real value; the other is `"none"`.
+- `Tier: skipped`는 증거가 캡처되지 않았음을 의미하며, `URL`과 `Path`는 모두 `"none"`입니다.
+- catbox에 업로드된 경우: `URL`에는 공개 URL이 포함되고, `Path`는 `"none"`입니다.
+- 로컬에 저장된 경우: `Path`에는 로컬 파일 경로가 포함되고, `URL`은 `"none"`입니다.
+- 건너뛰지 않은 모든 티어에 대해, `URL` 또는 `Path` 중 정확히 하나만 실제 값을 가지며 나머지는 `"none"`입니다.
 
-**Label convention:**
-- Browser reel, terminal recording, screenshot reel: label as "Demo"
-- Static screenshots: label as "Screenshots"
-- The caller applies the label when formatting. ce-demo-reel does not generate markdown.
-- Test output is never labeled "Demo" or "Screenshots"
+**라벨 컨벤션:**
+- 브라우저 릴, 터미널 녹화, 스크린샷 릴: "데모(Demo)"로 라벨링
+- 정적 스크린샷: "스크린샷(Screenshots)"으로 라벨링
+- 호출자가 포맷팅할 때 라벨을 적용합니다. ce-demo-reel은 마크다운을 직접 생성하지 않습니다.
+- 테스트 출력은 결코 "데모"나 "스크린샷"으로 라벨링되지 않습니다.

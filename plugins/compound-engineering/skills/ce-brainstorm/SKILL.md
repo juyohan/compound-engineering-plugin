@@ -1,234 +1,251 @@
 ---
 name: ce-brainstorm
-description: 'Explore requirements and approaches through collaborative dialogue before writing a right-sized requirements document and planning implementation. Use for feature ideas, problem framing, when the user says ''let''s brainstorm'', or when they want to think through options before deciding what to build. Also use when a user describes a vague or ambitious feature request, asks ''what should we build'', ''help me think through X'', presents a problem with multiple valid solutions, or seems unsure about scope or direction — even if they don''t explicitly ask to brainstorm.'
-argument-hint: "[feature idea or problem to explore]"
+description: '구체적인 요구사항 문서를 작성하고 구현을 계획하기 전에, 협력적인 대화를 통해 요구사항과 접근 방식을 탐색합니다. 새로운 기능 아이디어, 문제 정의, 사용자가 ''브레인스토밍하자''고 말할 때, 또는 무엇을 빌드할지 결정하기 전에 옵션을 검토하고 싶을 때 사용합니다. 또한 사용자가 모호하거나 야심 찬 기능 요청을 할 때, ''무엇을 빌드해야 할까'', ''X에 대해 같이 고민해줘''라고 요청할 때, 여러 가지 해결책이 있는 문제를 제시할 때, 또는 명시적으로 요청하지 않더라도 범위나 방향이 불확실해 보일 때 사용합니다.'
+argument-hint: "[탐색할 기능 아이디어 또는 문제]"
+allowed-tools:
+  - gem
 ---
 
-# Brainstorm a Feature or Improvement
+# 기능 또는 개선사항 브레인스토밍
 
-**Note: The current year is 2026.** Use this when dating requirements documents.
+**참고: 현재 연도는 2026년입니다.** 요구사항 문서를 작성할 때 이 연도를 사용하십시오.
 
-Brainstorming helps answer **WHAT** to build through collaborative dialogue. It precedes `/ce-plan`, which answers **HOW** to build it.
+브레인스토밍은 협력적인 대화를 통해 **무엇(WHAT)**을 빌드할지 결정하는 데 도움을 줍니다. 이는 **어떻게(HOW)** 빌드할지를 결정하는 `/ce-plan` 단계 이전에 수행됩니다.
 
-The durable output of this workflow is a **requirements document**. In other workflows this might be called a lightweight PRD or feature brief. In compound engineering, keep the workflow name `brainstorm`, but make the written artifact strong enough that planning does not need to invent product behavior, scope boundaries, or success criteria.
+이 워크플로우의 결과물은 **요구사항 문서(requirements document)**입니다. 다른 워크플로우에서는 이를 가벼운 PRD 또는 기능 브리프(feature brief)라고 부를 수 있습니다. 컴파운드 엔지니어링(compound engineering)에서는 워크플로우 이름을 `brainstorm`으로 유지하되, 작성된 결과물이 계획 단계에서 제품의 동작, 범위 경계 또는 성공 기준을 임의로 만들어낼 필요가 없을 정도로 강력해야 합니다.
 
-This skill does not implement code. It explores, clarifies, and documents decisions for later planning or execution.
+이 스킬은 코드를 직접 구현하지 않습니다. 나중의 계획이나 실행을 위해 결정을 탐색하고, 명확히 하며, 문서화합니다.
 
-**IMPORTANT: All file references in generated documents must use repo-relative paths (e.g., `src/models/user.rb`), never absolute paths. Absolute paths break portability across machines, worktrees, and teammates.**
+**중요: 생성된 문서의 모든 파일 참조는 반드시 저장소 상대 경로(예: `src/models/user.rb`)를 사용해야 하며, 절대 경로를 사용해서는 안 됩니다. 절대 경로는 다른 기기, 워크트리 및 팀원 간의 이식성을 떨어뜨립니다.**
 
-## Core Principles
+## 핵심 원칙
 
-1. **Assess scope first** - Match the amount of ceremony to the size and ambiguity of the work.
-2. **Be a thinking partner** - Suggest alternatives, challenge assumptions, and explore what-ifs instead of only extracting requirements.
-3. **Resolve product decisions here** - User-facing behavior, scope boundaries, and success criteria belong in this workflow. Detailed implementation belongs in planning.
-4. **Keep implementation out of the requirements doc by default** - Do not include libraries, schemas, endpoints, file layouts, or code-level design unless the brainstorm itself is inherently about a technical or architectural change.
-5. **Right-size the artifact** - Simple work gets a compact requirements document or brief alignment. Larger work gets a fuller document. Do not add ceremony that does not help planning.
-6. **Apply YAGNI to carrying cost, not coding effort** - Prefer the simplest approach that delivers meaningful value. Avoid speculative complexity and hypothetical future-proofing, but low-cost polish or delight is worth including when its ongoing cost is small and easy to maintain.
+1. **범위 우선 평가** - 작업의 규모와 모호성에 맞춰 형식의 수준을 조정하십시오.
+2. **함께 생각하는 파트너** - 단순히 요구사항을 추출하는 데 그치지 말고 대안을 제시하고, 가설에 의문을 제기하며, "만약에" 상황을 탐색하십시오.
+3. **제품 관련 결정은 여기서 해결** - 사용자 대면 동작, 범위 경계 및 성공 기준은 이 워크플로우에서 결정합니다. 상세한 구현 방법은 계획(planning) 단계에서 다룹니다.
+4. **기본적으로 구현 상세는 요구사항 문서에서 제외** - 브레인스토밍 자체가 기술적 또는 아키텍처적 변경에 관한 것이 아니라면 라이브러리, 스키마, 엔드포인트, 파일 레이아웃 또는 코드 수준의 설계는 포함하지 마십시오.
+5. **적정 규모의 산출물** - 간단한 작업은 요약된 요구사항 문서나 간략한 조율로 마무리합니다. 큰 작업은 보다 상세한 문서를 작성합니다. 계획 단계에 도움이 되지 않는 불필요한 형식은 추가하지 마십시오.
+6. **유지 비용에 YAGNI 적용** - 유의미한 가치를 제공하는 가장 단순한 접근 방식을 선호하십시오. 추측에 기반한 복잡성이나 가설적인 미래 대비는 피하되, 지속적인 유지 비용이 적고 관리가 쉽다면 사용자 경험을 높이는 사소한 디테일은 포함할 가치가 있습니다.
 
-## Interaction Rules
+## 상호작용 규칙
 
-These rules apply to every brainstorm, including the universal (non-software) flow routed to `references/universal-brainstorming.md`.
+이 규칙들은 `references/universal-brainstorming.md`로 라우팅되는 범용(비소프트웨어) 흐름을 포함한 모든 브레인스토밍에 적용됩니다.
 
-1. **Ask one question at a time** - One question per turn, even when sub-questions feel related. Stacking several questions in a single message produces diluted answers; pick the single most useful one and ask it.
-2. **Prefer single-select multiple choice** - Use single-select when choosing one direction, one priority, or one next step.
-3. **Use multi-select rarely and intentionally** - Use it only for compatible sets such as goals, constraints, non-goals, or success criteria that can all coexist. If prioritization matters, follow up by asking which selected item is primary.
-4. **Default to the platform's blocking question tool** - Use `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). These tools include a free-text fallback (e.g., "Other" in Claude Code), so options scaffold the answer without confining it — well-chosen options surface dimensions the user may not have separated, and pick-plus-optional-note is lower activation energy than composing prose from scratch. This default holds for opening and elicitation questions too, not only narrowing. Fall back to numbered options in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question.
-5. **Use prose only when the question is genuinely open** - Drop the blocking tool only when (a) the answer is inherently narrative ("walk me through how you got here"), (b) the question is diagnostic or introspective and presented options would leak your priors and bias the answer (e.g., "what concerns you most?" where a 4-option menu signals which axes matter), or (c) you cannot write 3-4 genuinely distinct, plausibly-correct options that cover the space without padding or strawmen. The test: if you'd be straining to fill the option slots, the question is open — use prose. Rule 1 still applies: still one question per turn.
+1. **한 번에 하나씩 질문하기** - 하위 질문들이 관련되어 보이더라도 한 번에 하나의 질문만 하십시오. 한 메시지에 여러 질문을 쌓아두면 답변의 질이 떨어집니다. 가장 유용한 질문 하나를 골라 질문하십시오.
+2. **단일 선택 객관식 선호** - 하나의 방향, 우선순위 또는 다음 단계를 선택할 때는 단일 선택 방식을 사용하십시오.
+3. **다중 선택은 드물고 의도적으로 사용** - 목표, 제약 사항, 비목표(non-goals) 또는 성공 기준과 같이 공존할 수 있는 항목들에 대해서만 사용하십시오. 우선순위가 중요하다면, 선택된 항목 중 무엇이 최우선인지 후속 질문을 하십시오.
+4. **기본적으로 플랫폼의 질문 도구 사용** - Claude Code의 `AskUserQuestion` (스키마가 로드되지 않은 경우 `ToolSearch`로 `select:AskUserQuestion` 먼저 호출), Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user` (`pi-ask-user` 확장 필요)를 사용하십시오. 이 도구들은 자유 텍스트 폴백(예: Claude Code의 "Other")을 포함하므로, 답변을 가두지 않으면서도 답변의 틀을 제공합니다. 잘 선택된 옵션들은 사용자가 미처 구분하지 못한 차원을 드러내 주며, 텍스트를 직접 작성하는 것보다 선택 후 메모를 덧붙이는 방식이 사용자 입장에서 훨씬 쉽습니다. 이 원칙은 탐색 질문뿐만 아니라 범위를 좁히는 질문에도 적용됩니다. 채팅 메시지에 번호를 매기는 방식은 도구가 없거나 오류가 발생할 때만 사용하십시오. 스키마 로드가 귀찮다는 이유로 생략해서는 안 됩니다. 질문을 소리 없이 건너뛰지 마십시오.
+5. **질문이 정말로 열려 있을 때만 서술형 사용** - 다음과 같은 경우에만 질문 도구 사용을 중단하십시오. (a) 답변이 본질적으로 서술적이어야 하는 경우 ("여기까지 오게 된 과정을 설명해줘"), (b) 진단적 또는 성찰적인 질문이라 제시된 옵션이 사용자의 답변을 편향시킬 수 있는 경우 (예: "가장 걱정되는 게 뭐야?"라고 물을 때 옵션을 주면 사용자가 그 축 안에서만 생각하게 됨), (c) 3~4개의 확실히 구분되고 타당한 옵션을 만들기 어려운 경우. 옵션을 채우기 위해 억지로 말을 만들어내야 한다면 서술형 질문을 사용하십시오. 이때도 규칙 1(한 번에 질문 하나)은 동일하게 적용됩니다.
 
-## Output Guidance
+## 출력 지침
 
-- **Keep outputs concise** - Prefer short sections, brief bullets, and only enough detail to support the next decision.
-- **Use repo-relative paths** - When referencing files, use paths relative to the repo root (e.g., `src/models/user.rb`), never absolute paths. Absolute paths make documents non-portable across machines and teammates.
+- **간결하게 유지** - 짧은 섹션, 간략한 글머리 기호, 다음 결정을 내리는 데 필요한 만큼의 상세 정보만 제공하십시오.
+- **저장소 상대 경로 사용** - 파일을 참조할 때는 절대 경로가 아닌 저장소 루트 기준 경로(예: `src/models/user.rb`)를 사용하십시오. 절대 경로는 다른 기기나 팀원 간에 문서의 호환성을 떨어뜨립니다.
 
-## Feature Description
+## 기능 설명
 
 <feature_description> #$ARGUMENTS </feature_description>
 
-**If the feature description above is empty, ask the user:** "What would you like to explore? Please describe the feature, problem, or improvement you're thinking about."
+## 다중 에이전트 협업 (Multi-Agent Collaboration)
 
-Do not proceed until you have a feature description from the user.
+사용자의 입력(`$ARGUMENTS`) 내에 `--add <ai-이름>` 형태의 플래그가 포함되어 있는지 확인하십시오. 
+현재 지원되는 외부 AI 인터페이스는 `--add gemini` (또는 `--add gem`)입니다.
 
-## Execution Flow
+만약 해당 플래그가 감지되면, 작업을 단독으로 확정하지 말고 다음 절차를 따르십시오:
+1. **의도 파악:** 플래그를 제외한 나머지 문자열을 실제 지시사항으로 간주합니다.
+2. **초안 작성:** 본인(주 에이전트)의 지식과 코드베이스 컨텍스트를 바탕으로 작업의 초기 뼈대나 접근법을 생각합니다.
+3. **MCP 협업 호출:** `gem` 도구를 호출하여 외부 Gemini 에이전트에게 조언이나 검토를 구합니다.
+   - 호출 시 전달할 메시지 예시: "나는 현재 이 작업에 대한 초안을 세우고 있어. 내 초안은 [초안 요약]이야. 이 접근 방식의 기술적 타당성을 검토하고 누락된 에지 케이스나 더 나은 패턴을 조언해줄 수 있어?"
+4. **결과 통합:** `gem` 도구가 반환한 피드백을 당신의 최종 결과물에 통합(Synthesis)합니다. 
+5. **명시적 표시:** 최종 산출물의 상단 또는 설명 부분에 "이 결과물은 Gemini와의 협업을 통해 검토 및 보완되었습니다."라는 문구를 추가하십시오.
 
-### Phase 0: Resume, Assess, and Route
+이 협업 절차를 염두에 두고 아래의 본래 스킬 워크플로우를 진행하십시오.
 
-#### 0.1 Resume Existing Work When Appropriate
 
-If the user references an existing brainstorm topic or document, or there is an obvious recent matching `*-requirements.md` file in `docs/brainstorms/`:
-- Read the document
-- Confirm with the user before resuming: "Found an existing requirements doc for [topic]. Should I continue from this, or start fresh?"
-- If resuming, summarize the current state briefly, continue from its existing decisions and outstanding questions, and update the existing document instead of creating a duplicate
+**위의 기능 설명이 비어 있다면 사용자에게 물어보십시오:** "무엇을 탐색하고 싶으신가요? 생각하고 계신 기능, 문제 또는 개선 사항에 대해 설명해 주세요."
 
-#### 0.1b Classify Task Domain
+사용자로부터 기능 설명을 듣기 전까지는 진행하지 마십시오.
 
-Before proceeding to Phase 0.2, classify whether this is a software task. The key question is: **does the task involve building, modifying, or architecting software?** -- not whether the task *mentions* software topics.
+## 실행 흐름
 
-**Software** (continue to Phase 0.2) -- the task references code, repositories, APIs, databases, or asks to build/modify/debug/deploy software.
+### 단계 0: 재개, 평가 및 라우팅
 
-**Non-software brainstorming** (route to universal brainstorming) -- BOTH conditions must be true:
-- None of the software signals above are present
-- The task describes something the user wants to explore, decide, or think through in a non-software domain
+#### 0.1 적절한 경우 기존 작업 재개
 
-**Neither** (respond directly, skip all brainstorming phases) -- the input is a quick-help request, error message, factual question, or single-step task that doesn't need a brainstorm.
+사용자가 기존 브레인스토밍 주제나 문서를 언급하거나, `docs/brainstorms/`에 명백히 일치하는 최근 `*-requirements.md` 파일이 있다면:
+- 문서를 읽습니다.
+- 재개하기 전에 사용자에게 확인합니다: "[주제]에 대한 기존 요구사항 문서를 찾았습니다. 여기서 계속할까요, 아니면 새로 시작할까요?"
+- 재개하는 경우, 현재 상태를 간략히 요약하고 기존 결정 및 남은 질문에서 이어가며, 복사본을 만드는 대신 기존 문서를 업데이트합니다.
 
-**If non-software brainstorming is detected:** Read `references/universal-brainstorming.md` and use those facilitation principles. Skip Phases 0.2–4 below — the **Core Principles and Interaction Rules above still apply unchanged**, including one-question-per-turn and the default to the platform's blocking question tool.
+#### 0.1b 작업 도메인 분류
 
-#### 0.2 Assess Whether Brainstorming Is Needed
+단계 0.2로 넘어가기 전에, 이것이 소프트웨어 작업인지 분류합니다. 핵심 질문은 다음과 같습니다: **이 작업이 소프트웨어를 빌드, 수정 또는 설계하는 것과 관련이 있는가?** (작업에 소프트웨어 관련 용어가 *언급*되었는지가 기준이 아닙니다.)
 
-**Clear requirements indicators:**
-- Specific acceptance criteria provided
-- Referenced existing patterns to follow
-- Described exact expected behavior
-- Constrained, well-defined scope
+**소프트웨어** (단계 0.2로 진행) -- 작업이 코드, 저장소, API, 데이터베이스를 참조하거나 소프트웨어를 빌드/수정/디버그/배포하도록 요청합니다.
 
-**If requirements are already clear:**
-Keep the interaction brief. Confirm understanding and present concise next-step options rather than forcing a long brainstorm. Only write a short requirements document when a durable handoff to planning or later review would be valuable. Skip Phase 1.1 and 1.2 entirely — go straight to Phase 1.3 or Phase 2.5 in announce-mode (synthesis emitted for visibility, no blocking confirmation), then to Phase 3.
+**비소프트웨어 브레인스토밍** (범용 브레인스토밍으로 라우팅) -- 다음 두 조건이 모두 참이어야 합니다:
+- 위의 소프트웨어 신호가 하나도 나타나지 않음.
+- 사용자가 비소프트웨어 도메인에서 탐색, 결정 또는 고민하고 싶은 내용을 설명함.
 
-#### 0.3 Assess Scope
+**둘 다 아님** (직접 응답하고 모든 브레인스토밍 단계 건너뜀) -- 입력이 빠른 도움 요청, 에러 메시지, 사실 확인 질문 또는 브레인스토밍이 필요 없는 단일 단계 작업인 경우입니다.
 
-Use the feature description plus a light repo scan to classify the work:
-- **Lightweight** - small, well-bounded, low ambiguity
-- **Standard** - normal feature or bounded refactor with some decisions to make
-- **Deep** - cross-cutting, strategic, or highly ambiguous
+**비소프트웨어 브레인스토밍이 감지된 경우:** `references/universal-brainstorming.md`를 읽고 해당 촉진 원칙을 사용하십시오. 아래의 단계 0.2~4는 건너뜁니다. **단, 위의 핵심 원칙 및 상호작용 규칙(한 번에 질문 하나, 기본적으로 질문 도구 사용 등)은 변경 없이 그대로 적용됩니다.**
 
-If the scope is unclear, ask one targeted question to disambiguate and then proceed.
+#### 0.2 브레인스토밍 필요 여부 평가
 
-**Deep sub-mode: feature vs product.** For Deep scope, also classify whether the brainstorm must establish product shape or inherit it:
+**명확한 요구사항 지표:**
+- 구체적인 수락 기준(acceptance criteria) 제공됨
+- 따를 수 있는 기존 패턴이 참조됨
+- 기대되는 동작이 정확히 설명됨
+- 범위가 좁고 잘 정의됨
 
-- **Deep — feature** (default): existing product shape anchors decisions. Primary actors, core outcome, positioning, and primary flows are already established in the product or repo. The brainstorm extends or refines within that shape.
-- **Deep — product**: the brainstorm must establish product shape rather than inherit it. Primary actors, core outcome, positioning against adjacent products, or primary end-to-end flows are materially unresolved. Existing code lowers the odds of product-tier but does not by itself rule it out — a half-built tool with ambiguous shape is still product-tier.
+**요구사항이 이미 명확한 경우:**
+상호작용을 짧게 유지하십시오. 이해한 내용을 확인하고 긴 브레인스토밍을 강제하는 대신 간결한 다음 단계 옵션을 제시하십시오. 계획 단계로의 전달이나 나중의 검토를 위해 가치가 있는 경우에만 짧은 요구사항 문서를 작성합니다. 단계 1.1과 1.2를 생략하고 바로 단계 1.3 또는 단계 2.5(Synthesis Summary)로 진행하십시오.
 
-Product-tier triggers additional Phase 1.2 questions and additional sections in the requirements document. Feature-tier uses the current Deep behavior unchanged.
+#### 0.3 범위 평가
 
-### Phase 1: Understand the Idea
+기능 설명과 가벼운 저장소 스캔을 통해 작업을 분류합니다:
+- **Lightweight (가벼움)** - 작고 범위가 명확하며 모호성이 낮음
+- **Standard (표준)** - 일반적인 기능 또는 몇 가지 결정이 필요한 한정된 리팩토링
+- **Deep (심층)** - 여러 영역에 걸친 전략적이거나 모호성이 높은 작업
 
-#### 1.1 Existing Context Scan
+범위가 불확실하다면 이를 명확히 하기 위한 타겟 질문을 하나 던진 후 진행하십시오.
 
-Scan the repo before substantive brainstorming. Match depth to scope:
+**Deep 하위 모드: 기능(feature) vs 제품(product).** Deep 범위의 경우 브레인스토밍이 제품의 형상을 새로 정의해야 하는지 아니면 기존 형상을 상속받는지 분류합니다.
 
-**Lightweight** — Search for the topic, check if something similar already exists, and move on.
+- **Deep — feature** (기본값): 기존 제품의 형상이 결정의 기준이 됩니다. 주요 행위자, 핵심 결과물, 포지셔닝 및 주요 흐름이 제품이나 저장소에 이미 확립되어 있습니다. 브레인스토밍은 그 형상 안에서 확장하거나 개선합니다.
+- **Deep — product**: 브레인스토밍이 제품의 형상을 상속받는 대신 새로 확립해야 합니다. 주요 행위자, 핵심 결과물, 인접 제품과의 포지셔닝 또는 주요 엔드투엔드 흐름이 실질적으로 해결되지 않았습니다. 기존 코드가 있다고 해서 제품 계층일 가능성이 낮아지는 것은 아닙니다. 형상이 모호한 절반쯤 빌드된 도구는 여전히 제품 계층입니다.
 
-**Standard and Deep** — Two passes:
+제품 계층은 단계 1.2에서 추가 질문을 트리거하며 요구사항 문서에 추가 섹션을 만듭니다. 기능 계층은 기존의 Deep 동작을 그대로 사용합니다.
 
-*Constraint Check* — Check project instruction files (`AGENTS.md`, and `CLAUDE.md` only if retained as compatibility context) for workflow, product, or scope constraints that affect the brainstorm. Also read `STRATEGY.md` if it exists — the product's target problem, approach, persona, and active tracks are direct input to what this brainstorm should deliver and should shape scope, success criteria, and which approaches are aligned vs out-of-scope. If these add nothing, move on.
+### Phase 1: 아이디어 이해하기
 
-*Topic Scan* — Search for relevant terms. Read the most relevant existing artifact if one exists (brainstorm, plan, spec, skill, feature doc). Skim adjacent examples covering similar behavior.
+#### 1.1 기존 컨텍스트 스캔
 
-If nothing obvious appears after a short scan, say so and continue. Two rules govern technical depth during the scan:
+실질적인 브레인스토밍 전에 저장소를 스캔합니다. 깊이는 범위에 맞춥니다.
 
-1. **Verify before claiming** — When the brainstorm touches checkable infrastructure (database tables, routes, config files, dependencies, model definitions), read the relevant source files to confirm what actually exists. Any claim that something is absent — a missing table, an endpoint that doesn't exist, a dependency not in the Gemfile, a config option with no current support — must be verified against the codebase first; if not verified, label it as an unverified assumption. This applies to every brainstorm regardless of topic.
+**Lightweight** — 주제를 검색하고 비슷한 것이 이미 존재하는지 확인한 후 넘어갑니다.
 
-2. **Defer design decisions to planning** — Implementation details like schemas, migration strategies, endpoint structure, or deployment topology belong in planning, not here — unless the brainstorm is itself about a technical or architectural decision, in which case those details are the subject of the brainstorm and should be explored.
+**Standard 및 Deep** — 두 단계로 진행합니다:
 
-**Slack context** (opt-in, Standard and Deep only) — never auto-dispatch. Route by condition:
+*제약 사항 확인* — 프로젝트 지침 파일(`AGENTS.md` 및 호환성 컨텍스트로 남겨진 경우에만 `CLAUDE.md`)에서 브레인스토밍에 영향을 미치는 워크플로우, 제품 또는 범위 제약 사항을 확인합니다. `STRATEGY.md`가 있다면 이 또한 읽습니다. 제품의 타겟 문제, 접근 방식, 페르소나 및 활성 트랙은 이 브레인스토밍이 제공해야 할 결과물에 직접적인 입력값이 되며 범위, 성공 기준 및 어떤 접근 방식이 적절한지 결정하는 기준이 됩니다.
 
-- **Tools available + user asked**: Dispatch `ce-slack-researcher` with a brief summary of the brainstorm topic alongside Phase 1.1 work. Incorporate findings into constraint and context awareness.
-- **Tools available + user didn't ask**: Note in output: "Slack tools detected. Ask me to search Slack for organizational context at any point, or include it in your next prompt."
-- **No tools + user asked**: Note in output: "Slack context was requested but no Slack tools are available. Install and authenticate the Slack plugin to enable organizational context search."
+*주제 스캔* — 관련 용어를 검색합니다. 관련 산출물(브레인스토밍, 계획, 스펙, 스킬, 기능 문서)이 있다면 가장 관련성 높은 것을 읽습니다. 비슷한 동작을 다루는 인접 사례들을 훑어봅니다.
 
-#### 1.2 Product Pressure Test
+짧은 스캔 후 명확한 것이 없다면 그렇게 말하고 계속합니다. 스캔 중 기술적 깊이에 대해서는 다음 두 규칙을 따릅니다:
 
-Before generating approaches, scan the user's opening for rigor gaps. Match depth to scope.
+1. **주장하기 전에 확인** — 브레인스토밍이 확인 가능한 인프라(데이터베이스 테이블, 라우트, 설정 파일, 의존성, 모델 정의)를 다룰 때는 관련 소스 파일을 읽어 실제로 존재하는지 확인하십시오. 테이블 누락, 존재하지 않는 엔드포인트, Gemfile에 없는 의존성, 지원되지 않는 설정 옵션 등 "무언가가 없다"는 주장은 반드시 코드베이스에서 먼저 확인해야 합니다. 확인되지 않은 경우 "확인되지 않은 가정"으로 라벨을 붙이십시오. 이는 주제와 상관없이 모든 브레인스토밍에 적용됩니다.
 
-This is agent-internal analysis, not a user-facing checklist. Read the opening, note which gaps actually exist, and raise only those as questions during Phase 1.3 — folded into the normal flow of dialogue, not fired as a pre-flight gauntlet. A fuzzy opening may earn three or four probes; a concrete, well-framed one may earn zero because no scope-appropriate gaps were found.
+2. **설계 결정은 계획 단계로 위임** — 스키마, 마이그레이션 전략, 엔드포인트 구조 또는 배포 토폴로지와 같은 구현 상세는 여기서 다루지 않고 계획 단계에서 다룹니다. 단, 브레인스토밍 자체가 기술적 또는 아키텍처적 결정에 관한 것이라면 해당 상세 사항이 브레인스토밍의 주제가 되므로 탐색해야 합니다.
+
+**Slack 컨텍스트** (선택 사항, Standard 및 Deep 전용) — 자동 실행하지 않습니다. 조건에 따라 라우팅합니다:
+- **도구 사용 가능 + 사용자가 요청함**: 단계 1.1 작업과 함께 브레인스토밍 주제 요약을 포함하여 `ce-slack-researcher`를 호출합니다. 발견된 내용을 제약 사항 및 컨텍스트 파악에 반영합니다.
+- **도구 사용 가능 + 사용자가 요청 안 함**: 출력에 명시: "Slack 도구가 감지되었습니다. 언제든지 조직 컨텍스트를 위해 Slack 검색을 요청하시거나 다음 프롬프트에 포함해 주세요."
+- **도구 없음 + 사용자가 요청함**: 출력에 명시: "Slack 컨텍스트가 요청되었으나 가용한 Slack 도구가 없습니다. 조직 컨텍스트 검색을 위해 Slack 플러그인을 설치하고 인증해 주세요."
+
+#### 1.2 제품 압박 테스트 (Product Pressure Test)
+
+접근 방식을 제안하기 전에 사용자의 초기 요청에서 논리적 격차가 있는지 스캔합니다. 깊이는 범위에 맞춥니다.
+
+이는 에이전트 내부 분석이며 사용자에게 보여주는 체크리스트가 아닙니다. 요청을 읽고 어떤 격차가 존재하는지 확인한 뒤, 해당되는 것만 단계 1.3에서 질문으로 던지십시오. 대화의 흐름 속에 자연스럽게 녹여내야 하며 사전에 한꺼번에 퍼붓지 마십시오. 모호한 요청에는 서너 개의 질문이 필요할 수 있고, 구체적인 요청에는 범위에 맞는 격차가 없다면 질문이 없을 수도 있습니다.
 
 **Lightweight:**
-- Is this solving the real user problem?
-- Are we duplicating something that already covers this?
-- Is there a clearly better framing with near-zero extra cost?
+- 이것이 사용자의 실제 문제를 해결하는가?
+- 이미 이 문제를 다루고 있는 것과 중복되지는 않는가?
+- 추가 비용 없이 명확하게 더 나은 프레이밍이 있는가?
 
-**Standard — scan for these gaps:**
+**Standard — 다음 격차를 스캔:**
 
-- **Evidence gap.** The opening asserts want or need, but doesn't point to anything the would-be user has already done — time spent, money paid, workarounds built — that would make the want observable. When present, ask for the most concrete thing someone has already done about this.
+- **증거 격차 (Evidence gap).** 요청에서 원함이나 필요성을 주장하지만, 실제 사용자가 이미 한 행동(시간 소요, 비용 지불, 워크라운드 구축 등)을 제시하지 못하는 경우입니다. 이 경우 사용자가 이미 이 문제에 대해 행한 가장 구체적인 사례를 물어보십시오.
 
-- **Specificity gap.** The opening describes the beneficiary at a level of abstraction where the agent couldn't design without silently inventing who they are and what changes for them. When present, ask the user to name a specific person or narrow segment, and what changes for that person when this ships.
+- **구체성 격차 (Specificity gap).** 대상자를 너무 추상적으로 설명하여 에이전트가 그들이 누구인지, 무엇이 변하는지 임의로 가정해야 하는 경우입니다. 이 경우 구체적인 인물이나 좁은 세그먼트의 이름을 대고, 이것이 출시되었을 때 그들에게 무엇이 변하는지 물어보십시오.
 
-- **Counterfactual gap.** The opening doesn't make visible what users do today when this problem arises, nor what changes if nothing ships. When present, ask what the current workaround is, even if it's messy — and what it costs them.
+- **반사실 격차 (Counterfactual gap).** 이 문제가 발생했을 때 사용자가 현재 어떻게 대응하고 있는지, 또는 이것이 출시되지 않았을 때 무엇이 변하는지 드러나지 않는 경우입니다. 현재의 워크라운드가 아무리 엉망이더라도 무엇인지, 그리고 그 비용이 얼마인지 물어보십시오.
 
-- **Attachment gap.** The opening treats a particular solution shape as the thing being built, rather than the value that shape is supposed to deliver, and hasn't been examined against smaller forms that might deliver the same value. When present, ask what the smallest version that still delivers real value would look like.
+- **집착 격차 (Attachment gap).** 이 기능이 전달해야 할 가치보다 특정 해결 방식 자체에 집중하고 있으며, 동일한 가치를 주는 더 작은 형태를 검토하지 않은 경우입니다. 실질적인 가치를 제공하는 가장 작은 버전이 무엇일지 물어보십시오.
 
-Plus these synthesis questions — not gap lenses, product-judgment the agent weighs in its own reasoning:
-- Is there a nearby framing that creates more user value without more carrying cost? If so, what complexity does it add?
-- Given the current project state, user goal, and constraints, what is the single highest-leverage move right now: the request as framed, a reframing, one adjacent addition, a simplification, or doing nothing?
+추가적인 종합 질문 (에이전트 스스로 판단):
+- 유지 비용 증가 없이 더 많은 사용자 가치를 창출하는 인접 프레이밍이 있는가? 있다면 어떤 복잡성이 추가되는가?
+- 현재 프로젝트 상태, 사용자 목표 및 제약 사항을 고려할 때 지금 가장 영향력 있는 움직임은 무엇인가? (요청대로 진행, 리프레이밍, 인접 기능 추가, 단순화 또는 아무것도 안 함)
 
-Favor moves that compound value, reduce future carrying cost, or make the product meaningfully more useful or compelling. Use the result to sharpen the conversation, not to bulldoze the user's intent.
+가치를 복리로 쌓거나, 미래 유지 비용을 줄이거나, 제품을 유의미하게 더 유용하게 만드는 방향을 선호하십시오. 이 결과를 사용하여 대화를 예리하게 만들되 사용자의 의도를 억누르지는 마십시오.
 
-**Deep** — Standard lenses and synthesis questions plus:
-- Is this a local patch, or does it move the broader system toward where it wants to be?
+**Deep** — Standard 렌즈 및 종합 질문에 더해:
+- 이것이 국소적인 패치인가, 아니면 시스템 전체가 지향하는 방향으로 움직이게 하는가?
 
-**Deep — product** — Deep plus:
+**Deep — product** — Deep에 더해:
 
-- **Durability gap.** The opening's value proposition rests on a current state of the world that may shift in predictable ways within the horizon the user cares about. When present, ask how the idea fares under the most plausible near-term shifts — and push past rising-tide answers every competitor could make.
+- **지속성 격차 (Durability gap).** 가치 제안이 사용자가 중시하는 기간 내에 변할 수 있는 세상의 현재 상태에 의존하고 있는 경우입니다. 가까운 미래에 발생할 수 있는 변화 속에서 이 아이디어가 어떻게 유지될지 묻고, 경쟁자 누구나 할 수 있는 답변 이상의 것을 끌어내십시오.
 
-- What adjacent product could we accidentally build instead, and why is that the wrong one?
-- What would have to be true in the world for this to fail?
+- 실수로 대신 빌드하게 될 수 있는 인접 제품은 무엇이며, 왜 그것이 잘못된 방향인가?
+- 이 시도가 실패하려면 세상의 어떤 조건이 참이어야 하는가?
 
-These questions force an explicit product thesis and feed the Scope Boundaries subsections ("Deferred for later" and "Outside this product's identity") and Dependencies / Assumptions in the requirements document.
+이 질문들은 명시적인 제품 가설(product thesis)을 수립하게 하며 요구사항 문서의 범위 경계 섹션("나중으로 미룸" 및 "이 제품의 정체성 밖의 일")과 의존성/가정 섹션에 반영됩니다.
 
-#### 1.3 Collaborative Dialogue
+#### 1.3 협력적인 대화
 
-Follow the Interaction Rules above. Use the platform's blocking question tool when available.
+위의 상호작용 규칙을 따르십시오. 가능한 경우 플랫폼의 질문 도구를 사용하십시오.
 
-**Guidelines:**
-- Ask what the user is already thinking before offering your own ideas. This surfaces hidden context and prevents fixation on AI-generated framings.
-- Start broad (problem, users, value) then narrow (constraints, exclusions, edge cases)
-- **Rigor probes fire before Phase 2 and are prose, not menus.** Narrowing is legitimate, but Phase 1 cannot end with un-probed rigor gaps. Each scope-appropriate gap from Phase 1.2 fires as a **separate** direct prose probe — one probe satisfies one gap, not multiple. Standard brainstorms scan four gap lenses (evidence, specificity, counterfactual, attachment); Deep-product adds durability (five total), but only the gaps actually present in the opening must be probed. Surface those probes progressively across the conversation — interleaving with narrowing moves is fine, as long as every scope-appropriate gap that was found in Phase 1.2 has been probed in prose before Phase 2. Rigor probes map to Interaction Rule 5(b): a 4-option menu signals which kinds of evidence count and lets the user pick rather than produce. Prose forces them to produce real observation or surface their uncertainty. Examples (one per gap): *evidence — "What's the most concrete thing someone's already done about this — paid, built a workaround, quit a tool over it?"* / *specificity — "Can you name a team you've actually watched hit this, or are you reasoning?"* / *counterfactual — "What do teams do today when this breaks — who reconciles?"* / *attachment — "Before we move to shapes or approaches — what's the smallest version that would still prove the bet right, and what's excluded?"* — **attachment is the final rigor probe before Phase 2 when the attachment gap is present. Fire it regardless of whether a specific shape has emerged through narrowing; its job is to pressure-test the user's implicit framing of the product before Phase 2 inherits it** / *durability — "Under the most plausible near-term shifts, how does this bet hold?"* If the answer reveals genuine uncertainty, record it as an explicit assumption in the requirements document rather than skipping the probe.
-- Clarify the problem frame, validate assumptions, and ask about success criteria
-- Make requirements concrete enough that planning will not need to invent behavior
-- Surface dependencies or prerequisites only when they materially affect scope
-- Resolve product decisions here; leave technical implementation choices for planning
-- Bring ideas, alternatives, and challenges instead of only interviewing
+**지침:**
+- 자신의 아이디어를 제안하기 전에 사용자가 이미 무엇을 생각하고 있는지 먼저 물어보십시오. 이는 숨겨진 컨텍스트를 드러내고 AI가 생성한 프레이밍에 고착되는 것을 방지합니다.
+- 넓게 시작하여(문제, 사용자, 가치) 좁혀가십시오(제약, 제외 항목, 예외 케이스).
+- **논리적 격차 확인(Rigor probes)은 단계 2 이전에 수행하며 메뉴가 아닌 서술형으로 질문합니다.** 범위를 좁히는 것은 정당하지만, 단계 1은 확인되지 않은 격차를 남겨둔 채 끝나서는 안 됩니다. 단계 1.2에서 발견된 각 격차는 **개별적인** 직접 서술형 질문으로 던져져야 합니다. 한 질문으로 여러 격차를 해소하려 하지 마십시오. 5가지 격차(증거, 구체성, 반사실, 집착, 지속성) 중 실제 존재하는 것만 질문합니다. 대화 전반에 걸쳐 순차적으로 질문하십시오. 단계 2로 넘어가기 전까지 단계 1.2에서 발견된 모든 격차에 대해 서술형 질문이 이루어져야 합니다. 상호작용 규칙 5(b)에 따라, 4지 선다형 메뉴는 어떤 증거가 유효한지 힌트를 주어 사용자가 고민 없이 선택하게 만듭니다. 서술형은 사용자가 직접 관찰한 내용을 제시하거나 불확실성을 드러내게 만듭니다. 예시: *증거 — "사람들이 실제로 이 문제에 대해 행한 가장 구체적인 일이 무엇인가요? 비용을 지불했나요, 워크라운드를 만들었나요, 아니면 도구 사용을 포기했나요?"* / *집착 — "방식이나 접근법으로 넘어가기 전에, 이 베팅이 옳다는 것을 증명할 수 있는 가장 작은 버전은 어떤 모습일까요? 무엇이 제외될까요?"* (집착 격차는 단계 2 이전의 마지막 질문이 됩니다) 만약 답변이 불확실성을 드러낸다면, 이를 무시하지 말고 요구사항 문서에 명시적인 가정으로 기록하십시오.
+- 문제 프레임을 명확히 하고, 가정을 검증하며, 성공 기준에 대해 물어보십시오.
+- 계획 단계에서 동작을 임의로 지어낼 필요가 없을 정도로 요구사항을 구체화하십시오.
+- 범위에 실질적인 영향을 주는 경우에만 의존성이나 전제 조건을 표면화하십시오.
+- 제품 관련 결정은 여기서 해결하고, 기술적인 구현 선택은 계획 단계로 남겨두십시오.
+- 단순히 인터뷰만 하지 말고 아이디어, 대안 및 반론을 제시하십시오.
 
-**Exit condition:** Continue until the idea is clear OR the user explicitly wants to proceed.
+**종료 조건:** 아이디어가 명확해지거나 사용자가 명시적으로 진행하기를 원할 때까지 계속하십시오.
 
-### Phase 2: Explore Approaches
+### 단계 2: 접근 방식 탐색
 
-If multiple plausible directions remain, propose **2-3 concrete approaches** based on research and conversation. Otherwise state the recommended direction directly.
+여러 가지 타당한 방향이 남아 있다면, 조사와 대화를 바탕으로 **2~3가지 구체적인 접근 방식**을 제안하십시오. 그렇지 않다면 추천하는 방향을 직접 밝히십시오.
 
-Use at least one non-obvious angle — inversion (what if we did the opposite?), constraint removal (what if X weren't a limitation?), or analogy from how another domain solves this. The first approaches that come to mind are usually variations on the same axis.
+하나 이상의 비자명한 관점(반전, 제약 제거, 다른 도메인의 비유 등)을 사용하십시오. 처음에 떠오르는 접근 방식들은 보통 같은 축 위의 변주일 뿐입니다.
 
-Present approaches first, then evaluate. Let the user see all options before hearing which one is recommended — leading with a recommendation before the user has seen alternatives anchors the conversation prematurely.
+접근 방식을 먼저 제시한 후 평가하십시오. 추천안을 먼저 말하면 대화가 조기에 고착될 수 있으므로 사용자가 모든 옵션을 먼저 볼 수 있게 하십시오.
 
-When useful, include one deliberately higher-upside alternative:
-- Identify what adjacent addition or reframing would most increase usefulness, compounding value, or durability without disproportionate carrying cost. Present it as a challenger option alongside the baseline, not as the default. Omit it when the work is already obviously over-scoped or the baseline request is clearly the right move.
+유용한 경우, 의도적으로 더 큰 성과를 낼 수 있는 대안을 포함하십시오:
+- 과도한 유지 비용 없이 유용성, 가치 복리 또는 지속성을 가장 크게 높일 수 있는 인접 기능 추가나 리프레이밍을 식별합니다. 이를 기본값이 아닌 '도전적인 옵션'으로 제시하십시오. 작업이 이미 명백히 오버스코프이거나 기본 요청이 명확히 옳은 움직임인 경우에는 생략합니다.
 
-At product tier, alternatives should differ on *what* is built (product shape, actor set, positioning), not *how* it is built. Implementation-variant alternatives belong at feature tier.
+제품 계층에서 대안은 무엇을 빌드할지(제품 형상, 행위자 집단, 포지셔닝)가 달라야 하며, 어떻게 빌드할지가 달라서는 안 됩니다. 구현 방식의 차이는 기능 계층의 대안입니다.
 
-For each approach, provide:
-- Brief description (2-3 sentences)
-- Pros and cons
-- Key risks or unknowns
-- When it's best suited
+각 접근 방식에 대해 다음을 제공하십시오:
+- 간략한 설명 (2~3문장)
+- 장점과 단점
+- 주요 리스크 또는 불확실성
+- 어떤 상황에 가장 적합한지
 
-**Approach granularity: mechanism / product shape, not architecture.** Approach descriptions name mechanism-level distinctions ("pause as a rule property" vs "pause as an event filter" vs "pause as a separate entity") and product-relevant trade-offs (plan-tier coupling, complexity surface, migration difficulty). They do NOT name implementation specifics — column names, table names, file paths, service classes, JSON shapes, exact method names. Those are ce-plan's job. Bringing architecture forward at brainstorm time forces the user to make architectural decisions on ce-brainstorm's intentionally-shallow research, and the synthesis at Phase 2.5 then has to filter out the leak.
+**접근 방식의 세분성: 아키텍처가 아닌 메커니즘/제품 형상.** 접근 방식 설명은 메커니즘 수준의 구분("일시 정지를 규칙 속성으로" vs "일시 정지를 이벤트 필터로" vs "일시 정지를 별도 엔티티로")과 제품 관련 트레이드오프(플랜 티어 결합, 복잡성 노출, 마이그레이션 난이도)를 언급합니다. 컬럼명, 테이블명, 파일 경로, 서비스 클래스, JSON 구조, 정확한 메서드명과 같은 구현 상세는 언급하지 마십시오. 그것은 `ce-plan`의 역할입니다. 브레인스토밍 단계에서 아키텍처를 결정하게 하면 사용자는 불충분한 조사를 바탕으로 결정을 내려야 하는 상황에 처하게 됩니다.
 
-After presenting all approaches, state your recommendation and explain why. Prefer simpler solutions when added complexity creates real carrying cost, but do not reject low-cost, high-value polish just because it is not strictly necessary.
+모든 접근 방식을 제시한 후, 추천안과 그 이유를 설명하십시오. 복잡성이 실질적인 유지 비용을 발생시킨다면 단순한 해결책을 선호하되, 비용이 낮고 가치가 높은 디테일은 단지 '필수가 아니라는' 이유로 거부하지 마십시오.
 
-If one approach is clearly best and alternatives are not meaningful, skip the menu and state the recommendation directly.
+하나의 접근 방식이 압도적으로 좋고 대안이 무의미하다면 메뉴를 생략하고 추천안을 직접 밝히십시오.
 
-If relevant, call out whether the choice is:
-- Reuse an existing pattern
-- Extend an existing capability
-- Build something net new
+적절한 경우 선택지가 다음 중 무엇인지 언급하십시오:
+- 기존 패턴 재사용
+- 기존 역량 확장
+- 완전히 새로운 것 구축
 
-### Phase 2.5: Synthesis Summary
+### 단계 2.5: 종합 요약 (Synthesis Summary)
 
-**STOP. Before composing the synthesis, read `references/synthesis-summary.md`.** The discipline rules, prose-summary requirement, three-bucket structure, anti-pattern guidance, soft-cut behavior, self-redirect support, prose-feedback rules, and bucket-content routing into doc body sections all live there. Composing a synthesis without these rules loaded reliably produces malformed output — missing prose summary, implementation-detail leakage, the proposal-pitch anti-pattern. This is not optional supplementary reading; it is the source of truth for how the phase behaves.
+**잠시 멈추십시오. 요약을 작성하기 전에 `references/synthesis-summary.md`를 읽으십시오.** 규율, 서술형 요약 요구 사항, 3개의 버킷 구조, 안티 패턴 지침, 소프트 컷(soft-cut) 동작, 자기 리다이렉트 지원, 서술형 피드백 규칙 및 버킷 내용의 문서 섹션 라우팅 규칙이 모두 그곳에 있습니다. 이 규칙들을 숙지하지 않고 요약을 작성하면 산문 요약 누락, 구현 상세 유출 등 잘못된 출력이 생성될 가능성이 높습니다. 이는 선택 사항이 아니라 단계가 어떻게 동작해야 하는지에 대한 정답지입니다.
 
-Surface a synthesis to the user before Phase 3 writes the requirements doc — the user's last opportunity to correct scope before the artifact lands.
+단계 3에서 요구사항 문서를 작성하기 전에 사용자에게 요약을 제시하십시오. 이는 산출물이 생성되기 전 사용자가 범위를 수정할 수 있는 마지막 기회입니다.
 
-Fires for **all tiers** including Lightweight. Skip Phase 2.5 entirely on the Phase 0.1b non-software (universal-brainstorming) route.
+Lightweight를 포함한 **모든 계층**에서 실행됩니다. 단계 0.1b의 비소프트웨어(범용 브레인스토밍) 흐름에서는 생략합니다.
 
-**Headless mode** (LFG / `disable-model-invocation`): the synthesis is composed but not confirmed. Inferred bets route to a `## Assumptions` section in the doc (so downstream review can scrutinize them as un-validated), not into Key Decisions. See `references/synthesis-summary.md` Headless mode for the full routing.
+**Headless 모드** (LFG / `disable-model-invocation`): 요약은 작성되지만 사용자 확인을 거치지 않습니다. 추론된 베팅(Inferred bets)은 나중에 검토할 수 있도록 문서의 `## Assumptions` 섹션으로 라우팅됩니다. 자세한 내용은 `references/synthesis-summary.md`의 Headless 모드 섹션을 참조하십시오.
 
-**Announce-mode (Phase 0.2 fast path)**: on the "requirements already clear" fast path, Phase 2.5 fires in announce-mode — emit the synthesis (Stated / Inferred / Out) for visibility, then **end the turn**. Do NOT call the Write tool in the same turn as the synthesis emission. On the user's next message: if it's an acknowledgment, follow-up, or any non-correcting input, proceed to Phase 3 doc-write; if it indicates a correction (push-back on an Inferred bullet, scope adjustment), revise the synthesis and emit again. Lighter than full Phase 2.5 (no `AskUserQuestion` menu, no formal confirm option) but still gives the user a real interruption window before the doc lands. ce-brainstorm sits early in the workflow; a wrong-doc has downstream consequence (feeds ce-plan, then implementation), so the turn boundary is justified even on the fast path.
+**Announce-모드 (단계 0.2 패스트 패스)**: "요구사항이 이미 명확함" 패스트 패스에서 단계 2.5는 announce-모드로 실행됩니다. 요약(Stated / Inferred / Out)을 보여주고 **턴을 종료**하십시오. 요약 제시와 동시에 Write 도구를 호출하지 마십시오. 사용자의 다음 메시지가 확인, 후속 질문 또는 수정을 요구하지 않는 입력이라면 단계 3의 문서 작성을 진행하십시오. 수정 사항(Inferred 항목에 대한 반론, 범위 조정 등)이 있다면 요약을 수정하여 다시 제시하십시오. 전체 단계 2.5보다는 가볍지만 문서가 작성되기 전 사용자에게 실질적인 중단 기회를 제공합니다.
 
-### Phase 3: Capture the Requirements
+### Phase 3: 요구사항 기록하기
 
-Write or update a requirements document only when the conversation produced durable decisions worth preserving. Read `references/requirements-capture.md` for the document template, formatting rules, visual aid guidance, and completeness checks.
+대화 결과 보존할 가치가 있는 지속적인 결정사항이 생성된 경우에만 요구사항 문서를 작성하거나 업데이트합니다. 문서 템플릿, 포맷팅 규칙, 시각적 보조 자료 지침 및 완결성 확인에 대해서는 `references/requirements-capture.md`를 읽으십시오.
 
-For **Lightweight** brainstorms, keep the document compact. Skip document creation when the user only needs brief alignment and no durable decisions need to be preserved.
+**Lightweight** 브레인스토밍의 경우 문서를 간결하게 유지하십시오. 사용자가 짧은 조율만 필요로 하고 보존해야 할 결정사항이 없다면 문서 생성을 생략합니다.
 
-### Phase 4: Handoff
+### Phase 4: 전달 (Handoff)
 
-Present next-step options and execute the user's selection. Read `references/handoff.md` for the option logic, dispatch instructions, and closing summary format.
+다음 단계 옵션을 제시하고 사용자의 선택을 실행합니다. 옵션 로직, 디스패치 지침 및 종료 요약 형식에 대해서는 `references/handoff.md`를 읽으십시오.

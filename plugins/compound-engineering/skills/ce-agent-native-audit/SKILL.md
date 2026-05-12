@@ -1,278 +1,296 @@
 ---
 name: ce-agent-native-audit
-description: Run comprehensive agent-native architecture review with scored principles
-argument-hint: "[optional: specific principle to audit]"
+description: 점수화된 원칙을 바탕으로 포괄적인 에이전트 네이티브 아키텍처 리뷰를 실행합니다.
+argument-hint: "[선택 사항: 감사할 특정 원칙]"
 disable-model-invocation: true
+allowed-tools:
+  - gem
 ---
 
-# Agent-Native Architecture Audit
+# 에이전트 네이티브 아키텍처 감사 (Agent-Native Architecture Audit)
 
-Conduct a comprehensive review of the codebase against agent-native architecture principles, launching parallel sub-agents for each principle and producing a scored report.
+## 다중 에이전트 협업 (Multi-Agent Collaboration)
 
-## Core Principles to Audit
+사용자의 입력(`$ARGUMENTS`) 내에 `--add <ai-이름>` 형태의 플래그가 포함되어 있는지 확인하십시오. 
+현재 지원되는 외부 AI 인터페이스는 `--add gemini` (또는 `--add gem`)입니다.
 
-1. **Action Parity** - "Whatever the user can do, the agent can do"
-2. **Tools as Primitives** - "Tools provide capability, not behavior"
-3. **Context Injection** - "System prompt includes dynamic context about app state"
-4. **Shared Workspace** - "Agent and user work in the same data space"
-5. **CRUD Completeness** - "Every entity has full CRUD (Create, Read, Update, Delete)"
-6. **UI Integration** - "Agent actions immediately reflected in UI"
-7. **Capability Discovery** - "Users can discover what the agent can do"
-8. **Prompt-Native Features** - "Features are prompts defining outcomes, not code"
+만약 해당 플래그가 감지되면, 작업을 단독으로 확정하지 말고 다음 절차를 따르십시오:
+1. **의도 파악:** 플래그를 제외한 나머지 문자열을 실제 지시사항으로 간주합니다.
+2. **초안 작성:** 본인(주 에이전트)의 지식과 코드베이스 컨텍스트를 바탕으로 작업의 초기 뼈대나 접근법을 생각합니다.
+3. **MCP 협업 호출:** `gem` 도구를 호출하여 외부 Gemini 에이전트에게 조언이나 검토를 구합니다.
+   - 호출 시 전달할 메시지 예시: "나는 현재 이 작업에 대한 초안을 세우고 있어. 내 초안은 [초안 요약]이야. 이 접근 방식의 기술적 타당성을 검토하고 누락된 에지 케이스나 더 나은 패턴을 조언해줄 수 있어?"
+4. **결과 통합:** `gem` 도구가 반환한 피드백을 당신의 최종 결과물에 통합(Synthesis)합니다. 
+5. **명시적 표시:** 최종 산출물의 상단 또는 설명 부분에 "이 결과물은 Gemini와의 협업을 통해 검토 및 보완되었습니다."라는 문구를 추가하십시오.
 
-## Workflow
+이 협업 절차를 염두에 두고 아래의 본래 스킬 워크플로우를 진행하십시오.
 
-### Step 1: Load the Agent-Native Skill
 
-First, invoke the agent-native-architecture skill to understand all principles:
+에이전트 네이티브 아키텍처 원칙에 따라 코드베이스에 대한 포괄적인 리뷰를 수행합니다. 각 원칙에 대해 병렬 서브 에이전트를 실행하고 점수가 포함된 보고서를 생성합니다.
+
+## 감사 대상 핵심 원칙
+
+1. **작업 패리티 (Action Parity)** - "사용자가 할 수 있는 모든 것을 에이전트도 할 수 있음"
+2. **프리미티브로서의 도구 (Tools as Primitives)** - "도구는 행동이 아닌 역량을 제공함"
+3. **컨텍스트 주입 (Context Injection)** - "시스템 프롬프트에 앱 상태에 대한 동적 컨텍스트가 포함됨"
+4. **공유 워크스페이스 (Shared Workspace)** - "에이전트와 사용자가 동일한 데이터 공간에서 작업함"
+5. **CRUD 완결성 (CRUD Completeness)** - "모든 엔티티에 대해 완전한 CRUD(생성, 읽기, 업데이트, 삭제)가 가능함"
+6. **UI 통합 (UI Integration)** - "에이전트의 작업이 즉시 UI에 반영됨"
+7. **역량 발견 (Capability Discovery)** - "사용자가 에이전트의 능력을 발견할 수 있음"
+8. **프롬프트 네이티브 기능 (Prompt-Native Features)** - "기능은 코드가 아닌 결과물을 정의하는 프롬프트임"
+
+## 워크플로우
+
+### 단계 1: 에이전트 네이티브 스킬 로드
+
+먼저, 모든 원칙을 이해하기 위해 agent-native-architecture 스킬을 호출합니다.
 
 ```
 /ce-agent-native-architecture
 ```
 
-Select option 7 (action parity) to load the full reference material.
+옵션 7(작업 패리티)을 선택하여 전체 참조 자료를 로드합니다.
 
-### Step 2: Launch Parallel Sub-Agents
+### 단계 2: 병렬 서브 에이전트 실행
 
-Launch 8 parallel sub-agents using the platform's subagent primitive (`Agent` with `subagent_type: Explore` in Claude Code, `spawn_agent` with `agent_type: "explorer"` in Codex, `subagent` with `agent: "scout"` in Pi via the `pi-subagents` extension), one for each principle. Each agent should:
+각 원칙에 대해 하나씩, 총 8개의 병렬 서브 에이전트를 플랫폼의 서브 에이전트 프리미티브(Claude Code의 `subagent_type: Explore`를 사용하는 `Agent`, Codex의 `agent_type: "explorer"`를 사용하는 `spawn_agent`, `pi-subagents` 확장을 통한 Pi의 `agent: "scout"`을 사용하는 `subagent`)를 사용하여 실행합니다. 각 에이전트는 다음을 수행해야 합니다.
 
-1. Enumerate ALL instances in the codebase (user actions, tools, contexts, data stores, etc.)
-2. Check compliance against the principle
-3. Provide a SPECIFIC SCORE like "X out of Y (percentage%)"
-4. List specific gaps and recommendations
+1. 코드베이스의 모든 인스턴스(사용자 작업, 도구, 컨텍스트, 데이터 저장소 등)를 나열합니다.
+2. 원칙에 대한 준수 여부를 확인합니다.
+3. "X/Y (백분율%)"와 같이 구체적인 점수를 제공합니다.
+4. 구체적인 격차와 권장 사항을 나열합니다.
 
 <sub-agents>
 
-**Agent 1: Action Parity**
+**에이전트 1: 작업 패리티 (Action Parity)**
 ```
-Audit for ACTION PARITY - "Whatever the user can do, the agent can do."
+작업 패리티(ACTION PARITY) 감사를 수행하십시오 - "사용자가 할 수 있는 모든 것을 에이전트도 할 수 있어야 함."
 
-Tasks:
-1. Enumerate ALL user actions in frontend (API calls, button clicks, form submissions)
-   - Search for API service files, fetch calls, form handlers
-   - Check routes and components for user interactions
-2. Check which have corresponding agent tools
-   - Search for agent tool definitions
-   - Map user actions to agent capabilities
-3. Score: "Agent can do X out of Y user actions"
+작업:
+1. 프론트엔드의 모든 사용자 작업(API 호출, 버튼 클릭, 폼 제출)을 나열하십시오.
+   - API 서비스 파일, fetch 호출, 폼 핸들러를 검색하십시오.
+   - 사용자 상호작용을 위해 라우트와 컴포넌트를 확인하십시오.
+2. 각 작업에 대응하는 에이전트 도구가 있는지 확인하십시오.
+   - 에이전트 도구 정의를 검색하십시오.
+   - 사용자 작업을 에이전트 역량에 매핑하십시오.
+3. 점수 산정: "사용자 작업 Y개 중 에이전트가 수행 가능한 작업 X개"
 
-Format:
-## Action Parity Audit
-### User Actions Found
-| Action | Location | Agent Tool | Status |
-### Score: X/Y (percentage%)
-### Missing Agent Tools
-### Recommendations
-```
-
-**Agent 2: Tools as Primitives**
-```
-Audit for TOOLS AS PRIMITIVES - "Tools provide capability, not behavior."
-
-Tasks:
-1. Find and read ALL agent tool files
-2. Classify each as:
-   - PRIMITIVE (good): read, write, store, list - enables capability without business logic
-   - WORKFLOW (bad): encodes business logic, makes decisions, orchestrates steps
-3. Score: "X out of Y tools are proper primitives"
-
-Format:
-## Tools as Primitives Audit
-### Tool Analysis
-| Tool | File | Type | Reasoning |
-### Score: X/Y (percentage%)
-### Problematic Tools (workflows that should be primitives)
-### Recommendations
+형식:
+## 작업 패리티 감사
+### 발견된 사용자 작업
+| 작업 | 위치 | 에이전트 도구 | 상태 |
+### 점수: X/Y (백분율%)
+### 누락된 에이전트 도구
+### 권장 사항
 ```
 
-**Agent 3: Context Injection**
+**에이전트 2: 프리미티브로서의 도구 (Tools as Primitives)**
 ```
-Audit for CONTEXT INJECTION - "System prompt includes dynamic context about app state"
+프리미티브로서의 도구(TOOLS AS PRIMITIVES) 감사를 수행하십시오 - "도구는 행동이 아닌 역량을 제공해야 함."
 
-Tasks:
-1. Find context injection code (search for "context", "system prompt", "inject")
-2. Read agent prompts and system messages
-3. Enumerate what IS injected vs what SHOULD be:
-   - Available resources (files, drafts, documents)
-   - User preferences/settings
-   - Recent activity
-   - Available capabilities listed
-   - Session history
-   - Workspace state
+작업:
+1. 모든 에이전트 도구 파일을 찾아 읽으십시오.
+2. 각 도구를 다음과 같이 분류하십시오:
+   - PRIMITIVE (좋음): 읽기, 쓰기, 저장, 목록 조회 - 비즈니스 로직 없이 역량을 부여함
+   - WORKFLOW (나쁨): 비즈니스 로직을 포함하고, 결정을 내리며, 단계를 오케스트레이션함
+3. 점수 산정: "전체 도구 Y개 중 적절한 프리미티브 도구 X개"
 
-Format:
-## Context Injection Audit
-### Context Types Analysis
-| Context Type | Injected? | Location | Notes |
-### Score: X/Y (percentage%)
-### Missing Context
-### Recommendations
+형식:
+## 프리미티브로서의 도구 감사
+### 도구 분석
+| 도구 | 파일 | 타입 | 근거 |
+### 점수: X/Y (백분율%)
+### 문제가 있는 도구 (프리미티브여야 할 워크플로우 도구)
+### 권장 사항
 ```
 
-**Agent 4: Shared Workspace**
+**에이전트 3: 컨텍스트 주입 (Context Injection)**
 ```
-Audit for SHARED WORKSPACE - "Agent and user work in the same data space"
+컨텍스트 주입(CONTEXT INJECTION) 감사를 수행하십시오 - "시스템 프롬프트에 앱 상태에 대한 동적 컨텍스트가 포함되어야 함."
 
-Tasks:
-1. Identify all data stores/tables/models
-2. Check if agents read/write to SAME tables or separate ones
-3. Look for sandbox isolation anti-pattern (agent has separate data space)
+작업:
+1. 컨텍스트 주입 코드를 찾으십시오 ("context", "system prompt", "inject" 검색).
+2. 에이전트 프롬프트와 시스템 메시지를 읽으십시오.
+3. 무엇이 주입되고 있는지, 무엇이 주입되어야 하는지 나열하십시오:
+   - 가용 자원 (파일, 초안, 문서)
+   - 사용자 선호도/설정
+   - 최근 활동
+   - 나열된 가용 역량
+   - 세션 히스토리
+   - 워크스페이스 상태
 
-Format:
-## Shared Workspace Audit
-### Data Store Analysis
-| Data Store | User Access | Agent Access | Shared? |
-### Score: X/Y (percentage%)
-### Isolated Data (anti-pattern)
-### Recommendations
-```
-
-**Agent 5: CRUD Completeness**
-```
-Audit for CRUD COMPLETENESS - "Every entity has full CRUD"
-
-Tasks:
-1. Identify all entities/models in the codebase
-2. For each entity, check if agent tools exist for:
-   - Create
-   - Read
-   - Update
-   - Delete
-3. Score per entity and overall
-
-Format:
-## CRUD Completeness Audit
-### Entity CRUD Analysis
-| Entity | Create | Read | Update | Delete | Score |
-### Overall Score: X/Y entities with full CRUD (percentage%)
-### Incomplete Entities (list missing operations)
-### Recommendations
+형식:
+## 컨텍스트 주입 감사
+### 컨텍스트 유형 분석
+| 컨텍스트 유형 | 주입 여부 | 위치 | 비고 |
+### 점수: X/Y (백분율%)
+### 누락된 컨텍스트
+### 권장 사항
 ```
 
-**Agent 6: UI Integration**
+**에이전트 4: 공유 워크스페이스 (Shared Workspace)**
 ```
-Audit for UI INTEGRATION - "Agent actions immediately reflected in UI"
+공유 워크스페이스(SHARED WORKSPACE) 감사를 수행하십시오 - "에이전트와 사용자가 동일한 데이터 공간에서 작업해야 함."
 
-Tasks:
-1. Check how agent writes/changes propagate to frontend
-2. Look for:
-   - Streaming updates (SSE, WebSocket)
-   - Polling mechanisms
-   - Shared state/services
-   - Event buses
-   - File watching
-3. Identify "silent actions" anti-pattern (agent changes state but UI doesn't update)
+작업:
+1. 모든 데이터 저장소/테이블/모델을 식별하십시오.
+2. 에이전트가 사용자와 동일한 테이블에 읽기/쓰기를 하는지, 아니면 별도의 테이블을 사용하는지 확인하십시오.
+3. 샌드박스 격리 안티 패턴(에이전트가 별도의 데이터 공간을 가짐)을 찾으십시오.
 
-Format:
-## UI Integration Audit
-### Agent Action → UI Update Analysis
-| Agent Action | UI Mechanism | Immediate? | Notes |
-### Score: X/Y (percentage%)
-### Silent Actions (anti-pattern)
-### Recommendations
+형식:
+## 공유 워크스페이스 감사
+### 데이터 저장소 분석
+| 데이터 저장소 | 사용자 접근 | 에이전트 접근 | 공유 여부? |
+### 점수: X/Y (백분율%)
+### 격리된 데이터 (안티 패턴)
+### 권장 사항
 ```
 
-**Agent 7: Capability Discovery**
+**에이전트 5: CRUD 완결성 (CRUD Completeness)**
 ```
-Audit for CAPABILITY DISCOVERY - "Users can discover what the agent can do"
+CRUD 완결성(CRUD COMPLETENESS) 감사를 수행하십시오 - "모든 엔티티에 대해 완전한 CRUD가 가능해야 함."
 
-Tasks:
-1. Check for these 7 discovery mechanisms:
-   - Onboarding flow showing agent capabilities
-   - Help documentation
-   - Capability hints in UI
-   - Agent self-describes in responses
-   - Suggested prompts/actions
-   - Empty state guidance
-   - Slash commands (/help, /tools)
-2. Score against 7 mechanisms
+작업:
+1. 코드베이스의 모든 엔티티/모델을 식별하십시오.
+2. 각 엔티티에 대해 에이전트 도구가 다음을 지원하는지 확인하십시오:
+   - Create (생성)
+   - Read (읽기)
+   - Update (업데이트)
+   - Delete (삭제)
+3. 엔티티별 점수 및 전체 점수를 산정하십시오.
 
-Format:
-## Capability Discovery Audit
-### Discovery Mechanism Analysis
-| Mechanism | Exists? | Location | Quality |
-### Score: X/7 (percentage%)
-### Missing Discovery
-### Recommendations
+형식:
+## CRUD 완결성 감사
+### 엔티티 CRUD 분석
+| 엔티티 | 생성 | 읽기 | 업데이트 | 삭제 | 점수 |
+### 전체 점수: 엔티티 Y개 중 완전한 CRUD 지원 X개 (백분율%)
+### 미완성 엔티티 (누락된 작업 나열)
+### 권장 사항
 ```
 
-**Agent 8: Prompt-Native Features**
+**에이전트 6: UI 통합 (UI Integration)**
 ```
-Audit for PROMPT-NATIVE FEATURES - "Features are prompts defining outcomes, not code"
+UI 통합(UI INTEGRATION) 감사를 수행하십시오 - "에이전트 작업이 UI에 즉시 반영되어야 함."
 
-Tasks:
-1. Read all agent prompts
-2. Classify each feature/behavior as defined in:
-   - PROMPT (good): outcomes defined in natural language
-   - CODE (bad): business logic hardcoded
-3. Check if behavior changes require prompt edit vs code change
+작업:
+1. 에이전트의 쓰기/변경 사항이 프론트엔드에 어떻게 전파되는지 확인하십시오.
+2. 다음을 찾으십시오:
+   - 스트리밍 업데이트 (SSE, WebSocket)
+   - 폴링 메커니즘
+   - 공유 상태/서비스
+   - 이벤트 버스
+   - 파일 감시 (File watching)
+3. "침묵하는 작업(silent actions)" 안티 패턴(에이전트가 상태를 변경하지만 UI가 업데이트되지 않음)을 식별하십시오.
 
-Format:
-## Prompt-Native Features Audit
-### Feature Definition Analysis
-| Feature | Defined In | Type | Notes |
-### Score: X/Y (percentage%)
-### Code-Defined Features (anti-pattern)
-### Recommendations
+형식:
+## UI 통합 감사
+### 에이전트 작업 → UI 업데이트 분석
+| 에이전트 작업 | UI 메커니즘 | 즉시 반영 여부? | 비고 |
+### 점수: X/Y (백분율%)
+### 침묵하는 작업 (안티 패턴)
+### 권장 사항
+```
+
+**에이전트 7: 역량 발견 (Capability Discovery)**
+```
+역량 발견(CAPABILITY DISCOVERY) 감사를 수행하십시오 - "사용자가 에이전트의 능력을 발견할 수 있어야 함."
+
+작업:
+1. 다음 7가지 발견 메커니즘을 확인하십시오:
+   - 에이전트 역량을 보여주는 온보딩 플로우
+   - 도움말 문서
+   - UI 내 역량 힌트
+   - 에이전트 답변 내의 자기 설명
+   - 제안된 프롬프트/작업
+   - 빈 상태(Empty state) 가이드
+   - 슬래시 명령 (/help, /tools)
+2. 7가지 메커니즘에 대한 점수를 산정하십시오.
+
+형식:
+## 역량 발견 감사
+### 발견 메커니즘 분석
+| 메커니즘 | 존재 여부 | 위치 | 품질 |
+### 점수: X/7 (백분율%)
+### 누락된 발견 메커니즘
+### 권장 사항
+```
+
+**에이전트 8: 프롬프트 네이티브 기능 (Prompt-Native Features)**
+```
+프롬프트 네이티브 기능(PROMPT-NATIVE FEATURES) 감사를 수행하십시오 - "기능은 코드가 아닌 결과물을 정의하는 프롬프트여야 함."
+
+작업:
+1. 모든 에이전트 프롬프트를 읽으십시오.
+2. 각 기능/행동이 어디에 정의되어 있는지 분류하십시오:
+   - PROMPT (좋음): 결과물이 자연어로 정의됨
+   - CODE (나쁨): 비즈니스 로직이 하드코딩됨
+3. 동작 변경 시 코드 수정이 아닌 프롬프트 수정이 필요한지 확인하십시오.
+
+형식:
+## 프롬프트 네이티브 기능 감사
+### 기능 정의 분석
+| 기능 | 정의된 위치 | 타입 | 비고 |
+### 점수: X/Y (백분율%)
+### 코드로 정의된 기능 (안티 패턴)
+### 권장 사항
 ```
 
 </sub-agents>
 
-### Step 3: Compile Summary Report
+### 단계 3: 요약 보고서 작성
 
-After all agents complete, compile a summary with:
+모든 에이전트가 작업을 완료하면 다음 내용을 포함한 요약을 작성합니다.
 
 ```markdown
-## Agent-Native Architecture Review: [Project Name]
+## 에이전트 네이티브 아키텍처 리뷰: [프로젝트 이름]
 
-### Overall Score Summary
+### 전체 점수 요약
 
-| Core Principle | Score | Percentage | Status |
+| 핵심 원칙 | 점수 | 백분율 | 상태 |
 |----------------|-------|------------|--------|
-| Action Parity | X/Y | Z% | ✅/⚠️/❌ |
-| Tools as Primitives | X/Y | Z% | ✅/⚠️/❌ |
-| Context Injection | X/Y | Z% | ✅/⚠️/❌ |
-| Shared Workspace | X/Y | Z% | ✅/⚠️/❌ |
-| CRUD Completeness | X/Y | Z% | ✅/⚠️/❌ |
-| UI Integration | X/Y | Z% | ✅/⚠️/❌ |
-| Capability Discovery | X/Y | Z% | ✅/⚠️/❌ |
-| Prompt-Native Features | X/Y | Z% | ✅/⚠️/❌ |
+| 작업 패리티 | X/Y | Z% | ✅/⚠️/❌ |
+| 프리미티브로서의 도구 | X/Y | Z% | ✅/⚠️/❌ |
+| 컨텍스트 주입 | X/Y | Z% | ✅/⚠️/❌ |
+| 공유 워크스페이스 | X/Y | Z% | ✅/⚠️/❌ |
+| CRUD 완결성 | X/Y | Z% | ✅/⚠️/❌ |
+| UI 통합 | X/Y | Z% | ✅/⚠️/❌ |
+| 역량 발견 | X/Y | Z% | ✅/⚠️/❌ |
+| 프롬프트 네이티브 기능 | X/Y | Z% | ✅/⚠️/❌ |
 
-**Overall Agent-Native Score: X%**
+**전체 에이전트 네이티브 점수: X%**
 
-### Status Legend
-- ✅ Excellent (80%+)
-- ⚠️ Partial (50-79%)
-- ❌ Needs Work (<50%)
+### 상태 범례
+- ✅ 우수 (80% 이상)
+- ⚠️ 부분적 (50-79%)
+- ❌ 개선 필요 (50% 미만)
 
-### Top 10 Recommendations by Impact
+### 영향도별 상위 10개 권장 사항
 
-| Priority | Action | Principle | Effort |
+| 우선순위 | 작업 | 원칙 | 노력 수준 |
 |----------|--------|-----------|--------|
 
-### What's Working Excellently
+### 우수하게 작동하는 부분
 
-[List top 5 strengths]
+[상위 5가지 강점 나열]
 ```
 
-## Success Criteria
+## 성공 기준
 
-- [ ] All 8 sub-agents complete their audits
-- [ ] Each principle has a specific numeric score (X/Y format)
-- [ ] Summary table shows all scores and status indicators
-- [ ] Top 10 recommendations are prioritized by impact
-- [ ] Report identifies both strengths and gaps
+- [ ] 8개 서브 에이전트가 모두 감사를 완료함
+- [ ] 각 원칙에 대해 구체적인 수치 점수(X/Y 형식)가 있음
+- [ ] 요약 표에 모든 점수와 상태 표시가 나타남
+- [ ] 상위 10개 권장 사항이 영향도에 따라 우선순위가 지정됨
+- [ ] 보고서에 강점과 격차가 모두 식별됨
 
-## Optional: Single Principle Audit
+## 선택 사항: 단일 원칙 감사
 
-If $ARGUMENTS specifies a single principle (e.g., "action parity"), only run that sub-agent and provide detailed findings for that principle alone.
+만약 $ARGUMENTS에 단일 원칙(예: "action parity")이 지정된 경우, 해당 서브 에이전트만 실행하고 그 원칙에 대한 상세 결과만 제공하십시오.
 
-Valid arguments:
-- `action parity` or `1`
-- `tools` or `primitives` or `2`
-- `context` or `injection` or `3`
-- `shared` or `workspace` or `4`
-- `crud` or `5`
-- `ui` or `integration` or `6`
-- `discovery` or `7`
-- `prompt` or `features` or `8`
+유효한 인자:
+- `action parity` 또는 `1`
+- `tools` 또는 `primitives` 또는 `2`
+- `context` 또는 `injection` 또는 `3`
+- `shared` 또는 `workspace` 또는 `4`
+- `crud` 또는 `5`
+- `ui` 또는 `integration` or `6`
+- `discovery` 또는 `7`
+- `prompt` 또는 `features` 또는 `8`

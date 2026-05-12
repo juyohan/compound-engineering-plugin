@@ -1,80 +1,80 @@
-# Post-Ideation Workflow
+# 아이디어 도출 후 워크플로우 (Post-Ideation Workflow)
 
-Read this file after Phase 2 ideation agents return and the orchestrator has merged and deduped their outputs into a master candidate list. Do not load before Phase 2 completes.
+Phase 2의 아이디어 도출 에이전트들이 복귀하고 오케스트레이터(orchestrator)가 그 결과물을 마스터 후보 목록으로 병합 및 중복 제거한 후에 이 파일을 읽으십시오. Phase 2가 완료되기 전에는 로드하지 마십시오.
 
-## Phase 3: Adversarial Filtering
+## Phase 3: 비판적 필터링 (Adversarial Filtering)
 
-Review every candidate idea critically. The orchestrator performs this filtering directly -- do not dispatch sub-agents for critique.
+모든 후보 아이디어를 비판적으로 검토하십시오. 오케스트레이터가 이 필터링을 직접 수행하며, 비판을 위해 서브 에이전트를 파견하지 마십시오.
 
-Do not generate replacement ideas in this phase unless explicitly refining.
+이 단계에서는 명시적인 정교화 과정이 아닌 한 대체 아이디어를 생성하지 마십시오.
 
-For each rejected idea, write a one-line reason.
+거절된 각 아이디어에 대해 한 줄의 거절 이유를 작성하십시오.
 
-Rejection criteria:
-- too vague
-- not actionable
-- duplicates a stronger idea
-- not grounded in the stated context
-- too expensive relative to likely value
-- already covered by existing workflows or docs
-- interesting but better handled as a brainstorm variant, not a product improvement
-- **unjustified — no articulated warrant** (sub-agent failed to provide `direct:`, `external:`, or `reasoned:` justification, or the stated warrant does not actually support the claimed move)
-- **below ambition floor** (fails the meeting-test: would not warrant team discussion — except when Phase 0.5 detected tactical focus signals, in which case this criterion is waived)
-- **subject-replacement** (abandons or replaces the subject of ideation rather than operating on it — e.g., "pivot to an unrelated domain," "become a different organization")
+거절 기준:
+- 너무 모호함
+- 실행 가능하지 않음
+- 더 강력한 아이디어와 중복됨
+- 명시된 컨텍스트에 근거하지 않음
+- 예상 가치 대비 비용이 너무 높음
+- 기존 워크플로우나 문서에서 이미 다루고 있음
+- 흥미롭지만 제품 개선보다는 브레인스토밍 변형으로 다루는 것이 적절함
+- **정당성 부족 — 명확한 근거(warrant) 없음** (서브 에이전트가 `direct:`, `external:`, 또는 `reasoned:` 근거를 제공하지 못했거나, 명시된 근거가 실제 제안된 조치를 뒷받침하지 못함)
+- **야심 부족 (ambition floor 미달)** (회의-테스트 통과 실패: 팀 회의에서 논의할 가치가 없음 — 단, Phase 0.5에서 전술적 포커스 신호가 감지된 경우 이 기준은 면제됨)
+- **주체 대체 (subject-replacement)** (아이디어 도출의 대상을 개선하는 대신 포기하거나 교체함 — 예: "관련 없는 분야로 피벗", "다른 조직으로 전환")
 
-Score survivors using a consistent rubric weighing: groundedness in stated context, **warrant strength** (`direct:` > `external:` > `reasoned:`; none excluded, but direct-evidence ideas score higher all else equal), expected value, novelty, pragmatism, leverage on future work, implementation burden, and overlap with stronger ideas.
+컨텍스트 근거의 확실성, **근거 강도** (`direct:` > `external:` > `reasoned:`; 모두 포함 가능하지만 조건이 같다면 직접 증거 아이디어가 더 높은 점수를 받음), 예상 가치, 참신함, 실용성, 향후 작업에 대한 영향력, 구현 부담, 더 강력한 아이디어와의 중복도 등을 종합적으로 고려하여 생존 아이디어의 점수를 매기십시오.
 
-Target output:
-- keep 5-7 survivors by default
-- if too many survive, run a second stricter pass
-- if fewer than 5 survive, report that honestly rather than lowering the bar
+목표 출력:
+- 기본적으로 5-7개의 생존 아이디어 유지
+- 너무 많은 아이디어가 생존한 경우 더 엄격하게 두 번째 패스 실행
+- 5개 미만이 생존한 경우 기준을 낮추지 말고 정직하게 보고
 
-## Phase 4: Present the Survivors
+## Phase 4: 생존 아이디어 제시 (Present the Survivors)
 
-**Checkpoint B (V17).** Before presenting, write `<scratch-dir>/survivors.md` (using the absolute path captured in Phase 1) containing the survivor list plus key context (focus hint, grounding summary, rejection summary). This protects the post-critique state before the user reaches the persistence menu. Best-effort: if the write fails (disk full, permissions), log a warning and proceed; the checkpoint is not load-bearing. Reuses the same `<run-id>` and `<scratch-dir>` generated in Phase 1; not cleaned up at the end of the run (the run directory is preserved so the V15 cache remains reusable across run-ids in the same session — see Phase 6).
+**체크포인트 B (V17).** 제시하기 전에 생존 목록과 주요 컨텍스트(포커스 힌트, 근거 요약, 거절 요약)를 포함하는 `<scratch-dir>/survivors.md` (Phase 1에서 캡처한 절대 경로 사용) 파일을 작성하십시오. 이는 사용자가 지속성 메뉴에 도달하기 전 비판 검토 후의 상태를 보호합니다. 최선형(Best-effort): 작성이 실패해도(디스크 꽉 참, 권한 문제 등) 경고를 기록하고 진행하십시오. 체크포인트는 필수 실행 요건은 아닙니다. Phase 1에서 생성된 동일한 `<run-id>`와 `<scratch-dir>`을 재사용하며, 실행 종료 시 삭제하지 않습니다 (Phase 6 참조 - V15 캐시가 동일 세션의 다른 run-id에서 재사용될 수 있도록 실행 디렉토리를 보존함).
 
-Present the surviving ideas to the user. The terminal review loop is a complete ideation cycle in itself — persistence is opt-in (Phase 5), and refinement happens in conversation with no file or network cost (Phase 6).
+생존한 아이디어를 사용자에게 제시하십시오. 터미널 리뷰 루프 자체로 완전한 아이디어 도출 사이클입니다 — 저장 여부는 선택 사항이며 (Phase 5), 정교화는 파일이나 네트워크 비용 없이 대화를 통해 이루어집니다 (Phase 6).
 
-Present only the surviving ideas in structured form:
+생존한 아이디어만 구조화된 형태로 제시하십시오:
 
-- title
-- description
-- **warrant** (tagged `direct:` / `external:` / `reasoned:`, with the quoted evidence, cited source, or written-out argument)
-- rationale (how the warrant connects to the move's significance)
-- downsides
-- confidence score
-- estimated complexity
+- 제목
+- 설명
+- **근거 (Warrant)** (`direct:` / `external:` / `reasoned:` 태그와 함께 인용된 증거, 인용된 출처 또는 상세 논거 포함)
+- 이론적 근거 (Rationale) (근거가 제안된 조치의 중요성과 어떻게 연결되는지)
+- 단점
+- 신뢰 점수
+- 예상 복잡도
 
-Then include a brief rejection summary so the user can see what was considered and cut.
+그 후, 사용자가 어떤 아이디어가 고려되고 탈락했는지 알 수 있도록 짧은 거절 요약을 포함하십시오.
 
-Keep the presentation concise. Allow brief follow-up questions and lightweight clarification.
+제시는 간결하게 유지하십시오. 짧은 후속 질문과 가벼운 설명 요청을 허용하십시오.
 
-## Phase 5: Persistence (Opt-In, Mode-Aware)
+## Phase 5: 지속성/저장 (선택 사항, 모드 인식형)
 
-Persistence is opt-in. The terminal review loop is a complete ideation cycle. Refinement loops happen in conversation with no file or network cost. Persistence triggers only when the user explicitly chooses to save, share, or hand off (selected in Phase 6).
+저장은 선택 사항입니다. 터미널 리뷰 루프는 그 자체로 완전한 사이클입니다. 정교화 루프는 대화 내에서 파일이나 네트워크 비용 없이 발생합니다. 저장은 사용자가 명시적으로 저장, 공유 또는 전달을 선택한 경우에만 트리거됩니다 (Phase 6에서 선택).
 
-When the user picks an option in Phase 6 that requires a durable record (Open and iterate in Proof, Brainstorm, Save and end), ensure a record exists first. When the user chooses to keep refining, no record is needed unless the user asks.
+사용자가 Phase 6에서 지속적인 기록이 필요한 옵션(Proof에서 열기 및 반복, 브레인스토밍, 저장 후 종료)을 선택하면 기록이 먼저 존재하는지 확인하십시오. 사용자가 정교화를 계속하기로 선택한 경우, 사용자가 요청하지 않는 한 기록이 필요하지 않습니다.
 
-**Mode-determined defaults:**
+**모드별 기본값:**
 
-| Action | Repo mode default | Elsewhere mode default |
+| 액션 | 리포지토리 모드 기본값 | 기타 모드 기본값 |
 |---|---|---|
-| Save | `docs/ideation/YYYY-MM-DD-<topic>-ideation.md` | Proof |
-| Share | Proof (additional) | Proof (primary) |
-| Brainstorm handoff | `ce-brainstorm` | `ce-brainstorm` (universal-brainstorming) |
-| End | Conversation only is fine | Conversation only is fine |
+| 저장 (Save) | `docs/ideation/YYYY/MM/DD-<topic>-ideation.md` | Proof |
+| 공유 (Share) | Proof (추가) | Proof (기본) |
+| 브레인스토밍 전달 | `ce-brainstorm` | `ce-brainstorm` (universal-brainstorming) |
+| 종료 (End) | 대화로만 종료 가능 | 대화로만 종료 가능 |
 
-Either mode can also use the other destination on explicit request ("save to Proof even though this is repo mode", "save to a local file even though this is elsewhere"). Honor such overrides directly.
+각 모드는 명시적인 요청에 따라 다른 대상을 사용할 수도 있습니다 ("리포지토리 모드지만 Proof에 저장해줘", "기타 모드지만 로컬 파일로 저장해줘"). 이러한 오버라이드를 직접 존중하십시오.
 
-### 5.1 File Save (default for repo mode; on request for elsewhere mode)
+### 5.1 파일 저장 (리포지토리 모드 기본; 기타 모드 요청 시)
 
-1. Ensure `docs/ideation/` exists
-2. Choose the file path:
-   - `docs/ideation/YYYY-MM-DD-<topic>-ideation.md`
-   - `docs/ideation/YYYY-MM-DD-open-ideation.md` when no focus exists
-3. Write or update the ideation document
+1. `docs/ideation/` 디렉토리가 존재하는지 확인
+2. 파일 경로 결정:
+   - `docs/ideation/YYYY/MM/DD-<topic>-ideation.md`
+   - 포커스가 없는 경우 `docs/ideation/YYYY/MM/DD-open-ideation.md`
+3. 아이디어 도출 문서 작성 또는 업데이트
 
-Use this structure and omit clearly irrelevant fields only when necessary:
+다음 구조를 사용하고 명백히 관련 없는 필드는 필요한 경우에만 생략하십시오:
 
 ```markdown
 ---
@@ -84,157 +84,157 @@ focus: <optional focus hint>
 mode: <repo-grounded | elsewhere-software | elsewhere-non-software>
 ---
 
-# Ideation: <Title>
+# Ideation: <제목>
 
 ## Grounding Context
-[Grounding summary from Phase 1 — labeled "Codebase Context" in repo mode, "Topic Context" in elsewhere mode]
+[Phase 1의 근거 요약 — 리포지토리 모드에서는 "Codebase Context", 기타 모드에서는 "Topic Context"로 레이블 지정]
 
 ## Ranked Ideas
 
-### 1. <Idea Title>
-**Description:** [Concrete explanation]
-**Warrant:** [`direct:` / `external:` / `reasoned:` — the actual basis, quoted or cited]
-**Rationale:** [How the warrant connects to the move's significance]
-**Downsides:** [Tradeoffs or costs]
-**Confidence:** [0-100%]
-**Complexity:** [Low / Medium / High]
-**Status:** [Unexplored / Explored]
+### 1. <아이디어 제목>
+**설명:** [구체적인 설명]
+**근거 (Warrant):** [`direct:` / `external:` / `reasoned:` — 인용되거나 출처가 명시된 실제 근거]
+**이론적 근거 (Rationale):** [근거가 조치의 중요성과 어떻게 연결되는지]
+**단점:** [트레이드오프 또는 비용]
+**신뢰도:** [0-100%]
+**복잡도:** [낮음 / 보통 / 높음]
+**상태:** [탐색 전 / 탐색 완료]
 
-## Rejection Summary
+## 거절 요약 (Rejection Summary)
 
-| # | Idea | Reason Rejected |
+| # | 아이디어 | 거절 이유 |
 |---|------|-----------------|
-| 1 | <Idea> | <Reason rejected> |
+| 1 | <아이디어> | <거절 이유> |
 ```
 
-If resuming:
-- update the existing file in place
-- preserve explored markers
+이어서 진행하는 경우:
+- 기존 파일을 제자리에서 업데이트
+- 탐색 완료(explored) 마커 보존
 
-### 5.2 Proof Save (default for elsewhere mode; on request for repo mode)
+### 5.2 Proof 저장 (기타 모드 기본; 리포지토리 모드 요청 시)
 
-Hand off the ideation content to the `ce-proof` skill in HITL review mode. This uploads the doc, runs an iterative review loop (user annotates in Proof, agent ingests feedback and applies tracked edits), and (in repo mode) syncs the reviewed markdown back to `docs/ideation/`.
+아이디어 도출 내용을 HITL 리뷰 모드의 `ce-proof` 스킬로 전달하십시오. 이는 문서를 업로드하고, 반복적인 리뷰 루프를 실행하며(사용자가 Proof에서 주석을 달면 에이전트가 피드백을 수집하여 추적된 편집 사항 적용), 리포지토리 모드에서는 리뷰된 마크다운을 다시 `docs/ideation/`으로 동기화합니다.
 
-Load the `ce-proof` skill in HITL-review mode with:
+다음과 같이 HITL-review 모드로 `ce-proof` 스킬을 로드하십시오:
 
-- **source content:** the survivors and rejection summary from Phase 4 (in repo mode, this is the file written in 5.1; in elsewhere mode, render to a temp file as the source for upload)
-- **doc title:** `Ideation: <topic>` or the H1 of the ideation doc
+- **source content:** Phase 4의 생존 아이디어 및 거절 요약 (리포지토리 모드에서는 5.1에서 작성된 파일; 기타 모드에서는 업로드 소스로 사용할 임시 파일 렌더링)
+- **doc title:** `Ideation: <topic>` 또는 아이디어 문서의 H1 제목
 - **identity:** `ai:compound-engineering` / `Compound Engineering`
-- **recommended next step:** `/ce-brainstorm` (shown in the proof skill's final terminal output)
+- **추천 다음 단계:** `/ce-brainstorm` (Proof 스킬의 최종 터미널 출력에 표시됨)
 
-The Proof failure ladder in Phase 6.5 governs what happens when this hand-off fails.
+전달 실패 시 Phase 6.5의 Proof 실패 사다리(Failure Ladder) 규칙에 따릅니다.
 
-**Caller-aware return.** The return-rule bullets below describe the default control flow, but the next step depends on which Phase 6 option invoked the Proof save. Apply the right branch for the caller:
+**호출자 인식형 반환 (Caller-aware return).** 아래의 반환 규칙 불렛들은 기본 제어 흐름을 설명하지만, 다음 단계는 Phase 6 옵션 중 무엇이 Proof 저장을 호출했는지에 따라 달라집니다. 호출자에 맞는 브랜치를 적용하십시오:
 
-- **§6.2 Open and iterate in Proof.** Behavior is mode-aware:
-    - *Repo mode:* return to the Phase 6 menu on every status. The Proof-reviewed content is now synced locally, and the user typically has a follow-up action in the repo (brainstorm toward a plan, save and end, or keep refining).
-    - *Elsewhere mode:* on a successful Proof return (`proceeded` or `done_for_now`), exit cleanly — narrate that the artifact lives at `docUrl` (including any stale-local note if applicable) and stop. Proof iteration is often the terminal act in elsewhere mode; forcing another menu choice after the user already got what they came for produces decision fatigue. Only the `aborted` branch returns to the Phase 6 menu so the user can retry or pick another path.
-- **§6.3 Brainstorm a selected idea.** On a successful Proof return (`proceeded` or `done_for_now`), do **not** stop at the Phase 6 menu — after applying the per-status handling below (including any stale-local pull offer), continue into §6.3's remaining bullets (mark the chosen idea as `Explored`, then load `ce-brainstorm`). Only the `aborted` branch returns to the Phase 6 menu, since no durable record was written.
-- **§6.4 Save and end.** On a successful Proof return (`proceeded` or `done_for_now`), exit cleanly: narrate that the ideation was saved, surface the `docUrl` (and the local-path note if applicable), and stop. Do **not** re-ask the Phase 6 question — the user already chose to end. Only the `aborted` branch returns to the Phase 6 menu so the user can retry or pick a different path.
+- **§6.2 Proof에서 열기 및 반복.** 동작은 모드 인식형입니다:
+    - *리포지토리 모드:* 모든 상태에서 Phase 6 메뉴로 돌아갑니다. Proof에서 리뷰된 콘텐츠가 이제 로컬로 동기화되었으며, 사용자는 일반적으로 리포지토리 내에서 후속 조치(계획을 향한 브레인스토밍, 저장 후 종료, 또는 정교화 계속)를 취하게 됩니다.
+    - *기타 모드:* Proof 반환이 성공하면(`proceeded` 또는 `done_for_now`), 결과물이 `docUrl`에 있음을 설명하고 깔끔하게 종료하십시오. 기타 모드에서 Proof 반복은 종종 최종 동작이 됩니다. 사용자가 이미 원하는 것을 얻은 후에 또 다른 메뉴 선택을 강요하는 것은 결정 피로를 유발합니다. 오직 `aborted` 브랜치만 Phase 6 메뉴로 돌아가 사용자가 재시도하거나 다른 경로를 선택할 수 있게 합니다.
+- **§6.3 선택한 아이디어 브레인스토밍.** Proof 반환이 성공하면(`proceeded` 또는 `done_for_now`), Phase 6 메뉴에서 멈추지 마십시오 — 아래의 상태별 처리를 적용한 후 §6.3의 나머지 단계(선택된 아이디어를 `Explored`로 표시, 그 후 `ce-brainstorm` 로드)를 계속하십시오. 오직 `aborted` 브랜치만 지속적인 기록이 작성되지 않았으므로 Phase 6 메뉴로 돌아갑니다.
+- **§6.4 저장 후 종료.** Proof 반환이 성공하면(`proceeded` 또는 `done_for_now`), 아이디어가 저장되었음을 설명하고 `docUrl`을 안내한 뒤 깔끔하게 종료하십시오. Phase 6 질문을 다시 하지 마십시오 — 사용자는 이미 종료를 선택했습니다. 오직 `aborted` 브랜치만 Phase 6 메뉴로 돌아가 사용자가 재시도하거나 다른 경로를 선택할 수 있게 합니다.
 
-When the proof skill returns control:
+Proof 스킬이 제어권을 반환할 때:
 
-- `status: proceeded` with `localSynced: true` → the ideation doc on disk now reflects the review. Apply the caller-aware return rule above for the invoking branch.
-- `status: proceeded` with `localSynced: false` → the reviewed version lives in Proof at `docUrl` but the local copy is stale. Offer to pull the Proof doc to `localPath` using the proof skill's Pull workflow. Apply the caller-aware return rule above; if the pull was declined, include a one-line note that `<localPath>` is stale vs. Proof so the next handoff (or final exit narration) doesn't read the old content silently. Placement: above the Phase 6 menu when the caller-aware rule returns to it, in the handoff preamble to `ce-brainstorm` for §6.3, or alongside the final save/exit narration for §6.2 elsewhere / §6.4.
-- `status: done_for_now` → the doc on disk may be stale if the user edited in Proof before leaving. Offer to pull the Proof doc to `localPath` so the local ideation artifact stays in sync, then apply the caller-aware return rule above. `done_for_now` means the user stopped the HITL loop — it does not mean they ended the whole ideation session unless the caller-aware rule exits (§6.2 elsewhere mode or §6.4). If the pull was declined, include the stale-local note at the placement described in the previous bullet.
-- `status: aborted` → fall back to the Phase 6 menu without changes, regardless of caller. No durable record was written, so §6.3 must not proceed with the brainstorm handoff and §6.4 must not end — the menu lets the user retry or pick another path.
+- `status: proceeded` 및 `localSynced: true` → 디스크의 아이디어 문서가 리뷰 내용을 반영합니다. 호출 브랜치에 대해 위의 호출자 인식형 반환 규칙을 적용하십시오.
+- `status: proceeded` 및 `localSynced: false` → 리뷰된 버전이 Proof의 `docUrl`에 있지만 로컬 복사본은 최신이 아닙니다. Proof 스킬의 Pull 워크플로우를 사용하여 Proof 문서를 `localPath`로 가져올 것을 제안하십시오. 호출자 인식형 반환 규칙을 적용하되, Pull이 거부된 경우 다음 전달이나 최종 종료 안내 시 이전 콘텐츠를 자동으로 읽지 않도록 `<localPath>`가 Proof 대비 최신이 아니라는 한 줄 노트를 포함하십시오. 위치: 호출자 인식형 규칙이 메뉴로 돌아갈 때는 Phase 6 메뉴 상단, §6.3의 경우 `ce-brainstorm` 전달 서문에, §6.2 기타 모드/§6.4의 경우 최종 저장/종료 안내와 함께 표시합니다.
+- `status: done_for_now` → 사용자가 나가기 전에 Proof에서 편집했다면 디스크의 파일이 최신이 아닐 수 있습니다. 로컬 아이디어 결과물을 동기화 상태로 유지하기 위해 Proof 문서를 `localPath`로 가져올 것을 제안하고, 위의 호출자 인식형 반환 규칙을 적용하십시오. `done_for_now`는 사용자가 HITL 루프를 멈췄다는 의미이며, 호출자 인식형 규칙이 종료를 지시하지 않는 한(§6.2 기타 모드 또는 §6.4) 전체 세션이 끝났음을 의미하지는 않습니다. Pull이 거부된 경우 이전 불렛에서 설명한 위치에 노트를 포함하십시오.
+- `status: aborted` → 호출자와 상관없이 변경 사항 없이 Phase 6 메뉴로 돌아갑니다. 지속적인 기록이 작성되지 않았으므로 §6.3은 브레인스토밍 전달을 진행해서는 안 되며 §6.4는 종료해서는 안 됩니다 — 메뉴를 통해 사용자가 재시도하거나 다른 경로를 선택하게 합니다.
 
-## Phase 6: Refine or Hand Off
+## Phase 6: 정교화 또는 전달 (Refine or Hand Off)
 
-Ask what should happen next using the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to numbered options in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question.
+플랫폼의 차단형 질문 도구를 사용하여 다음 단계를 물어보십시오: Claude Code에서는 `AskUserQuestion`, Codex에서는 `request_user_input`, Gemini 및 Pi에서는 `ask_user`를 사용합니다. 스키마 로드가 필요해서가 아니라, 하네스(harness)에 차단 도구가 없거나 호출 에러가 발생하는 경우에만 차선책으로 숫자가 매겨진 옵션을 사용하십시오. 질문을 임의로 생략하지 마십시오.
 
-**Question:** "What should the agent do next?"
+**질문:** "에이전트가 다음에 무엇을 할까요?"
 
-Offer these four options (labels are self-contained with the distinguishing word front-loaded so options stay distinct when truncated):
+다음 네 가지 옵션을 제공하십시오 (레이블은 잘려도 구분 가능하도록 핵심 단어를 앞에 배치한 독립적인 형태여야 합니다):
 
-1. **Refine the ideation in conversation (or stop here — no save)** — add ideas, re-evaluate, or deepen analysis. No file or network side effects; ending the conversation at any point after this pick is a valid no-save exit.
-2. **Open and iterate in Proof** — save the ideation to Proof and enter the proof skill's HITL review loop: iterate via comments in the Proof editor; reviewed edits sync back to `docs/ideation/` in repo mode.
-3. **Brainstorm a selected idea** — load `ce-brainstorm` with the chosen idea as the seed. The orchestrator first writes a durable record using the mode default in Phase 5.
-4. **Save and end** — persist the ideation using the mode default (file in repo mode, Proof in elsewhere mode), then end.
+1. **대화로 정교화 (또는 저장 없이 종료)** — 아이디어 추가, 재평가 또는 분석 심화. 파일이나 네트워크 부작용이 없으며, 이 선택 후 어느 시점에서든 대화를 종료하는 것은 유효한 '저장 안 함' 종료입니다.
+2. **Proof에서 열기 및 반복** — 아이디어를 Proof에 저장하고 Proof 스킬의 HITL 리뷰 루프에 진입합니다. Proof 에디터에서 댓글을 통해 반복 작업하며, 리뷰된 편집 내용은 리포지토리 모드에서 `docs/ideation/`으로 동기화됩니다.
+3. **선택한 아이디어 브레인스토밍** — 선택한 아이디어를 시드로 하여 `ce-brainstorm`을 로드합니다. 오케스트레이터는 먼저 Phase 5의 모드 기본값을 사용하여 지속적인 기록을 작성합니다.
+4. **저장 후 종료** — 모드 기본값(리포지토리 모드에서는 파일, 기타 모드에서는 Proof)을 사용하여 아이디어를 저장한 후 종료합니다.
 
-No-save exit is supported without a dedicated menu option. Pick option 1 and stop the conversation, or use the question tool's free-text escape to say so directly — persistence is opt-in and the terminal review loop is already a complete ideation cycle.
+별도의 메뉴 옵션 없이도 '저장 없이 종료'가 지원됩니다. 옵션 1을 선택하고 대화를 중단하거나, 질문 도구의 자유 텍스트 입력을 통해 직접 의사를 표시하십시오 — 저장은 선택 사항이며 터미널 리뷰 루프는 이미 완전한 사이클입니다.
 
-Do not delete the run's scratch directory (`<scratch-dir>` resolved in Phase 1) on completion. The V15 web-research cache is session-scoped and reused across run-ids by later ideation invocations in the same session (see `references/web-research-cache.md`); per-run cleanup would defeat that reuse. Checkpoint A (`raw-candidates.md`) and Checkpoint B (`survivors.md`) are cheap to leave behind and follow the repo's Scratch Space cross-invocation-reusable convention — OS handles eventual cleanup.
+완료 시 실행의 스크래치 디렉토리(Phase 1에서 확인한 `<scratch-dir>`)를 삭제하지 마십시오. V15 웹 리서치 캐시는 세션 범위 내에서 유지되며 동일 세션의 나중 호출에서 재사용됩니다. 실행별 정리는 이러한 재사용을 방해합니다. 체크포인트 A(`raw-candidates.md`)와 체크포인트 B(`survivors.md`)는 남겨두어도 비용이 적으며 리포지토리의 스크래치 공간 규칙을 따릅니다 — 최종 정리는 OS가 처리합니다.
 
-### 6.1 Refine the Ideation in Conversation
+### 6.1 대화로 정교화
 
-Route refinement by intent:
+의도에 따라 정교화 경로를 결정하십시오:
 
-- `add more ideas` or `explore new angles` -> return to Phase 2
-- `re-evaluate` or `raise the bar` -> return to Phase 3
-- `dig deeper on idea #N` -> expand only that idea's analysis
+- `아이디어 추가` 또는 `새로운 관점 탐색` -> Phase 2로 복귀
+- `재평가` 또는 `기준 상향` -> Phase 3으로 복귀
+- `아이디어 #N 상세 분석` -> 해당 아이디어의 분석만 확장
 
-No persistence triggers during refinement. The user can choose Save and end (or Brainstorm, or Open and iterate in Proof) when they are ready to persist.
+정교화 중에는 저장이 트리거되지 않습니다. 사용자는 저장이 준비되었을 때 '저장 후 종료' (또는 브레인스토밍, Proof에서 열기)를 선택할 수 있습니다.
 
-Ending after refinement — or without any refinement at all — is a valid no-save exit. There is no required next step; stopping the conversation here leaves no durable artifact, which matches the opt-in persistence contract.
+정교화 후 — 또는 정교화 없이 — 종료하는 것은 유효한 '저장 안 함' 종료입니다. 필수적인 다음 단계는 없으며, 여기서 대화를 멈추면 지속적인 결과물이 남지 않습니다. 이는 선택적 저장 원칙에 부합합니다.
 
-### 6.2 Open and Iterate in Proof
+### 6.2 Proof에서 열기 및 반복
 
-Invoke the Proof HITL review path via §5.2 with §6.2 as the caller. In repo mode, ensure the local file exists first (run §5.1) so the HITL sync-back has a target; in elsewhere mode, §5.2 renders to a temp file as usual. Honor Phase 5's "ensure a record exists first" contract either way.
+§6.2를 호출자로 하여 §5.2를 통해 Proof HITL 리뷰 경로를 호출하십시오. 리포지토리 모드에서는 HITL 동기화 대상이 있도록 먼저 로컬 파일을 생성(§5.1 실행)하십시오. 기타 모드에서는 §5.2가 평소처럼 임시 파일로 렌더링합니다. 어느 쪽이든 Phase 5의 "기록이 먼저 존재하는지 확인" 원칙을 준수하십시오.
 
-Apply §5.2's caller-aware return rule for the §6.2 branch — behavior is mode-aware. In repo mode, return to the Phase 6 menu on every status so the user can pick a follow-up (brainstorm toward a plan, save-and-end, or keep refining) now that the Proof review is reflected in the local file. In elsewhere mode, exit cleanly on a successful Proof return since Proof iteration is often the terminal act — the artifact lives at `docUrl` and is the canonical record; only the `aborted` status returns to the menu.
+§6.2 브랜치에 대해 §5.2의 호출자 인식형 반환 규칙을 적용하십시오 — 동작은 모드 인식형입니다. 리포지토리 모드에서는 Proof 리뷰가 로컬 파일에 반영된 후 사용자가 후속 조치(계획을 향한 브레인스토밍, 저장 후 종료, 정교화 계속)를 선택할 수 있도록 모든 상태에서 Phase 6 메뉴로 돌아갑니다. 기타 모드에서는 Proof 반복이 최종 동작인 경우가 많으므로 성공적인 반환 시 깔끔하게 종료하십시오. 결과물은 `docUrl`에 보존됩니다. 오직 `aborted` 상태만 메뉴로 돌아갑니다.
 
-If the Proof handoff fails, the §6.5 Proof Failure Ladder governs recovery.
+Proof 전달이 실패하면 §6.5 Proof 실패 사다리 규칙이 복구를 제어합니다.
 
-### 6.3 Brainstorm a Selected Idea
+### 6.3 선택한 아이디어 브레인스토밍
 
-- Write or update the durable record per the mode default in Phase 5 (file in repo mode, Proof in elsewhere mode). When this routes through §5.2 Proof Save, apply §5.2's caller-aware return rule: continue into the next bullet on a successful Proof return instead of bouncing back to the Phase 6 menu. If Proof returned `aborted` (no durable record written), go back to the Phase 6 menu and do **not** proceed with the brainstorm handoff.
-- Mark the chosen idea as `Explored` in the saved record
-- Load the `ce-brainstorm` skill with the chosen idea as the seed
+- Phase 5의 모드 기본값에 따라 지속적인 기록을 작성하거나 업데이트하십시오 (리포지토리 모드에서는 파일, 기타 모드에서는 Proof). 이것이 §5.2 Proof 저장을 통하는 경우 §5.2의 호출자 인식형 반환 규칙을 적용하십시오: 성공 시 Phase 6 메뉴로 돌아가지 않고 다음 단계로 계속 진행합니다. Proof가 `aborted`를 반환한 경우(기록 작성 안 됨), Phase 6 메뉴로 돌아가고 브레인스토밍 전달을 진행하지 마십시오.
+- 저장된 기록에서 선택된 아이디어를 `Explored`로 표시하십시오.
+- 선택된 아이디어를 시드로 하여 `ce-brainstorm` 스킬을 로드하십시오.
 
-**Repo mode only:** do **not** skip brainstorming and go straight to `ce-plan` from ideation output — `ce-plan` wants brainstorm-grounded requirements. In elsewhere modes, ideation (or ideation + Proof iteration) is a legitimate terminal state; brainstorming is optional deeper development of one idea, not a required next rung on an implementation ladder that does not exist in these modes.
+**리포지토리 모드 전용:** 브레인스토밍을 건너뛰고 바로 `ce-plan`으로 가지 마십시오 — `ce-plan`은 브레인스토밍에 기반한 요구사항을 필요로 합니다. 기타 모드에서 아이디어 도출(또는 Proof 반복을 포함한 아이디어 도출)은 그 자체로 유효한 최종 상태입니다. 브레인스토밍은 하나의 아이디어를 더 깊게 발전시키기 위한 선택 사항이지, 존재하지 않는 구현 단계로 가기 위한 필수 단계가 아닙니다.
 
-### 6.4 Save and End
+### 6.4 저장 후 종료
 
-Persist via the mode default (5.1 in repo mode, 5.2 in elsewhere mode), then end. If the user instead asked to use the non-default destination, honor that explicit request.
+모드 기본값(리포지토리 모드 5.1, 기타 모드 5.2)을 통해 저장한 후 종료하십시오. 사용자가 기본값이 아닌 다른 대상을 요청한 경우 그 명시적 요청을 존중하십시오.
 
-When the path lands in a Proof save (5.2), apply §5.2's caller-aware return rule for the §6.4 branch: on a successful Proof return, exit cleanly — narrate the save, surface the `docUrl` (and any stale-local note if the pull was declined), and stop. Do **not** loop back to the Phase 6 menu; the user already chose to end. Only a `status: aborted` from Proof returns to the menu so the user can retry or pick another path (file save, custom path, or keep refining). The §6.5 Proof Failure Ladder still governs persistent Proof failures and ends at the Phase 6 menu — that failure-recovery path is distinct from the successful-save exit described here.
+경로가 Proof 저장(5.2)인 경우, §6.4 브랜치에 대해 §5.2의 호출자 인식형 반환 규칙을 적용하십시오: 성공 시 저장을 설명하고 `docUrl`(및 Pull 거부 시 stale-local 노트)을 안내한 뒤 깔끔하게 종료하십시오. Phase 6 메뉴로 다시 돌아가지 마십시오. 사용자는 이미 종료를 선택했습니다. 오직 Proof의 `status: aborted`인 경우에만 사용자가 재시도하거나 다른 경로(파일 저장, 커스텀 경로 또는 정교화 계속)를 선택할 수 있도록 메뉴로 돌아갑니다. §6.5 Proof 실패 사다리는 지속적인 Proof 실패 시에도 작동하며 Phase 6 메뉴에서 끝납니다 — 이 실패 복구 경로는 여기서 설명하는 성공적 저장 종료와는 별개입니다.
 
-When the path lands in a file save (5.1):
+경로가 파일 저장(5.1)인 경우:
 
-- offer to commit only the ideation doc
-- do not create a branch
-- do not push
-- if the user declines, leave the file uncommitted
+- 아이디어 문서만 커밋할 것을 제안하십시오.
+- 브랜치를 생성하지 마십시오.
+- 푸시(push)하지 마십시오.
+- 사용자가 거절하면 파일을 커밋되지 않은 상태로 둡니다.
 
-After the file save (and optional commit), end the session — do not return to the Phase 6 menu.
+파일 저장(및 선택적 커밋) 후 세션을 종료하십시오 — Phase 6 메뉴로 돌아가지 마십시오.
 
-### 6.5 Proof Failure Ladder
+### 6.5 Proof 실패 사다리 (Proof Failure Ladder)
 
-The `ce-proof` skill performs single-retry-once internally on transient failures (`STALE_BASE`, `BASE_TOKEN_REQUIRED`) before surfacing failure. The proof skill's return contract does not expose typed error classes to callers — the orchestrator cannot distinguish retryable vs terminal failures from outside.
+`ce-proof` 스킬은 일시적인 실패(`STALE_BASE`, `BASE_TOKEN_REQUIRED`)에 대해 내부적으로 한 번 재시도한 후 실패를 노출합니다. Proof 스킬의 반환 계약은 호출자에게 타입화된 에러 클래스를 노출하지 않으므로, 오케스트레이터는 외부에서 재시도 가능 여부와 최종 실패를 구분할 수 없습니다.
 
-**Orchestrator-side retry harness (intentionally minimal):** wrap the proof skill invocation in **one** additional best-effort retry with a short pause (~2 seconds). The proof skill already retried internally, so this catches transient races at the orchestrator boundary without compounding latency. Do not classify error types from outside the skill — no detection mechanism exists.
+**오케스트레이터 측 재시도 하네스 (의도적으로 최소화):** Proof 스킬 호출을 짧은 일시 중지(~2초)와 함께 **단 한 번** 추가적인 최선형(best-effort) 재시도로 감싸십시오. Proof 스킬이 이미 내부적으로 재시도했으므로, 이는 지연 시간을 과도하게 늘리지 않으면서 오케스트레이터 경계에서의 일시적인 레이스 컨디션을 잡아냅니다. 스킬 외부에서 에러 타입을 분류하지 마십시오 — 감지 메커니즘이 존재하지 않습니다.
 
-Distinguish create-failure from ops-failure by inspecting whether the proof skill returned a `docUrl` before failing:
+실패하기 전에 Proof 스킬이 `docUrl`을 반환했는지 확인하여 생성 실패와 작업 실패를 구분하십시오:
 
-- **Create-failure** (no `docUrl` returned): retry the create.
-- **Ops-failure** (a `docUrl` was returned, but a later operation failed): retry only the failing operation. **Do not recreate** the document.
+- **생성 실패 (Create-failure)** (`docUrl` 반환 안 됨): 생성을 재시도합니다.
+- **작업 실패 (Ops-failure)** (`docUrl`은 반환되었으나 이후 작업이 실패함): 실패한 작업만 재시도합니다. **문서를 다시 생성하지 마십시오.**
 
-**Failure narration.** Narrate the single retry to the terminal so the pause does not look like a hang ("Retrying Proof... attempt 2/2"). On persistent failure, narrate that retry exhausted before showing the fallback menu.
+**실패 안내.** 터미널에 단일 재시도를 안내하여 일시 중지가 멈춘 것처럼 보이지 않게 하십시오 ("Proof 재시도 중... 시도 2/2"). 지속적으로 실패하는 경우, 폴백 메뉴를 보여주기 전에 재시도가 소진되었음을 안내하십시오.
 
-**Fallback menu after persistent failure.** Use the platform's blocking question tool. Present these options (omit option (a) if no repo exists at CWD):
+**지속적 실패 후 폴백 메뉴.** 플랫폼의 차단형 질문 도구를 사용하십시오. 다음 옵션들을 제시하십시오 (CWD에 리포지토리가 없으면 (a) 옵션 제외):
 
-- "Save to `docs/ideation/` instead" (repo-mode default destination, available when CWD is inside a git repo)
-- "Save to a custom path the user provides" (validate writable; create parent dirs)
-- "Skip save and keep the ideation in conversation" (no persistence)
+- "대신 `docs/ideation/`에 저장" (리포지토리 모드 기본 대상, CWD가 git 리포지토리 내부일 때 가능)
+- "사용자가 제공하는 커스텀 경로에 저장" (쓰기 가능 여부 확인, 상위 디렉토리 생성)
+- "저장을 생략하고 대화 내용으로만 유지" (지속성 없음)
 
-If proof returned a partial `docUrl` before failing, surface that URL alongside the fallback options so the user can recover or share the partial record.
+실패 전에 Proof가 부분적인 `docUrl`을 반환했다면, 사용자가 복구하거나 부분적인 기록을 공유할 수 있도록 폴백 옵션과 함께 해당 URL을 노출하십시오.
 
-After the fallback completes (any path), continue back to the Phase 6 menu so the user can still refine, iterate in Proof, brainstorm, or save and end.
+폴백이 완료되면 (어떤 경로든), 사용자가 여전히 정교화, Proof 반복, 브레인스토밍 또는 저장 후 종료를 할 수 있도록 Phase 6 메뉴로 돌아가십시오.
 
-## Quality Bar
+## 품질 기준 (Quality Bar)
 
-Before finishing, check:
+종료하기 전 확인 사항:
 
-- the idea set is grounded in the stated context (codebase in repo mode; user-supplied context in elsewhere mode)
-- **every surviving idea has articulated warrant** (`direct:`, `external:`, or `reasoned:`) that actually supports the claimed move — speculation dressed as ambition was rejected, with reasons
-- **every surviving idea passes the meeting-test** unless Phase 0.5 detected tactical focus signals that waived the floor
-- **no surviving idea replaces the subject** rather than operating on it
-- the candidate list was generated before filtering
-- the original many-ideas -> critique -> survivors mechanism was preserved
-- if sub-agents were used, they improved diversity without replacing the core workflow
-- every rejected idea has a reason
-- survivors are materially better than a naive "give me ideas" list
-- persistence followed user choice — terminal-only sessions did not write a file or call Proof
-- when persistence did trigger, the mode default was respected unless the user explicitly overrode it
-- acting on an idea routes to `ce-brainstorm`, not directly to implementation
+- 아이디어 세트가 명시된 컨텍스트에 근거함 (리포지토리 모드에서는 코드베이스, 기타 모드에서는 사용자 제공 컨텍스트)
+- **모든 생존 아이디어가 명확한 근거(warrant)** (`direct:`, `external:`, 또는 `reasoned:`)를 가지고 있으며, 이것이 실제 조치를 뒷받침함 — 야심으로 포장된 추측은 이유와 함께 거절됨
+- **모든 생존 아이디어가 회의-테스트를 통과함** (Phase 0.5에서 전술적 포커스 신호가 감지되어 기준이 면제된 경우 제외)
+- **어떤 생존 아이디어도 주체를 대체하지 않고** 주체에 대해 작용함
+- 필터링 전에 후보 목록이 생성됨
+- 원래의 '많은 아이디어 -> 비판 -> 생존자' 메커니즘이 보존됨
+- 서브 에이전트가 사용된 경우, 핵심 워크플로우를 대체하지 않고 다양성을 높이는 데 기여함
+- 거절된 모든 아이디어에 이유가 있음
+- 생존 아이디어들이 단순한 "아이디어 좀 줘" 식의 목록보다 실질적으로 더 나음
+- 저장은 사용자의 선택을 따름 — 터미널 전용 세션은 파일을 작성하거나 Proof를 호출하지 않음
+- 저장이 트리거되었을 때, 사용자가 명시적으로 오버라이드하지 않는 한 모드 기본값이 준수됨
+- 아이디어에 대한 조치는 구현으로 바로 가는 것이 아니라 `ce-brainstorm`으로 연결됨

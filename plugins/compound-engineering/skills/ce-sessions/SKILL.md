@@ -1,31 +1,49 @@
 ---
 name: ce-sessions
-description: "Search and ask questions about your coding agent session history. Use when asking what you worked on, what was tried before, how a problem was investigated across sessions, what happened recently, or any question about past agent sessions. Also use when the user references prior sessions, previous attempts, or past investigations — even without saying 'sessions' explicitly."
+description: "코딩 에이전트 세션 이력을 검색하고 관련 질문을 던집니다. 무엇을 작업했는지, 이전에 무엇을 시도했는지, 여러 세션에 걸쳐 문제가 어떻게 조사되었는지, 최근에 무슨 일이 있었는지 등 과거 에이전트 세션에 대한 질문을 할 때 사용합니다. 또한 사용자가 '세션'이라는 단어를 명시적으로 언급하지 않더라도 이전 세션, 이전 시도 또는 과거 조사 내용을 참조할 때 사용합니다."
+allowed-tools:
+  - gem
 ---
 
 # /ce-sessions
 
-Search your session history.
+## 다중 에이전트 협업 (Multi-Agent Collaboration)
 
-## Usage
+사용자의 입력(`$ARGUMENTS`) 내에 `--add <ai-이름>` 형태의 플래그가 포함되어 있는지 확인하십시오. 
+현재 지원되는 외부 AI 인터페이스는 `--add gemini` (또는 `--add gem`)입니다.
+
+만약 해당 플래그가 감지되면, 작업을 단독으로 확정하지 말고 다음 절차를 따르십시오:
+1. **의도 파악:** 플래그를 제외한 나머지 문자열을 실제 지시사항으로 간주합니다.
+2. **초안 작성:** 본인(주 에이전트)의 지식과 코드베이스 컨텍스트를 바탕으로 작업의 초기 뼈대나 접근법을 생각합니다.
+3. **MCP 협업 호출:** `gem` 도구를 호출하여 외부 Gemini 에이전트에게 조언이나 검토를 구합니다.
+   - 호출 시 전달할 메시지 예시: "나는 현재 이 작업에 대한 초안을 세우고 있어. 내 초안은 [초안 요약]이야. 이 접근 방식의 기술적 타당성을 검토하고 누락된 에지 케이스나 더 나은 패턴을 조언해줄 수 있어?"
+4. **결과 통합:** `gem` 도구가 반환한 피드백을 당신의 최종 결과물에 통합(Synthesis)합니다. 
+5. **명시적 표시:** 최종 산출물의 상단 또는 설명 부분에 "이 결과물은 Gemini와의 협업을 통해 검토 및 보완되었습니다."라는 문구를 추가하십시오.
+
+이 협업 절차를 염두에 두고 아래의 본래 스킬 워크플로우를 진행하십시오.
+
+
+세션 이력을 검색합니다.
+
+## 사용법 (Usage)
 
 ```
-/ce-sessions [question or topic]
+/ce-sessions [질문 또는 주제]
 /ce-sessions
 ```
 
-## Pre-resolved context
+## 사전 확인된 컨텍스트 (Pre-resolved context)
 
-**Git branch (pre-resolved):** !`git rev-parse --abbrev-ref HEAD 2>/dev/null || true`
+**Git 브랜치 (사전 확인됨):** !`git rev-parse --abbrev-ref HEAD 2>/dev/null || true`
 
-If the line above resolved to a plain branch name (like `feat/my-branch`), pass it to the agent. If it still contains a backtick command string or is empty, it did not resolve — omit it and let the agent derive it at runtime.
+위의 라인이 일반 브랜치 이름(예: `feat/my-branch`)으로 확인되면 에이전트에게 전달하세요. 여전히 백틱으로 감싸인 명령어 문자열이 포함되어 있거나 비어 있다면 확인되지 않은 것이므로, 이를 생략하고 에이전트가 런타임에 직접 유도하도록 하세요.
 
-## Execution
+## 실행 (Execution)
 
-If no argument is provided, ask what the user wants to know about their session history. Use the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to asking in plain text only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question.
+인자가 제공되지 않은 경우, 사용자가 세션 이력에 대해 무엇을 알고 싶은지 물어보세요. 플랫폼의 차단형 질문 도구를 사용하세요: Claude Code에서는 `AskUserQuestion` (스키마가 로드되지 않은 경우 `ToolSearch`로 `select:AskUserQuestion` 먼저 호출), Codex에서는 `request_user_input`, Gemini에서는 `ask_user`, Pi에서는 `ask_user` (`pi-ask-user` 확장 기능 필요). 스키마 로드가 필요해서가 아니라 하네스에 차단형 도구가 없거나 호출 오류(예: Codex 편집 모드)가 발생하는 경우에만 일반 텍스트 질문으로 대체하세요. 질문을 조용히 건너뛰지 마세요.
 
-Dispatch `ce-session-historian` with the user's question as the task prompt. Omit the `mode` parameter so the user's configured permission settings apply. Include in the dispatch prompt:
+사용자의 질문을 작업 프롬프트로 하여 `ce-session-historian`을 실행합니다. 사용자가 설정한 권한 설정이 적용되도록 `mode` 파라미터는 생략하세요. 실행 프롬프트에 다음 내용을 포함하세요:
 
-- The user's question
-- The current working directory
-- The repo name and git branch from pre-resolved context (only if they resolved to plain values — do not pass literal command strings)
+- 사용자의 질문
+- 현재 작업 디렉토리 (CWD)
+- 사전 확인된 컨텍스트로부터 얻은 리포지토리 이름 및 git 브랜치 (일반 텍스트 값으로 확인된 경우에만 포함하며, 명령어 문자열을 그대로 전달하지 마세요)

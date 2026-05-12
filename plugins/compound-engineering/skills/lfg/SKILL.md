@@ -1,62 +1,79 @@
 ---
 name: lfg
-description: Full autonomous engineering workflow
-argument-hint: "[feature description]"
+description: 완전 자율 엔지니어링 워크플로우
+argument-hint: "[기능 설명]"
 disable-model-invocation: true
+allowed-tools:
+  - gem
 ---
 
-CRITICAL: You MUST execute every step below IN ORDER. Do NOT skip any required step. Do NOT jump ahead to coding or implementation. The plan phase (step 1) MUST be completed and verified BEFORE any work begins. Violating this order produces bad output.
+## 다중 에이전트 협업 (Multi-Agent Collaboration)
 
-When invoking any skill referenced below, resolve its name against the available-skills list the host platform provides and use that exact entry. Some platforms list skills under a plugin namespace (e.g., `compound-engineering:ce-plan`); others list the bare name. Invoking a short-form guess that isn't in the list will fail — always match a listed entry verbatim before calling the Skill/Task tool.
+사용자의 입력(`$ARGUMENTS`) 내에 `--add <ai-이름>` 형태의 플래그가 포함되어 있는지 확인하십시오. 
+현재 지원되는 외부 AI 인터페이스는 `--add gemini` (또는 `--add gem`)입니다.
 
-1. Invoke the `ce-plan` skill with `$ARGUMENTS`.
+만약 해당 플래그가 감지되면, 작업을 단독으로 확정하지 말고 다음 절차를 따르십시오:
+1. **의도 파악:** 플래그를 제외한 나머지 문자열을 실제 지시사항으로 간주합니다.
+2. **초안 작성:** 본인(주 에이전트)의 지식과 코드베이스 컨텍스트를 바탕으로 작업의 초기 뼈대나 접근법을 생각합니다.
+3. **MCP 협업 호출:** `gem` 도구를 호출하여 외부 Gemini 에이전트에게 조언이나 검토를 구합니다.
+   - 호출 시 전달할 메시지 예시: "나는 현재 이 작업에 대한 초안을 세우고 있어. 내 초안은 [초안 요약]이야. 이 접근 방식의 기술적 타당성을 검토하고 누락된 에지 케이스나 더 나은 패턴을 조언해줄 수 있어?"
+4. **결과 통합:** `gem` 도구가 반환한 피드백을 당신의 최종 결과물에 통합(Synthesis)합니다. 
+5. **명시적 표시:** 최종 산출물의 상단 또는 설명 부분에 "이 결과물은 Gemini와의 협업을 통해 검토 및 보완되었습니다."라는 문구를 추가하십시오.
 
-   GATE: STOP. If ce-plan reported the task is non-software and cannot be processed in pipeline mode, stop the pipeline and inform the user that LFG requires software tasks. Otherwise, verify that the `ce-plan` workflow produced a plan file in `docs/plans/`. If no plan file was created, invoke `ce-plan` again with `$ARGUMENTS`. Do NOT proceed to step 2 until a written plan exists. **Record the plan file path** — it will be passed to ce-code-review in step 3.
+이 협업 절차를 염두에 두고 아래의 본래 스킬 워크플로우를 진행하십시오.
 
-2. Invoke the `ce-work` skill.
+중요: 아래의 모든 단계를 **순서대로** 실행해야 합니다. 필수 단계를 건너뛰지 마세요. 코딩이나 구현으로 바로 넘어가지 마세요. 계획 단계(1단계)는 작업을 시작하기 전에 반드시 완료되고 검증되어야 합니다. 이 순서를 위반하면 잘못된 결과가 생성됩니다.
 
-   GATE: STOP. Verify that implementation work was performed - files were created or modified beyond the plan. Do NOT proceed to step 3 if no code changes were made.
+아래에서 참조된 스킬을 호출할 때, 호스트 플랫폼이 제공하는 `available-skills` 목록에서 이름을 확인하고 해당 항목을 정확히 사용하세요. 일부 플랫폼은 플러그인 네임스페이스(예: `compound-engineering:ce-plan`) 아래에 스킬을 나열하고, 다른 플랫폼은 이름만 나열합니다. 목록에 없는 이름으로 추측하여 호출하면 실패합니다 — Skill/Task 도구를 호출하기 전에 항상 나열된 항목과 토씨 하나 틀리지 않게 일치시키세요.
 
-3. Invoke the `ce-code-review` skill with `mode:autofix plan:<plan-path-from-step-1>`.
+1. `$ARGUMENTS`와 함께 `ce-plan` 스킬을 호출합니다.
 
-   Pass the plan file path from step 1 so ce-code-review can verify requirements completeness. Read the Residual Actionable Work summary the skill emits.
+   GATE: 중지(STOP). `ce-plan`이 작업이 소프트웨어 관련이 아니며 파이프라인 모드에서 처리할 수 없다고 보고한 경우, 파이프라인을 중지하고 사용자에게 LFG는 소프트웨어 작업이 필요함을 알립니다. 그렇지 않은 경우 `ce-plan` 워크플로우가 `docs/plans/`에 계획 파일을 생성했는지 확인합니다. 계획 파일이 생성되지 않은 경우 `$ARGUMENTS`와 함께 `ce-plan`을 다시 호출합니다. 계획서가 작성될 때까지 2단계로 진행하지 마세요. **계획 파일 경로를 기록하세요** — 3단계에서 `ce-code-review`에 전달됩니다.
 
-4. **Persist review autofixes** (REQUIRED after step 3, before residual handoff)
+2. `ce-work` 스킬을 호출합니다.
 
-   Check `git status --short`. If `ce-code-review mode:autofix` changed files, stage only those review-fix files, commit them with `fix(review): apply autofix feedback`, and push the current branch before continuing. If an upstream exists, run `git push`. If no upstream exists, resolve a writable remote dynamically: prefer `origin` when present, otherwise use `git remote` and choose the first configured remote. Then run `git push --set-upstream <remote> HEAD`. Do not proceed to step 5, run browser tests, or output DONE while review autofix edits remain only in the working tree. If no files changed, explicitly note that there were no review autofixes to persist.
+   GATE: 중지(STOP). 구현 작업이 수행되었는지 확인합니다 - 계획 이외의 파일이 생성되거나 수정되어야 합니다. 코드 변경 사항이 없는 경우 3단계로 진행하지 마세요.
 
-5. **Autonomous residual handoff** (only when step 3 reported one or more residual `downstream-resolver` findings; skip when it reported `Residual actionable work: none.`)
+3. `mode:autofix plan:<step-1의-계획-경로>`와 함께 `ce-code-review` 스킬을 호출합니다.
 
-   Do not prompt the user. This step embraces the autopilot contract: residuals must become durable before DONE, but the agent never stops to ask.
+   `ce-code-review`가 요구 사항 완결성을 확인할 수 있도록 1단계의 계획 파일 경로를 전달합니다. 스킬이 내보내는 `Residual Actionable Work` 요약을 읽습니다.
 
-   1. Load `references/tracker-defer.md` in **non-interactive mode**. Pass the residual actionable findings from step 3's summary (or the run artifact when the summary was truncated).
-   2. Collect the structured return: `{ filed: [...], failed: [...], no_sink: [...] }`.
-   3. Compose a `## Residual Review Findings` markdown section from the structured return:
-      - For each item in `filed`: a bullet with severity, file:line, title, and a link to the tracker ticket URL.
-      - For each item in `failed`: a bullet with severity, file:line, title, and the failure reason (e.g., `Defer failed: gh returned 401 — tracker unavailable`).
-      - For each item in `no_sink`: a bullet with severity, file:line, and title inlined verbatim so the PR body or fallback file is the durable record.
-   4. Detect the current branch's open PR without prompting:
+4. **리뷰 자동 수정 사항 저장 (필수)** (3단계 이후, 잔여 작업 핸드오프 전)
+
+   `git status --short`를 확인합니다. `ce-code-review mode:autofix`가 파일을 변경한 경우, 해당 리뷰 수정 파일만 스테이징하고 `fix(review): apply autofix feedback` 메시지로 커밋한 후, 계속하기 전에 현재 브랜치를 푸시합니다. 업스트림이 존재하면 `git push`를 실행합니다. 업스트림이 없으면 쓰기 가능한 원격 저장소를 동적으로 확인합니다: `origin`이 있으면 우선적으로 사용하고, 그렇지 않으면 `git remote`를 사용하여 구성된 첫 번째 원격 저장소를 선택합니다. 그 후 `git push --set-upstream <remote> HEAD`를 실행합니다. 리뷰 자동 수정 편집 사항이 작업 트리에만 남아 있는 동안에는 5단계로 진행하거나, 브라우저 테스트를 실행하거나, `DONE`을 출력하지 마세요. 변경된 파일이 없으면 리뷰 자동 수정 사항이 없음을 명시적으로 기록합니다.
+
+5. **자율 잔여 작업 핸드오프 (Autonomous residual handoff)** (3단계에서 하나 이상의 잔여 `downstream-resolver` 발견 사항을 보고한 경우에만 수행. `Residual actionable work: none.`인 경우 건너뜀)
+
+   사용자에게 묻지 마세요. 이 단계는 오토파일럿 계약을 따릅니다: 잔여 작업은 `DONE` 전에 내구성을 갖춰야 하지만, 에이전트는 절대 멈춰서 묻지 않습니다.
+
+   1. `references/tracker-defer.md`를 **비대화형 모드**로 로드합니다. 3단계 요약의 잔여 실행 가능 발견 사항(또는 요약이 잘린 경우 실행 결과물)을 전달합니다.
+   2. 구조화된 반환값을 수집합니다: `{ filed: [...], failed: [...], no_sink: [...] }`.
+   3. 구조화된 반환값으로부터 `## Residual Review Findings` 마크다운 섹션을 구성합니다:
+      - `filed`의 각 항목: 심각도, file:line, 제목 및 트래커 티켓 URL 링크가 포함된 불렛.
+      - `failed`의 각 항목: 심각도, file:line, 제목 및 실패 사유(예: `Defer failed: gh returned 401 — tracker unavailable`)가 포함된 불렛.
+      - `no_sink`의 각 항목: 심각도, file:line 및 제목을 그대로 포함하여 PR 본문이나 폴백 파일이 내구성 있는 기록이 되도록 합니다.
+   4. 확인 절차 없이 현재 브랜치의 열린 PR을 감지합니다:
 
       ```bash
       gh pr view --json number,url,body,state
       ```
 
-   5. If an open PR exists, update it directly with `gh`; do not load any confirmation-driven PR update skill. Append or replace the `## Residual Review Findings` section in the current PR body, write the new body to an OS temp file, then run:
+   5. 열린 PR이 존재하는 경우 `gh`를 사용하여 직접 업데이트합니다. 확인 기반 PR 업데이트 스킬을 로드하지 마세요. `## Residual Review Findings` 섹션을 현재 PR 본문에 추가하거나 교체하고, 새 본문을 OS 임시 파일에 쓴 다음 다음을 실행합니다:
 
       ```bash
       gh pr edit PR_NUMBER --body-file BODY_FILE
       ```
 
-   6. If no open PR exists, create a tracked fallback file at `docs/residual-review-findings/<branch-or-head-sha>.md` containing the composed section and the source PR-review run context. Stage only that file, commit it with `docs(review): record residual review findings`, and push the current branch. If an upstream exists, run `git push`. If no upstream exists, resolve a writable remote dynamically: prefer `origin` when present, otherwise use `git remote` and choose the first configured remote. Then run `git push --set-upstream <remote> HEAD`. This is the durable no-PR sink. Do not output DONE until either the existing PR body has been updated or this fallback file commit has been pushed. If both paths fail, stop and report the failed commands; do not silently proceed.
+   6. 열린 PR이 없는 경우, 구성된 섹션과 소스 PR 리뷰 실행 컨텍스트를 포함하는 내구성 있는 폴백 파일을 `docs/residual-review-findings/<branch-or-head-sha>.md`에 생성합니다. 해당 파일만 스테이징하고 `docs(review): record residual review findings` 메시지로 커밋한 후 현재 브랜치를 푸시합니다. 업스트림이 존재하면 `git push`를 실행합니다. 업스트림이 없으면 쓰기 가능한 원격 저장소를 동적으로 확인합니다: `origin`이 있으면 우선적으로 사용하고, 그렇지 않으면 `git remote`를 사용하여 구성된 첫 번째 원격 저장소를 선택합니다. 그 후 `git push --set-upstream <remote> HEAD`를 실행합니다. 이것이 PR이 없는 경우의 내구성 있는 기록 장소입니다. 기존 PR 본문이 업데이트되거나 이 폴백 파일 커밋이 푸시될 때까지 `DONE`을 출력하지 마세요. 두 경로 모두 실패하면 중단하고 실패한 명령을 보고하세요. 조용히 진행하지 마세요.
 
-   Never block DONE on tracker filing failures once residuals have been durably recorded. A `no_sink` outcome is success only when the findings are present in the PR body or in the pushed fallback file.
+   잔여 작업이 내구성 있게 기록되었다면 트래커 등록 실패로 인해 `DONE`을 차단하지 마세요. 발견 사항이 PR 본문이나 푸시된 폴백 파일에 존재한다면 `no_sink` 결과도 성공으로 간주합니다.
 
-6. Invoke the `ce-test-browser` skill with `mode:pipeline`.
+6. `mode:pipeline`과 함께 `ce-test-browser` 스킬을 호출합니다.
 
-7. Invoke the `ce-commit-push-pr` skill.
+7. `ce-commit-push-pr` 스킬을 호출합니다.
 
-   This commits any remaining changes, pushes the branch, and opens a pull request. If step 5 already opened a PR (check with `gh pr view --json number,url,state 2>/dev/null`), skip PR creation but still commit and push any uncommitted changes.
+   남은 변경 사항을 커밋하고 브랜치를 푸시하며 풀 리퀘스트를 엽니다. 5단계에서 이미 PR을 연 경우(`gh pr view --json number,url,state 2>/dev/null`로 확인), PR 생성은 건너뛰고 커밋되지 않은 변경 사항에 대한 커밋 및 푸시만 수행합니다.
 
-8. Output `<promise>DONE</promise>` when complete
+8. 완료되면 `<promise>DONE</promise>`을 출력합니다.
 
-Start with step 1 now. Remember: plan FIRST, then work. Never skip the plan.
+지금 1단계부터 시작하세요. 기억하세요: 계획을 **먼저** 세우고, 작업을 수행합니다. 계획을 절대 건너뛰지 마세요.

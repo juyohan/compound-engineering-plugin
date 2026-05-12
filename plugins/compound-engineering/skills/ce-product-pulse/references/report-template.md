@@ -1,89 +1,89 @@
-# Pulse Report Template
+# Pulse 리포트 템플릿
 
-Loaded by `SKILL.md` at Phase 2.3 after queries have returned. Fill the template using the query results. Target total length: 30-40 lines.
+쿼리가 반환된 후 Phase 2.3에서 `SKILL.md`에 의해 로드됩니다. 쿼리 결과를 사용하여 템플릿을 작성하십시오. 목표 총 길이는 30-40행입니다.
 
-## Rules for filling in
+## 작성 규칙
 
-- Use real numbers, not ranges or hedges. If a number is uncertain, note the source inline.
-- Percent deltas compare the current window to the previous equal-length window (e.g., for `24h`, compare to the prior `24h`). If no comparison is possible, omit the delta rather than inventing one.
-- No hardcoded thresholds. Do not label things "high" or "low" or color anything red unless the reader asked for threshold-based annotation at setup.
-- No PII. No emails, no account IDs, no message content.
-- Headlines are the top of the page. If a reader only reads the first 3 lines, they should know the most important thing that happened.
-- If `STRATEGY.md` exists, re-read its `## Key metrics` section before assembling the report. For each strategy metric, decide what to render:
-  - If the metric name appears in `pulse_excluded_metrics`, omit it from the report.
-  - If the metric name appears in `pulse_pending_metrics`, include it in the Usage section marked `no data (instrumentation pending)`.
-  - Otherwise, resolve the source for this metric: look it up in `pulse_metric_sources` (CSV of `metric=source` pairs); if present, use that source. If absent, fall back to `pulse_analytics_source` and append `(default source)` to the metric line so the implicit routing is visible. Then query and render the metric with its current value and delta. If the query returns no value, include it anyway and mark it `no data`.
+- 범위나 모호한 표현 대신 실제 수치를 사용하십시오. 수치가 불확실한 경우 인라인으로 출처를 명시하십시오.
+- 퍼센트 델타(delta)는 현재 기간을 이전의 동일한 길이 기간과 비교합니다(예: `24h`인 경우 이전 `24h`와 비교). 비교가 불가능한 경우 수치를 지어내지 말고 델타를 생략하십시오.
+- 하드코딩된 임계값을 사용하지 마십시오. 설정 시 독자가 임계값 기반 주석을 요청하지 않은 한, 항목에 "높음" 또는 "낮음" 레이블을 붙이거나 빨간색으로 표시하지 마십시오.
+- PII(개인식별정보)를 포함하지 마십시오. 이메일, 계정 ID, 메시지 내용 등을 제외하십시오.
+- 헤드라인은 페이지 상단에 위치합니다. 독자가 처음 3행만 읽어도 발생한 가장 중요한 일을 알 수 있어야 합니다.
+- `STRATEGY.md`가 존재하는 경우, 리포트를 구성하기 전에 `## Key metrics` 섹션을 다시 읽으십시오. 각 전략 지표에 대해 다음을 결정하여 렌더링하십시오:
+  - 지표 이름이 `pulse_excluded_metrics`에 포함된 경우 리포트에서 생략하십시오.
+  - 지표 이름이 `pulse_pending_metrics`에 포함된 경우 Usage 섹션에 `데이터 없음 (계측 보류 중)`으로 표시하여 포함하십시오.
+  - 그렇지 않은 경우 해당 지표의 소스를 확인하십시오: `pulse_metric_sources`(`metric=source` 쌍의 CSV)에서 조회하고, 존재하면 해당 소스를 사용하십시오. 없는 경우 `pulse_analytics_source`로 폴백하고 지표 행에 `(기본 소스)`를 추가하여 암시적 라우팅이 보이도록 하십시오. 그 다음 지표를 쿼리하고 현재 값과 델타와 함께 렌더링하십시오. 쿼리가 값을 반환하지 않으면 그대로 포함하고 `데이터 없음`으로 표시하십시오.
 
-## Template
+## 템플릿
 
-The block below is the literal content to write. Replace every `{{placeholder}}` with query output. Delete lines whose data isn't available for this run.
+아래 블록은 작성될 실제 내용입니다. 모든 `{{placeholder}}`를 쿼리 출력으로 교체하십시오. 이번 실행에서 데이터를 사용할 수 없는 행은 삭제하십시오.
 
 ~~~markdown
 # {{product_name}} Pulse - {{window}} - {{YYYY-MM-DD HH:MM}} {{TZ}}
 
 ## Headlines
 
-- {{one-line headline capturing the most notable thing in the window}}
-- {{optional second headline}}
-- {{optional third headline}}
+- {{기간 내 가장 주목할 만한 사항을 담은 한 줄 헤드라인}}
+- {{선택적 두 번째 헤드라인}}
+- {{선택적 세 번째 헤드라인}}
 
 ## Usage
 
-- **Primary engagement:** {{N events}} ({{delta vs prior window}})
-- **Value realization:** {{N events}} ({{delta}}) - {{ratio vs engagement}}
-- **Completions / conversions:**
+- **기본 참여 (Primary engagement):** {{N events}} ({{이전 기간 대비 델타}})
+- **가치 실현 (Value realization):** {{N events}} ({{delta}}) - {{참여 대비 비율}}
+- **완료 / 전환:**
   - {{conversion event 1}}: {{N}} ({{delta}})
   - {{conversion event 2}}: {{N}} ({{delta}})
-- **Strategy metrics (if carried forward):**
+- **전략 지표 (이월된 경우):**
   - {{metric name}}: {{value}} ({{delta}})
-- **Quality sample (if configured):** {{distribution e.g. "8x 5, 1x 4, 1x 2"}}
+- **품질 샘플 (설정된 경우):** {{분포 예: "8x 5, 1x 4, 1x 2"}}
 
-## System performance
+## 시스템 성능 (System performance)
 
-- **Latency:** p50 {{ms}}, p95 {{ms}}, p99 {{ms}} ({{delta vs prior window}})
-- **Top errors** (top 5 by count, descending):
-  1. **{{error signature}}** - {{N occurrences}} - {{one-line context, no PII}}
-  2. **{{error signature}}** - {{N occurrences}} - {{one-line context}}
-  3. **{{error signature}}** - {{N occurrences}} - {{one-line context}}
-  4. **{{error signature}}** - {{N occurrences}} - {{one-line context}}
-  5. **{{error signature}}** - {{N occurrences}} - {{one-line context}}
+- **지연 시간 (Latency):** p50 {{ms}}, p95 {{ms}}, p99 {{ms}} ({{이전 기간 대비 델타}})
+- **주요 오류** (횟수 기준 상위 5개, 내림차순):
+  1. **{{error signature}}** - {{N 건}} - {{한 줄 컨텍스트, PII 제외}}
+  2. **{{error signature}}** - {{N 건}} - {{한 줄 컨텍스트}}
+  3. **{{error signature}}** - {{N 건}} - {{한 줄 컨텍스트}}
+  4. **{{error signature}}** - {{N 건}} - {{한 줄 컨텍스트}}
+  5. **{{error signature}}** - {{N 건}} - {{한 줄 컨텍스트}}
 
 ## Followups
 
-- {{One thing worth investigating next - specific enough to act on}}
-- {{Another thing worth investigating}}
-- {{3-5 items max; trim if thin}}
+- {{다음에 조사할 가치가 있는 사항 - 실행 가능할 정도로 구체적일 것}}
+- {{조사할 가치가 있는 또 다른 사항}}
+- {{최대 3-5개 항목; 내용이 부실하면 줄일 것}}
 
 ---
-_Source windows: analytics [{{start}} -> {{end}}], tracing [{{start}} -> {{end}}], payments [{{start}} -> {{end}}]. Trailing buffer: 15m. Saved to `docs/pulse-reports/{{YYYY-MM-DD}}_{{HH-MM}}.md`._
+_소스 기간: analytics [{{start}} -> {{end}}], tracing [{{start}} -> {{end}}], payments [{{start}} -> {{end}}]. 버퍼: 15m. `docs/pulse-reports/{{YYYY/MM/DD}}_{{HH-MM}}.md`에 저장됨._
 ~~~
 
-## Variations
+## 변형 사항
 
-- **No system performance tool configured:** omit the entire `## System performance` section. The report stays Headlines / Usage / Followups.
-- **Quality scoring not opted in:** omit the quality sample line.
-- **Single-source setup (analytics only):** omit the tracing and payments source windows from the footer.
-- **Error count customized at setup** (e.g., top 3 instead of top 5): follow the configured count. Do not pad or trim beyond what the query returned.
+- **시스템 성능 툴이 설정되지 않은 경우:** `## 시스템 성능` 섹션 전체를 생략하십시오. 리포트는 헤드라인 / Usage / Followups로 유지됩니다.
+- **품질 점수 측정을 선택하지 않은 경우:** 품질 샘플 행을 생략하십시오.
+- **단일 소스 설정인 경우 (분석 도구만 해당):** 하단에서 tracing 및 payments 소스 기간을 생략하십시오.
+- **오류 개수가 설정에서 변경된 경우** (예: 상위 5개 대신 상위 3개): 설정된 개수를 따르십시오. 쿼리가 반환한 것 이상으로 채우거나 줄이지 마십시오.
 
-## Post-write checklist
+## 작성 후 체크리스트
 
-Before saving and surfacing to chat:
+저장하고 채팅에 노출하기 전 확인 사항:
 
-- [ ] Total length is 30-40 lines (give or take 5).
-- [ ] Headlines exist and lead with the most notable item.
-- [ ] No hardcoded thresholds ("high error rate", "low conversion").
-- [ ] No PII. Scan error signatures and followups for user emails, IDs, or message snippets.
-- [ ] Top 5 errors (or the configured count), not top 10. Trim if the query returned more.
-- [ ] Strategy metrics carried forward from config are rendered in Usage, or marked `no data`.
-- [ ] Followups are specific - each one should be actionable as a sentence.
-- [ ] Filename and in-file timestamp use the same wall-clock time.
+- [ ] 총 길이가 30-40행 내외입니다 (오차범위 5행).
+- [ ] 헤드라인이 존재하며 가장 주목할 만한 항목으로 시작합니다.
+- [ ] 하드코딩된 임계값이 없습니다 ("높은 오류율", "낮은 전환율" 등).
+- [ ] PII가 없습니다. 오류 시그니처와 후속 조치에서 사용자 이메일, ID 또는 메시지 조각을 스캔하십시오.
+- [ ] 상위 5개 오류(또는 설정된 개수)가 포함되어 있으며 상위 10개가 아닙니다. 쿼리가 더 많이 반환했다면 줄이십시오.
+- [ ] 설정에서 이월된 전략 지표가 Usage에 렌더링되었거나 `데이터 없음`으로 표시되었습니다.
+- [ ] 후속 조치가 구체적입니다 - 각각은 문장으로서 실행 가능해야 합니다.
+- [ ] 파일 이름과 파일 내 타임스탬프가 동일한 시각을 사용합니다.
 
-## What to surface in chat
+## 채팅에 노출할 내용
 
-After writing the file, post back:
+파일을 작성한 후 다음 내용을 게시하십시오:
 
-- The Headlines section verbatim
-- The top Followup, if action looks urgent
-- The saved file path so the user can open the full report
+- 헤드라인 섹션 그대로 (verbatim)
+- 조치가 시급해 보이는 경우, 최상위 Followup 항목
+- 사용자가 전체 리포트를 열어볼 수 있도록 저장된 파일 경로
 
-Do not paste the full report into chat - the file is the artifact.
+전체 리포트를 채팅에 붙여넣지 마십시오 - 파일이 결과물입니다.

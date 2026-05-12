@@ -1,78 +1,78 @@
 <overview>
-Mobile is a first-class platform for agent-native apps. It has unique constraints and opportunities. This guide covers why mobile matters, iOS storage architecture, checkpoint/resume patterns, and cost-aware design.
+모바일은 에이전트 네이티브 앱을 위한 일급 시민(first-class platform)입니다. 모바일은 고유한 제약 조건과 기회를 동시에 가지고 있습니다. 이 가이드는 왜 모바일이 중요한지, iOS 저장소 아키텍처, 체크포인트/재개(checkpoint/resume) 패턴, 그리고 비용을 고려한 설계에 대해 다룹니다.
 </overview>
 
 <why_mobile>
-## Why Mobile Matters
+## 왜 모바일인가?
 
-Mobile devices offer unique advantages for agent-native apps:
+모바일 기기는 에이전트 네이티브 앱에 다음과 같은 독특한 이점을 제공합니다:
 
-### A File System
-Agents can work with files naturally, using the same primitives that work everywhere else. The filesystem is the universal interface.
+### 파일 시스템
+에이전트는 다른 곳에서 작동하는 것과 동일한 프리미티브를 사용하여 자연스럽게 파일을 다룰 수 있습니다. 파일 시스템은 유니버설 인터페이스입니다.
 
-### Rich Context
-A walled garden you get access to. Health data, location, photos, calendars—context that doesn't exist on desktop or web. This enables deeply personalized agent experiences.
+### 풍부한 컨텍스트 (Rich Context)
+접근 가능한 '가둬진 정원(walled garden)'입니다. 건강 데이터, 위치, 사진, 캘린더 등 데스크톱이나 웹에는 존재하지 않는 컨텍스트가 있습니다. 이를 통해 깊이 있게 개인화된 에이전트 경험이 가능합니다.
 
-### Local Apps
-Everyone has their own copy of the app. This opens opportunities that aren't fully realized yet: apps that modify themselves, fork themselves, evolve per-user. App Store policies constrain some of this today, but the foundation is there.
+### 로컬 앱
+모든 사용자가 앱의 개별 사본을 소유합니다. 이는 아직 완전히 실현되지 않은 기회들을 열어줍니다: 스스로 수정하고, 스스로 분기하며, 사용자별로 진화하는 앱입니다. 현재 앱 스토어 정책이 일부를 제한하고 있지만, 기반은 이미 마련되어 있습니다.
 
-### Cross-Device Sync
-If you use the file system with iCloud, all devices share the same file system. The agent's work on one device appears on all devices—without you having to build a server.
+### 기기 간 동기화
+iCloud와 함께 파일 시스템을 사용하면 모든 기기가 동일한 파일 시스템을 공유합니다. 한 기기에서의 에이전트 작업이 별도의 서버 구축 없이도 모든 기기에 나타납니다.
 
-### The Challenge
+### 도전 과제
 
-**Agents are long-running. Mobile apps are not.**
+**에이전트는 오래 실행되지만, 모바일 앱은 그렇지 않습니다.**
 
-An agent might need 30 seconds, 5 minutes, or an hour to complete a task. But iOS will background your app after seconds of inactivity, and may kill it entirely to reclaim memory. The user might switch apps, take a call, or lock their phone mid-task.
+에이전트는 작업을 완료하는 데 30초, 5분, 또는 한 시간이 필요할 수 있습니다. 하지만 iOS는 비활성 상태가 된 지 몇 초 만에 앱을 백그라운드로 전환하고, 메모리 확보를 위해 앱을 완전히 종료할 수도 있습니다. 사용자는 작업 중간에 앱을 바꾸거나, 전화를 받거나, 폰을 잠글 수 있습니다.
 
-This means mobile agent apps need:
-- **Checkpointing** — Saving state so work isn't lost
-- **Resuming** — Picking up where you left off after interruption
-- **Background execution** — Using the limited time iOS gives you wisely
-- **On-device vs. cloud decisions** — What runs locally vs. what needs a server
+따라서 모바일 에이전트 앱에는 다음이 필요합니다:
+- **체크포인팅 (Checkpointing)** — 작업 손실을 방지하기 위해 상태 저장
+- **재개 (Resuming)** — 중단된 지점부터 다시 시작
+- **백그라운드 실행** — iOS가 부여한 제한된 시간을 현명하게 사용
+- **온디바이스 vs 클라우드 결정** — 로컬에서 실행할 것과 서버가 필요한 것의 구분
 </why_mobile>
 
 <ios_storage>
-## iOS Storage Architecture
+## iOS 저장소 아키텍처
 
-> **Needs validation:** This is an approach that works well, but better solutions may exist.
+> **검증 필요:** 이 방식은 잘 작동하는 하나의 접근 방식이며, 더 나은 해결책이 존재할 수 있습니다.
 
-For agent-native iOS apps, use iCloud Drive's Documents folder for your shared workspace. This gives you **free, automatic multi-device sync** without building a sync layer or running a server.
+에이전트 네이티브 iOS 앱의 경우, 공유 작업 공간으로 iCloud Drive의 Documents 폴더를 사용하십시오. 이를 통해 동기화 계층을 구축하거나 서버를 운영하지 않고도 **무료로 자동 기기 간 동기화**가 가능해집니다.
 
-### Why iCloud Documents?
+### 왜 iCloud Documents인가?
 
-| Approach | Cost | Complexity | Offline | Multi-Device |
+| 방식 | 비용 | 복잡도 | 오프라인 | 기기 간 동기화 |
 |----------|------|------------|---------|--------------|
-| Custom backend + sync | $$$ | High | Manual | Yes |
-| CloudKit database | Free tier limits | Medium | Manual | Yes |
-| **iCloud Documents** | Free (user's storage) | Low | Automatic | Automatic |
+| 커스텀 백엔드 + 동기화 | $$$ | 높음 | 수동 구현 | 가능 |
+| CloudKit 데이터베이스 | 무료 티어 제한 | 중간 | 수동 구현 | 가능 |
+| **iCloud Documents** | 무료 (사용자 용량) | 낮음 | 자동 | 자동 |
 
-iCloud Documents:
-- Uses user's existing iCloud storage (free 5GB, most users have more)
-- Automatic sync across all user's devices
-- Works offline, syncs when online
-- Files visible in Files.app for transparency
-- No server costs, no sync code to maintain
+iCloud Documents의 장점:
+- 사용자의 기존 iCloud 저장 공간 사용 (무료 5GB, 대부분의 사용자는 더 많음)
+- 모든 사용자 기기에서 자동 동기화
+- 오프라인에서 작동하며, 온라인 시 동기화됨
+- 투명성을 위해 '파일(Files.app)' 앱에서 파일 확인 가능
+- 서버 비용 없음, 유지보수할 동기화 코드 없음
 
-### Implementation: iCloud-First with Local Fallback
+### 구현: 로컬 폴백을 포함한 iCloud 우선 방식
 
 ```swift
-// Get the iCloud Documents container
+// iCloud Documents 컨테이너 가져오기
 func iCloudDocumentsURL() -> URL? {
     FileManager.default.url(forUbiquityContainerIdentifier: nil)?
         .appendingPathComponent("Documents")
 }
 
-// Your shared workspace lives in iCloud
+// 공유 작업 공간은 iCloud에 위치함
 class SharedWorkspace {
     let rootURL: URL
 
     init() {
-        // Use iCloud if available, fall back to local
+        // iCloud를 우선 사용하고, 불가능할 경우 로컬로 폴백
         if let iCloudURL = iCloudDocumentsURL() {
             self.rootURL = iCloudURL
         } else {
-            // Fallback to local Documents (user not signed into iCloud)
+            // 로컬 Documents로 폴백 (iCloud 로그인 안 된 경우)
             self.rootURL = FileManager.default.urls(
                 for: .documentDirectory,
                 in: .userDomainMask
@@ -80,7 +80,7 @@ class SharedWorkspace {
         }
     }
 
-    // All file operations go through this root
+    // 모든 파일 작업은 이 루트를 통해 수행됨
     func researchPath(for bookId: String) -> URL {
         rootURL.appendingPathComponent("Research/\(bookId)")
     }
@@ -91,35 +91,15 @@ class SharedWorkspace {
 }
 ```
 
-### Directory Structure in iCloud
+### iCloud 파일 상태 처리
 
-```
-iCloud Drive/
-└── YourApp/                          # Your app's container
-    └── Documents/                    # Visible in Files.app
-        ├── Journal/
-        │   ├── user/
-        │   │   └── 2025-01-15.md     # Syncs across devices
-        │   └── agent/
-        │       └── 2025-01-15.md     # Agent observations sync too
-        ├── Research/
-        │   └── {bookId}/
-        │       ├── full_text.txt
-        │       └── sources/
-        ├── Chats/
-        │   └── {conversationId}.json
-        └── context.md                # Agent's accumulated knowledge
-```
-
-### Handling iCloud File States
-
-iCloud files may not be downloaded locally. Handle this:
+iCloud 파일이 로컬로 다운로드되지 않았을 수 있습니다. 이를 처리하십시오:
 
 ```swift
 func readFile(at url: URL) throws -> String {
-    // iCloud may create .icloud placeholder files
+    // iCloud가 .icloud 플레이스홀더 파일을 생성했을 수 있음
     if url.pathExtension == "icloud" {
-        // Trigger download
+        // 다운로드 트리거
         try FileManager.default.startDownloadingUbiquitousItem(at: url)
         throw FileNotYetAvailableError()
     }
@@ -127,7 +107,7 @@ func readFile(at url: URL) throws -> String {
     return try String(contentsOf: url, encoding: .utf8)
 }
 
-// For writes, use coordinated file access
+// 쓰기 작업 시에는 조정된 파일 접근(coordinated file access)을 사용하십시오
 func writeFile(_ content: String, to url: URL) throws {
     let coordinator = NSFileCoordinator()
     var error: NSError?
@@ -144,16 +124,16 @@ func writeFile(_ content: String, to url: URL) throws {
 }
 ```
 
-### What iCloud Enables
+### iCloud가 가능하게 하는 것들
 
-1. **User starts experiment on iPhone** → Agent creates config file
-2. **User opens app on iPad** → Same experiment visible, no sync code needed
-3. **Agent logs observation on iPhone** → Syncs to iPad automatically
-4. **User edits journal on iPad** → iPhone sees the edit
+1. **사용자가 iPhone에서 실험 시작** → 에이전트가 설정 파일 생성
+2. **사용자가 iPad에서 앱 열기** → 별도의 동기화 코드 없이 동일한 실험 확인 가능
+3. **에이전트가 iPhone에서 관찰 기록** → iPad로 자동 동기화
+4. **사용자가 iPad에서 저널 수정** → iPhone에서 즉시 반영됨
 
-### Entitlements Required
+### 필요한 권한(Entitlements)
 
-Add to your app's entitlements:
+앱의 entitlements에 다음을 추가하십시오:
 
 ```xml
 <key>com.apple.developer.icloud-container-identifiers</key>
@@ -170,44 +150,44 @@ Add to your app's entitlements:
 </array>
 ```
 
-### When NOT to Use iCloud Documents
+### iCloud Documents를 사용하지 말아야 할 때
 
-- **Sensitive data** - Use Keychain or encrypted local storage instead
-- **High-frequency writes** - iCloud sync has latency; use local + periodic sync
-- **Large media files** - Consider CloudKit Assets or on-demand resources
-- **Shared between users** - iCloud Documents is single-user; use CloudKit for sharing
+- **민감한 데이터** - Keychain이나 암호화된 로컬 저장소 사용
+- **고빈도 쓰기** - iCloud 동기화에는 지연 시간이 있으므로 로컬 저장 후 주기적 동기화 사용
+- **대용량 미디어 파일** - CloudKit Assets 또는 온디맨드 리소스 고려
+- **사용자 간 공유** - iCloud Documents는 단일 사용자용임. 공유에는 CloudKit 사용
 </ios_storage>
 
 <background_execution>
-## Background Execution & Resumption
+## 백그라운드 실행 및 재개
 
-> **Needs validation:** These patterns work but better solutions may exist.
+> **검증 필요:** 이 패턴들은 작동하지만 더 나은 해결책이 존재할 수 있습니다.
 
-Mobile apps can be suspended or terminated at any time. Agents must handle this gracefully.
+모바일 앱은 언제든 중단되거나 종료될 수 있습니다. 에이전트는 이를 우아하게 처리해야 합니다.
 
-### The Challenge
+### 도전 과제
 
 ```
-User starts research agent
+사용자가 조사 에이전트 시작
      ↓
-Agent begins web search
+에이전트가 웹 검색 시작
      ↓
-User switches to another app
+사용자가 다른 앱으로 전환
      ↓
-iOS suspends your app
+iOS가 앱을 중단(suspend)시킴
      ↓
-Agent is mid-execution... what happens?
+에이전트가 실행 도중인데... 무슨 일이 벌어질까요?
 ```
 
-### Checkpoint/Resume Pattern
+### 체크포인트/재개 패턴
 
-Save agent state before backgrounding, restore on foreground:
+백그라운드로 전환되기 전에 에이전트 상태를 저장하고, 포그라운드로 돌아왔을 때 복원하십시오:
 
 ```swift
 class AgentOrchestrator: ObservableObject {
     @Published var activeSessions: [AgentSession] = []
 
-    // Called when app is about to background
+    // 앱이 백그라운드로 가기 직전 호출됨
     func handleAppWillBackground() {
         for session in activeSessions {
             saveCheckpoint(session)
@@ -215,7 +195,7 @@ class AgentOrchestrator: ObservableObject {
         }
     }
 
-    // Called when app returns to foreground
+    // 앱이 포그라운드로 돌아왔을 때 호출됨
     func handleAppDidForeground() {
         for session in activeSessions where session.state == .backgrounded {
             if let checkpoint = loadCheckpoint(session.id) {
@@ -239,7 +219,7 @@ class AgentOrchestrator: ObservableObject {
         session.messages = checkpoint.conversationHistory
         session.pendingToolCalls = checkpoint.pendingToolCalls
 
-        // Resume execution if there were pending tool calls
+        // 대기 중인 도구 호출이 있었다면 실행 재개
         if !checkpoint.pendingToolCalls.isEmpty {
             session.transition(to: .running)
             Task { await executeNextTool(session) }
@@ -248,16 +228,16 @@ class AgentOrchestrator: ObservableObject {
 }
 ```
 
-### State Machine for Agent Lifecycle
+### 에이전트 라이프사이클을 위한 상태 머신
 
 ```swift
 enum AgentState {
-    case idle           // Not running
-    case running        // Actively executing
-    case waitingForUser // Paused, waiting for user input
-    case backgrounded   // App backgrounded, state saved
-    case completed      // Finished successfully
-    case failed(Error)  // Finished with error
+    case idle           // 실행 중 아님
+    case running        // 활발히 실행 중
+    case waitingForUser // 일시 정지, 사용자 입력 대기 중
+    case backgrounded   // 앱이 백그라운드로 이동, 상태 저장됨
+    case completed      // 성공적으로 완료됨
+    case failed(Error)  // 오류와 함께 종료됨
 }
 
 class AgentSession: ObservableObject {
@@ -272,7 +252,7 @@ class AgentSession: ObservableObject {
         ]
 
         guard validTransitions[state]?.contains(newState) == true else {
-            logger.warning("Invalid transition: \(state) → \(newState)")
+            logger.warning("잘못된 전이: \(state) → \(newState)")
             return
         }
 
@@ -281,21 +261,21 @@ class AgentSession: ObservableObject {
 }
 ```
 
-### Background Task Extension (iOS)
+### 백그라운드 작업 연장 (iOS)
 
-Request extra time when backgrounded during critical operations:
+중요한 작업 도중 백그라운드로 전환될 때 추가 시간을 요청하십시오:
 
 ```swift
 class AgentOrchestrator {
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
 
     func handleAppWillBackground() {
-        // Request extra time for saving state
+        // 상태 저장을 위해 추가 시간 요청
         backgroundTask = UIApplication.shared.beginBackgroundTask { [weak self] in
             self?.endBackgroundTask()
         }
 
-        // Save all checkpoints
+        // 모든 체크포인트 저장
         Task {
             for session in activeSessions {
                 await saveCheckpoint(session)
@@ -313,9 +293,9 @@ class AgentOrchestrator {
 }
 ```
 
-### User Communication
+### 사용자 커뮤니케이션
 
-Let users know what's happening:
+사용자에게 현재 상황을 알려주십시오:
 
 ```swift
 struct AgentStatusView: View {
@@ -324,13 +304,13 @@ struct AgentStatusView: View {
     var body: some View {
         switch session.state {
         case .backgrounded:
-            Label("Paused (app in background)", systemImage: "pause.circle")
+            Label("일시 정지됨 (앱이 백그라운드에 있음)", systemImage: "pause.circle")
                 .foregroundColor(.orange)
         case .running:
-            Label("Working...", systemImage: "ellipsis.circle")
+            Label("작업 중...", systemImage: "ellipsis.circle")
                 .foregroundColor(.blue)
         case .waitingForUser:
-            Label("Waiting for your input", systemImage: "person.circle")
+            Label("사용자 입력을 기다리는 중", systemImage: "person.circle")
                 .foregroundColor(.green)
         // ...
         }
@@ -340,58 +320,58 @@ struct AgentStatusView: View {
 </background_execution>
 
 <permissions>
-## Permission Handling
+## 권한 처리
 
-Mobile agents may need access to system resources. Handle permission requests gracefully.
+모바일 에이전트는 시스템 자원에 접근해야 할 수 있습니다. 권한 요청을 우아하게 처리하십시오.
 
-### Common Permissions
+### 일반적인 권한들
 
-| Resource | iOS Permission | Use Case |
+| 자원 | iOS 권한 | 사용 사례 |
 |----------|---------------|----------|
-| Photo Library | PHPhotoLibrary | Profile generation from photos |
-| Files | Document picker | Reading user documents |
-| Camera | AVCaptureDevice | Scanning book covers |
-| Location | CLLocationManager | Location-aware recommendations |
-| Network | (automatic) | Web search, API calls |
+| 사진 라이브러리 | PHPhotoLibrary | 사진을 통한 프로필 생성 |
+| 파일 | Document picker | 사용자 문서 읽기 |
+| 카메라 | AVCaptureDevice | 책 표지 스캔 |
+| 위치 | CLLocationManager | 위치 기반 추천 |
+| 네트워크 | (자동) | 웹 검색, API 호출 |
 
-### Permission-Aware Tools
+### 권한 인식 도구
 
-Check permissions before executing:
+실행 전 권한을 확인하십시오:
 
 ```swift
 struct PhotoTools {
     static func readPhotos() -> AgentTool {
         tool(
             name: "read_photos",
-            description: "Read photos from the user's photo library",
+            description: "사용자의 사진 라이브러리에서 사진 읽기",
             parameters: [
-                "limit": .number("Maximum photos to read"),
-                "dateRange": .string("Date range filter").optional()
+                "limit": .number("최대 사진 수"),
+                "dateRange": .string("날짜 범위 필터").optional()
             ],
             execute: { params, context in
-                // Check permission first
+                // 먼저 권한 확인
                 let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
 
                 switch status {
                 case .authorized, .limited:
-                    // Proceed with reading photos
+                    // 사진 읽기 진행
                     let photos = await fetchPhotos(params)
-                    return ToolResult(text: "Found \(photos.count) photos", images: photos)
+                    return ToolResult(text: "\(photos.count)개의 사진을 찾았습니다", images: photos)
 
                 case .denied, .restricted:
                     return ToolResult(
-                        text: "Photo access needed. Please grant permission in Settings → Privacy → Photos.",
+                        text: "사진 접근 권한이 필요합니다. 설정 → 개인정보 보호 → 사진에서 권한을 허용해 주세요.",
                         isError: true
                     )
 
                 case .notDetermined:
                     return ToolResult(
-                        text: "Photo permission required. Please try again.",
+                        text: "사진 권한이 필요합니다. 다시 시도해 주세요.",
                         isError: true
                     )
 
                 @unknown default:
-                    return ToolResult(text: "Unknown permission status", isError: true)
+                    return ToolResult(text: "알 수 없는 권한 상태", isError: true)
                 }
             }
         )
@@ -399,9 +379,9 @@ struct PhotoTools {
 }
 ```
 
-### Graceful Degradation
+### 단계적 기능 저하 (Graceful Degradation)
 
-When permissions aren't granted, offer alternatives:
+권한이 거부되었을 때 대안을 제시하십시오:
 
 ```swift
 func readPhotos() async -> ToolResult {
@@ -409,62 +389,62 @@ func readPhotos() async -> ToolResult {
 
     switch status {
     case .denied, .restricted:
-        // Suggest alternative
+        // 대안 제안
         return ToolResult(
             text: """
-            I don't have access to your photos. You can either:
-            1. Grant access in Settings → Privacy → Photos
-            2. Share specific photos directly in our chat
+            사진에 접근할 수 없습니다. 다음 방법 중 하나를 선택해 주세요:
+            1. 설정 → 개인정보 보호 → 사진에서 접근 권한 허용
+            2. 특정 사진을 채팅창에 직접 공유
 
-            Would you like me to help with something else instead?
+            대신 다른 작업을 도와드릴까요?
             """,
-            isError: false  // Not a hard error, just a limitation
+            isError: false  // 치명적 오류가 아닌 기능적 제한임
         )
     // ...
     }
 }
 ```
 
-### Permission Request Timing
+### 권한 요청 시점
 
-Don't request permissions until needed:
+필요할 때까지 권한을 요청하지 마십시오:
 
 ```swift
-// BAD: Request all permissions at launch
+// 나쁨: 시작 시 모든 권한 요청
 func applicationDidFinishLaunching() {
     requestPhotoAccess()
     requestCameraAccess()
     requestLocationAccess()
-    // User is overwhelmed with permission dialogs
+    // 사용자는 쏟아지는 권한 요청 팝업에 당황하게 됨
 }
 
-// GOOD: Request when the feature is used
+// 좋음: 기능을 사용할 때 요청
 tool("analyze_book_cover", async ({ image }) => {
-    // Only request camera access when user tries to scan a cover
+    // 사용자가 표지를 스캔하려고 할 때만 카메라 권한 요청
     let status = await AVCaptureDevice.requestAccess(for: .video)
     if status {
         return await scanCover(image)
     } else {
-        return ToolResult(text: "Camera access needed for book scanning")
+        return ToolResult(text: "책 스캔을 위해 카메라 권한이 필요합니다")
     }
 })
 ```
 </permissions>
 
 <cost_awareness>
-## Cost-Aware Design
+## 비용 고려 설계
 
-Mobile users may be on cellular data or concerned about API costs. Design agents to be efficient.
+모바일 사용자는 셀룰러 데이터를 사용 중이거나 API 비용을 걱정할 수 있습니다. 에이전트가 효율적으로 작동하도록 설계하십시오.
 
-### Model Tier Selection
+### 모델 티어 선택
 
-Use the cheapest model that achieves the outcome:
+결과를 달성할 수 있는 가장 저렴한 모델을 사용하십시오:
 
 ```swift
 enum ModelTier {
-    case fast      // claude-3-haiku: ~$0.25/1M tokens
-    case balanced  // claude-3-sonnet: ~$3/1M tokens
-    case powerful  // claude-3-opus: ~$15/1M tokens
+    case fast      // claude-3-haiku: 약 $0.25/1M 토큰
+    case balanced  // claude-3-sonnet: 약 $3/1M 토큰
+    case powerful  // claude-3-opus: 약 $15/1M 토큰
 
     var modelId: String {
         switch self {
@@ -475,19 +455,19 @@ enum ModelTier {
     }
 }
 
-// Match model to task complexity
+// 작업 복잡도에 모델 매칭
 let agentConfigs: [AgentType: ModelTier] = [
-    .quickLookup: .fast,        // "What's in my library?"
-    .chatAssistant: .balanced,  // General conversation
-    .researchAgent: .balanced,  // Web search + synthesis
-    .profileGenerator: .powerful, // Complex photo analysis
+    .quickLookup: .fast,        // "내 라이브러리에 뭐 있어?"
+    .chatAssistant: .balanced,  // 일반적인 대화
+    .researchAgent: .balanced,  // 웹 검색 + 합성
+    .profileGenerator: .powerful, // 복잡한 사진 분석
     .introductionWriter: .balanced,
 ]
 ```
 
-### Token Budgets
+### 토큰 예산 (Token Budgets)
 
-Limit tokens per agent session:
+에이전트 세션당 토큰 사용량을 제한하십시오:
 
 ```swift
 struct AgentConfig {
@@ -524,14 +504,14 @@ class AgentSession {
 }
 ```
 
-### Network-Aware Execution
+### 네트워크 상태 인식 실행
 
-Defer heavy operations to WiFi:
+무거운 작업은 WiFi 환경으로 미루십시오:
 
 ```swift
 class NetworkMonitor: ObservableObject {
     @Published var isOnWiFi: Bool = false
-    @Published var isExpensive: Bool = false  // Cellular or hotspot
+    @Published var isExpensive: Bool = false  // 셀룰러 또는 핫스팟
 
     private let monitor = NWPathMonitor()
 
@@ -551,38 +531,38 @@ class AgentOrchestrator {
 
     func startResearchAgent(for book: Book) async {
         if network.isExpensive {
-            // Warn user or defer
+            // 사용자에게 경고하거나 작업을 미룸
             let proceed = await showAlert(
-                "Research uses data",
-                message: "This will use approximately 1-2 MB of cellular data. Continue?"
+                "조사에 데이터 사용됨",
+                message: "이 작업은 약 1-2 MB의 셀룰러 데이터를 사용합니다. 계속하시겠습니까?"
             )
             if !proceed { return }
         }
 
-        // Proceed with research
+        // 조사 진행
         await runAgent(ResearchAgent.create(book: book))
     }
 }
 ```
 
-### Batch API Calls
+### API 호출 배치 처리 (Batching)
 
-Combine multiple small requests:
+여러 개의 작은 요청을 하나로 합치십시오:
 
 ```swift
-// BAD: Many small API calls
+// 나쁨: 많은 수의 작은 API 호출
 for book in books {
-    await agent.chat("Summarize \(book.title)")
+    await agent.chat("\(book.title) 요약해줘")
 }
 
-// GOOD: Batch into one request
+// 좋음: 하나의 요청으로 배치 처리
 let bookList = books.map { $0.title }.joined(separator: ", ")
-await agent.chat("Summarize each of these books briefly: \(bookList)")
+await agent.chat("다음 책들을 각각 짧게 요약해줘: \(bookList)")
 ```
 
-### Caching
+### 캐싱 (Caching)
 
-Cache expensive operations:
+비싼 작업은 캐싱하십시오:
 
 ```swift
 class ResearchCache {
@@ -591,7 +571,7 @@ class ResearchCache {
     func getCachedResearch(for bookId: String) -> CachedResearch? {
         guard let cached = cache[bookId] else { return nil }
 
-        // Expire after 24 hours
+        // 24시간 후 만료
         if Date().timeIntervalSince(cached.timestamp) > 86400 {
             cache.removeValue(forKey: bookId)
             return nil
@@ -608,23 +588,23 @@ class ResearchCache {
     }
 }
 
-// In research tool
+// 조사 도구 내에서
 tool("web_search", async ({ query, bookId }) => {
-    // Check cache first
+    // 먼저 캐시 확인
     if let cached = cache.getCachedResearch(for: bookId) {
         return ToolResult(text: cached.research.summary, cached: true)
     }
 
-    // Otherwise, perform search
+    // 캐시 없으면 검색 수행
     let results = await webSearch(query)
     cache.cacheResearch(results, for: bookId)
     return ToolResult(text: results.summary)
 })
 ```
 
-### Cost Visibility
+### 비용 가시성
 
-Show users what they're spending:
+사용자에게 얼마를 쓰고 있는지 보여주십시오:
 
 ```swift
 struct AgentCostView: View {
@@ -632,17 +612,17 @@ struct AgentCostView: View {
 
     var body: some View {
         VStack(alignment: .leading) {
-            Text("Session Stats")
+            Text("세션 통계")
                 .font(.headline)
 
             HStack {
-                Label("\(session.turnCount) turns", systemImage: "arrow.2.squarepath")
+                Label("\(session.turnCount) 턴", systemImage: "arrow.2.squarepath")
                 Spacer()
                 Label(formatTokens(session.totalTokensUsed), systemImage: "text.word.spacing")
             }
 
             if let estimatedCost = session.estimatedCost {
-                Text("Est. cost: \(estimatedCost, format: .currency(code: "USD"))")
+                Text("예상 비용: \(estimatedCost, format: .currency(code: "USD"))")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -653,28 +633,28 @@ struct AgentCostView: View {
 </cost_awareness>
 
 <offline_handling>
-## Offline Graceful Degradation
+## 오프라인에서의 기능 저하 처리
 
-Handle offline scenarios gracefully:
+오프라인 시나리오를 우아하게 처리하십시오:
 
 ```swift
 class ConnectivityAwareAgent {
     @ObservedObject var network = NetworkMonitor()
 
     func executeToolCall(_ toolCall: ToolCall) async -> ToolResult {
-        // Check if tool requires network
+        // 네트워크가 필요한 도구인지 확인
         let requiresNetwork = ["web_search", "web_fetch", "call_api"]
             .contains(toolCall.name)
 
         if requiresNetwork && !network.isConnected {
             return ToolResult(
                 text: """
-                I can't access the internet right now. Here's what I can do offline:
-                - Read your library and existing research
-                - Answer questions from cached data
-                - Write notes and drafts for later
+                지금은 인터넷에 연결할 수 없습니다. 오프라인에서 가능한 작업은 다음과 같습니다:
+                - 라이브러리 및 기존 조사 결과 읽기
+                - 캐시된 데이터로 질문에 답변하기
+                - 나중에 사용할 노트 및 초안 작성
 
-                Would you like me to try something that works offline?
+                오프라인에서 가능한 작업을 시도해 볼까요?
                 """,
                 isError: false
             )
@@ -685,17 +665,17 @@ class ConnectivityAwareAgent {
 }
 ```
 
-### Offline-First Tools
+### 오프라인 우선 도구 (Offline-First Tools)
 
-Some tools should work entirely offline:
+일부 도구는 완전히 오프라인에서 작동해야 합니다:
 
 ```swift
 let offlineTools: Set<String> = [
     "read_file",
     "write_file",
     "list_files",
-    "read_library",  // Local database
-    "search_local",  // Local search
+    "read_library",  // 로컬 데이터베이스
+    "search_local",  // 로컬 검색
 ]
 
 let onlineTools: Set<String> = [
@@ -705,13 +685,13 @@ let onlineTools: Set<String> = [
 ]
 
 let hybridTools: Set<String> = [
-    "publish_to_feed",  // Works offline, syncs later
+    "publish_to_feed",  // 오프라인에서 작동하고 나중에 동기화
 ]
 ```
 
-### Queued Actions
+### 액션 큐 (Queued Actions)
 
-Queue actions that require connectivity:
+연결이 필요한 액션은 큐에 담아두십시오:
 
 ```swift
 class OfflineQueue: ObservableObject {
@@ -743,9 +723,9 @@ class OfflineQueue: ObservableObject {
 </offline_handling>
 
 <battery_awareness>
-## Battery-Aware Execution
+## 배터리 인식 실행
 
-Respect device battery state:
+기기 배터리 상태를 존중하십시오:
 
 ```swift
 class BatteryMonitor: ObservableObject {
@@ -784,13 +764,13 @@ class AgentOrchestrator {
     func startAgent(_ config: AgentConfig) async {
         if battery.shouldDeferHeavyWork && config.isHeavy {
             let proceed = await showAlert(
-                "Low Battery",
-                message: "This task uses significant battery. Continue or defer until charging?"
+                "배터리 부족",
+                message: "이 작업은 배터리를 많이 소모합니다. 계속하시겠습니까, 아니면 충전 중으로 미루시겠습니까?"
             )
             if !proceed { return }
         }
 
-        // Adjust model tier based on battery
+        // 배터리 상태에 따라 모델 티어 조정
         let adjustedConfig = battery.isLowPowerMode
             ? config.withModelTier(.fast)
             : config
@@ -802,70 +782,70 @@ class AgentOrchestrator {
 </battery_awareness>
 
 <on_device_vs_cloud>
-## On-Device vs. Cloud
+## 온디바이스 vs 클라우드
 
-Understanding what runs where in a mobile agent-native app:
+모바일 에이전트 네이티브 앱에서 각 컴포넌트가 어디서 실행되는지 이해하기:
 
-| Component | On-Device | Cloud |
+| 컴포넌트 | 온디바이스 (On-Device) | 클라우드 (Cloud) |
 |-----------|-----------|-------|
-| Orchestration | ✅ | |
-| Tool execution | ✅ (file ops, photo access, HealthKit) | |
-| LLM calls | | ✅ (Anthropic API) |
-| Checkpoints | ✅ (local files) | Optional via iCloud |
-| Long-running agents | Limited by iOS | Possible with server |
+| 오케스트레이션 | ✅ | |
+| 도구 실행 | ✅ (파일 작업, 사진 접근, HealthKit 등) | |
+| LLM 호출 | | ✅ (Anthropic API 등) |
+| 체크포인트 | ✅ (로컬 파일) | iCloud를 통해 선택 가능 |
+| 오래 실행되는 에이전트 | iOS에 의해 제한됨 | 서버를 통해 가능 |
 
-### Implications
+### 함의 (Implications)
 
-**Network required for reasoning:**
-- The app needs network connectivity for LLM calls
-- Design tools to degrade gracefully when network is unavailable
-- Consider offline caching for common queries
+**추론을 위해 네트워크 필수:**
+- LLM 호출을 위해 앱은 네트워크 연결이 필요합니다.
+- 네트워크가 없을 때 기능이 우아하게 저하되도록 도구를 설계하십시오.
+- 일반적인 질의에 대해서는 오프라인 캐싱을 고려하십시오.
 
-**Data stays local:**
-- File operations happen on device
-- Sensitive data never leaves the device unless explicitly synced
-- Privacy is preserved by default
+**데이터는 로컬에 유지:**
+- 파일 작업은 기기 내에서 발생합니다.
+- 명시적으로 동기화하지 않는 한 민감한 데이터는 기기를 떠나지 않습니다.
+- 프라이버시는 기본적으로 보존됩니다.
 
-**Long-running agents:**
-For truly long-running agents (hours), consider a server-side orchestrator that can run indefinitely, with the mobile app as a viewer and input mechanism.
+**오래 실행되는 에이전트:**
+수 시간 동안 실행되어야 하는 에이전트의 경우, 기기는 뷰어 및 입력 수단으로 사용하고 서버 사이드 오케스트레이터를 두는 것을 고려하십시오.
 </on_device_vs_cloud>
 
 <checklist>
-## Mobile Agent-Native Checklist
+## 모바일 에이전트 네이티브 체크리스트
 
-**iOS Storage:**
-- [ ] iCloud Documents as primary storage (or conscious alternative)
-- [ ] Local Documents fallback when iCloud unavailable
-- [ ] Handle `.icloud` placeholder files (trigger download)
-- [ ] Use NSFileCoordinator for conflict-safe writes
+**iOS 저장소:**
+- [ ] iCloud Documents를 기본 저장소로 사용 (또는 의식적인 대안 선택)
+- [ ] iCloud 사용 불가 시 로컬 Documents로 폴백 처리
+- [ ] `.icloud` 플레이스홀더 파일 처리 (다운로드 트리거)
+- [ ] 충돌 없는 쓰기를 위해 NSFileCoordinator 사용
 
-**Background Execution:**
-- [ ] Checkpoint/resume implemented for all agent sessions
-- [ ] State machine for agent lifecycle (idle, running, backgrounded, etc.)
-- [ ] Background task extension for critical saves (30 second window)
-- [ ] User-visible status for backgrounded agents
+**백그라운드 실행:**
+- [ ] 모든 에이전트 세션에 체크포인트/재개 구현
+- [ ] 에이전트 라이프사이클 상태 머신 구현 (idle, running, backgrounded 등)
+- [ ] 중요 저장 작업을 위한 백그라운드 작업 연장 구현 (30초 윈도우)
+- [ ] 백그라운드 상태인 에이전트에 대한 사용자 가시성 확보
 
-**Permissions:**
-- [ ] Permissions requested only when needed, not at launch
-- [ ] Graceful degradation when permissions denied
-- [ ] Clear error messages with Settings deep links
-- [ ] Alternative paths when permissions unavailable
+**권장:**
+- [ ] 권한은 시작 시가 아닌 필요할 때 요청
+- [ ] 권한 거부 시 단계적 기능 저하 처리
+- [ ] 설정 앱 딥링크를 포함한 명확한 오류 메시지 제공
+- [ ] 권한 미보유 시 대안 경로 제공
 
-**Cost Awareness:**
-- [ ] Model tier matched to task complexity
-- [ ] Token budgets per session
-- [ ] Network-aware (defer heavy work to WiFi)
-- [ ] Caching for expensive operations
-- [ ] Cost visibility to users
+**비용 인식:**
+- [ ] 작업 복잡도에 맞는 모델 티어 매칭
+- [ ] 세션당 토큰 예산 설정
+- [ ] 네트워크 상태 인식 (무거운 작업은 WiFi로 미룸)
+- [ ] 비싼 작업을 위한 캐싱 구현
+- [ ] 사용자에게 비용 가시성 제공
 
-**Offline Handling:**
-- [ ] Offline-capable tools identified
-- [ ] Graceful degradation for online-only features
-- [ ] Action queue for sync when online
-- [ ] Clear user communication about offline state
+**오프라인 처리:**
+- [ ] 오프라인 가능 도구 식별
+- [ ] 온라인 전용 기능에 대한 단계적 기능 저하 처리
+- [ ] 온라인 복귀 시 동기화를 위한 액션 큐 구현
+- [ ] 오프라인 상태에 대한 명확한 사용자 안내
 
-**Battery Awareness:**
-- [ ] Battery monitoring for heavy operations
-- [ ] Low power mode detection
-- [ ] Defer or downgrade based on battery state
+**배터리 인식:**
+- [ ] 무거운 작업을 위한 배터리 모니터링
+- [ ] 저전력 모드 감지
+- [ ] 배터리 상태에 따른 작업 연기 또는 티어 다운그레이드
 </checklist>

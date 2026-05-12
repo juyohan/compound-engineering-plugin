@@ -1,119 +1,119 @@
-# Extensive analysis path
+# 심층 분석 경로 (Extensive analysis path)
 
-Use this path when the input is a longer recording (over ~60 seconds), contains multiple issues, requirements, or workflow walkthroughs, or the user explicitly wants requirements material. The goal is a full Compound Engineering-compatible artifact set that feeds `ce-brainstorm`.
+입력이 긴 녹화본(약 60초 이상)이거나, 여러 문제, 요구 사항, 또는 워크플로우 시연을 포함하고 있는 경우, 또는 사용자가 명시적으로 요구 사항 자료를 원하는 경우 이 경로를 사용하십시오. 목표는 `ce-brainstorm`에 공급될 수 있는 전체 Compound Engineering 호환 아티팩트 세트를 생성하는 것입니다.
 
-## Workflow
+## 워크플로우
 
-1. Run the analyzer:
+1. 분석기를 실행합니다:
 
    ```bash
    python scripts/analyze_riffrec_zip.py /path/to/input
    ```
 
-   Use `--output-dir <dir>` when the artifact should live somewhere specific. In a repo with `docs/brainstorms/`, the default output goes under `docs/brainstorms/riffrec-feedback/`.
+   아티팩트가 특정 위치에 저장되어야 하는 경우 `--output-dir <dir>`을 사용하십시오. `docs/brainstorms/`가 있는 리포지토리에서 기본 출력 경로는 `docs/brainstorms/riffrec-feedback/` 하위입니다.
 
-2. Read the generated `analysis.md`, `problem-analysis.md`, `review-prompt.md`, and `requirements-kickoff.md`.
+2. 생성된 `analysis.md`, `problem-analysis.md`, `review-prompt.md`, `requirements-kickoff.md`를 읽으십시오.
 
-3. Read `source-materials.md` before brainstorm. It is the source-of-truth manifest for the original raw feedback location, transcript, local-only frames, chunks, analysis artifacts, and screenshot paths. Use it to keep brainstorm and planning traceable to the original feedback evidence.
+3. 브레인스토밍 전 `source-materials.md`를 읽으십시오. 이것은 원본 원천 피드백 위치, 트랜스크립트(transcript), 로컬 전용 프레임, 청크(chunks), 분석 아티팩트 및 스크린샷 경로에 대한 정보원(source-of-truth) 매니페스트입니다. 브레인스토밍과 계획 수립 단계에서 원본 피드백 증거에 대한 추적성을 유지하기 위해 이를 사용하십시오.
 
-4. Inspect the extracted screenshots for high-signal moments using the platform's image-view tool. Prioritize screenshots selected because of click events near verbal complaints, failed network requests, console errors, or repeated interaction.
+4. 플랫폼의 이미지 보기 도구를 사용하여 추출된 스크린샷 중 신호가 강한 순간을 검사하십시오. 불만 섞인 발언 근처의 클릭 이벤트, 실패한 네트워크 요청, 콘솔 에러 또는 반복된 상호작용이 발생한 지점의 스크린샷을 우선적으로 확인하십시오.
 
-5. Fill or refine `problem-analysis.md` using the frame review structure from `review-prompt.md`. The final problem analysis must have exactly these top-level categories:
+5. `review-prompt.md`의 프레임 리뷰 구조를 사용하여 `problem-analysis.md`를 작성하거나 보완하십시오. 최종 문제 분석은 반드시 다음의 최상위 카테고리를 포함해야 합니다:
 
    - **Visual/UI Problems**
    - **Functional Problems**
    - **Requirements**
    - **Usability/UX Problems**
 
-   Each numbered item should describe the problem, location, UI element, frame reference, and relevant transcript context when available. Focus on WHAT is wrong, not HOW to fix it.
+   번호가 매겨진 각 항목은 문제, 위치, UI 요소, 프레임 참조 및 사용 가능한 경우 관련 트랜스크립트 컨텍스트를 설명해야 합니다. 해결 방법(HOW)이 아닌 무엇이 잘못되었는지(WHAT)에 집중하십시오.
 
-6. Convert evidence into requirements. Keep these categories distinct:
+6. 증거를 요구 사항으로 변환하십시오. 다음 카테고리를 명확히 구분하십시오:
 
-   - **Observed facts:** transcript quotes, click targets, request statuses, screenshot contents.
-   - **Inferences:** likely user intent, likely broken control, suspected missing state.
-   - **Requirements:** product behavior needed to resolve the problem.
+   - **관찰된 사실 (Observed facts):** 트랜스크립트 인용구, 클릭 대상, 요청 상태, 스크린샷 내용.
+   - **추론 (Inferences):** 가능성 높은 사용자 의도, 고장난 것으로 보이는 컨트롤, 누락된 것으로 의심되는 상태.
+   - **요구 사항 (Requirements):** 문제를 해결하기 위해 필요한 제품 동작.
 
-7. When the current workspace contains the product source code, run a source-mapping pass before or during brainstorm. Use the transcript language, visible UI labels, screenshot paths, route names, and generated requirements to search the codebase for likely components, controllers, services, models, tests, and state stores. For larger sessions, split this mapping by product area and use sub-agents when available so independent areas can be inspected in parallel.
+7. 현재 작업 디렉토리에 제품 소스 코드가 포함된 경우, 브레인스토밍 전이나 도중에 소스 매핑(source-mapping) 패스를 실행하십시오. 트랜스크립트 용어, 가시적인 UI 레이블, 스크린샷 경로, 라우트 이름 및 생성된 요구 사항을 사용하여 관련 가능성이 높은 컴포넌트, 컨트롤러, 서비스, 모델, 테스트 및 상태 저장소를 코드베이스에서 검색하십시오. 규모가 큰 세션의 경우, 이 매핑 작업을 제품 영역별로 나누고 하위 에이전트를 사용하여 독립적인 영역을 병렬로 검사하십시오.
 
-8. Add source mapping to the brainstorm material as suspected implementation surfaces, not as proven root cause unless the code clearly proves it. Include confidence levels and short evidence notes explaining why each file or component is relevant.
+8. 소스 매핑 결과를 브레인스토밍 자료에 추가하되, 확실한 근거가 없는 한 입증된 근본 원인이 아닌 '의심되는 구현 표면'으로 포함하십시오. 신뢰도 수준과 각 파일이나 컴포넌트가 왜 관련이 있는지 설명하는 짧은 증거 노트를 포함하십시오.
 
-9. Always continue into brainstorm. Once `analysis.md`, `problem-analysis.md`, `source-materials.md`, and `requirements-kickoff.md` exist, say "Analysis complete. Ready to brainstorm the findings." Then immediately load the `ce-brainstorm` skill with the generated `requirements-kickoff.md`, unless the user explicitly asked only to extract or analyze artifacts.
+9. 항상 브레인스토밍 단계로 진행하십시오. `analysis.md`, `problem-analysis.md`, `source-materials.md`, `requirements-kickoff.md`가 생성되면 "Analysis complete. Ready to brainstorm the findings."라고 말하십시오. 그런 다음 사용자가 명시적으로 아티팩트 추출이나 분석만을 요청하지 않는 한, 생성된 `requirements-kickoff.md`와 함께 즉시 `ce-brainstorm` 스킬을 로드하십시오.
 
-10. In brainstorm, first ask the user to confirm the captured requirements: "Did this capture the requirements correctly, and what is missing, wrong, or grouped badly?" Do not move to planning until brainstorm has confirmed or corrected the requirements.
+10. 브레인스토밍 단계에서 먼저 사용자에게 수집된 요구 사항의 확인을 요청하십시오: "요구 사항이 올바르게 수집되었나요? 누락되었거나, 틀렸거나, 잘못 그룹화된 내용이 있나요?" 브레인스토밍에서 요구 사항이 확인되거나 수정되기 전까지는 계획 수립 단계로 이동하지 마십시오.
 
-## Automatic handoff
+## 자동 전달 (Automatic handoff)
 
-Do not end the workflow after extraction in normal use. The intended sequence is:
+일반적인 사용 시 아티팩트 추출 후 워크플로우를 종료하지 마십시오. 의도된 순서는 다음과 같습니다:
 
-1. Run the analyzer.
-2. Read `source-materials.md` so brainstorm has direct links to raw feedback, transcript, frames, and analysis artifacts.
-3. Inspect or refine `problem-analysis.md` when the evidence needs human-visible interpretation.
-4. Load the `ce-brainstorm` skill with `requirements-kickoff.md`.
-5. Ask the user to confirm, correct, or regroup the captured requirements.
-6. Let `ce-brainstorm` produce the durable requirements doc under `docs/brainstorms/`.
+1. 분석기를 실행합니다.
+2. `source-materials.md`를 읽어 브레인스토밍이 원본 피드백, 트랜스크립트, 프레임 및 분석 아티팩트에 직접 링크될 수 있도록 합니다.
+3. 증거에 사람의 시각적 해석이 필요한 경우 `problem-analysis.md`를 검사하거나 보완합니다.
+4. `requirements-kickoff.md`와 함께 `ce-brainstorm` 스킬을 로드합니다.
+5. 사용자에게 수집된 요구 사항의 확인, 수정 또는 재정리를 요청합니다.
+6. `ce-brainstorm`이 `docs/brainstorms/` 하위에 내구성 있는 요구 사항 문서를 생성하게 합니다.
 
-Only stop after step 1 or 2 when the user asks specifically for raw artifacts, transcript, screenshots, or analysis without brainstorming.
+사용자가 브레인스토밍 없이 원본 아티팩트, 트랜스크립트, 스크린샷 또는 분석 결과만을 특별히 요청한 경우에만 1단계 또는 2단계 후에 중단하십시오.
 
-## Capture scale
+## 수집 범위 (Capture scale)
 
-Prefer over-capture to under-capture. The purpose of this path is to preserve product feedback as structured data for later AI work, not to decide what is worth implementing during extraction.
+부족하게 수집하는 것보다 과하게 수집하는 쪽을 선택하십시오. 이 경로의 목적은 추출 중에 구현 가치를 결정하는 것이 아니라, 나중에 AI 작업을 위해 제품 피드백을 구조화된 데이터로 보존하는 것입니다.
 
-When analyzing a feedback source:
+피드백 소스를 분석할 때:
 
-- Capture every distinct problem, bug, request, expectation, confusion point, and "note to self" that appears in the transcript or frames.
-- Include concrete examples from the source material for each issue when possible: timestamp, transcript phrase, screenshot path, clicked UI element, email/thread ID, or observed state.
-- Include concrete source-code mapping when possible: likely component/service/controller/model/test files, route or API endpoint names, relevant state variables, and confidence level. This mapping should make it obvious where a later implementation agent should start looking.
-- If only video is available, infer likely screens and components from visible UI labels, layout, URLs, route names, copied text, screenshots, and transcript references. Mark uncertain mappings explicitly instead of omitting them.
-- If only audio or notes are available, map from product terminology and workflow descriptions to likely code areas when the repo is present, and label the mapping as transcript-derived.
-- Do not drop lower-priority items during analysis. Mark them as lower priority or secondary if needed, but keep them represented.
-- Separate capture from prioritization. Brainstorm may regroup, split, defer, or reject items later, but the first requirements pass should preserve the full signal.
-- If a feedback session contains many issues, create a comprehensive capture document and state that planning should split it into smaller plans.
-- Treat source mapping as supporting material, not a filter. If a problem cannot yet be mapped to code, keep the problem and mark the source mapping as unknown.
+- 트랜스크립트나 프레임에 나타나는 모든 뚜렷한 문제, 버그, 요청, 기대 사항, 혼란 지점 및 "메모"를 수집하십시오.
+- 가능한 경우 각 이슈에 대해 소스 자료의 구체적인 예시를 포함하십시오: 타임스탬프, 트랜스크립트 문구, 스크린샷 경로, 클릭된 UI 요소, 이메일/스레드 ID 또는 관찰된 상태.
+- 가능한 경우 구체적인 소스 코드 매핑을 포함하십시오: 가능성 높은 컴포넌트/서비스/컨트롤러/모델/테스트 파일, 라우트 또는 API 엔드포인트 이름, 관련 상태 변수 및 신뢰도 수준. 이 매핑은 나중에 구현 에이전트가 어디에서 조사를 시작해야 할지 명확하게 보여주어야 합니다.
+- 비디오만 있는 경우, 가시적인 UI 레이블, 레이아웃, URL, 라우트 이름, 복사된 텍스트, 스크린샷 및 트랜스크립트 참조를 통해 가능성 높은 화면과 컴포넌트를 추론하십시오. 불확실한 매핑은 생략하지 말고 명시적으로 표시하십시오.
+- 오디오나 노트만 있는 경우, 리포지토리가 있다면 제품 용어와 워크플로우 설명을 바탕으로 가능성 높은 코드 영역에 매핑하고, 해당 매핑이 트랜스크립트 기반임을 표시하십시오.
+- 분석 중에 우선순위가 낮은 항목을 제외하지 마십시오. 필요한 경우 우선순위가 낮거나 보조적인 것으로 표시하되, 기록에는 남겨두십시오.
+- 수집과 우선순위 지정을 분리하십시오. 브레인스토밍 단계에서 나중에 항목을 재그룹화, 분할, 이월 또는 거부할 수 있지만, 첫 번째 요구 사항 수집 패스에서는 전체 신호를 보존해야 합니다.
+- 피드백 세션에 많은 이슈가 포함된 경우, 종합적인 수집 문서를 생성하고 계획 수립 시 이를 더 작은 계획들로 나누어야 함을 명시하십시오.
+- 소스 매핑을 필터가 아닌 보조 자료로 취급하십시오. 문제를 아직 코드로 매핑할 수 없는 경우, 문제는 유지하고 소스 매핑을 알 수 없음(unknown)으로 표시하십시오.
 
-## Source mapping grounding
+## 소스 매핑 근거 확인 (Source mapping grounding)
 
-When mapping feedback to source code, classify each mapping as one of:
+피드백을 소스 코드에 매핑할 때, 각 매핑을 다음 중 하나로 분류하십시오:
 
-- **Likely buggy surface:** the code path exists and directly handles the observed behavior.
-- **Missing or incomplete surface:** the feedback names a behavior, but the repo has no clear UI, route, controller action, or component implementing it yet.
-- **Indirect surface:** the code is adjacent to the behavior, but the exact interaction may happen through rendered email content, third-party UI, generated HTML, or another layer.
-- **Unknown:** no grounded source mapping found yet.
+- **Likely buggy surface:** 코드 경로가 존재하며 관찰된 동작을 직접 처리함.
+- **Missing or incomplete surface:** 피드백이 특정 동작을 언급하지만, 리포지토리에 아직 이를 구현하는 명확한 UI, 라우트, 컨트롤러 액션 또는 컴포넌트가 없음.
+- **Indirect surface:** 코드가 동작과 인접해 있지만, 정확한 상호작용은 렌더링된 이메일 내용, 제3자 UI, 생성된 HTML 또는 다른 레이어를 통해 발생할 수 있음.
+- **Unknown:** 아직 근거 있는 소스 매핑을 찾지 못함.
 
-Every source mapping should include:
+모든 소스 매핑은 다음을 포함해야 합니다:
 
-- Requirement/example ids, such as `R14`, `AE4`, or `EX17`.
-- File paths with line numbers when practical.
-- A short evidence note from code, not just a file guess.
-- Confidence: `High`, `Medium`, `Low`, or `Unknown`.
+- `R14`, `AE4`, `EX17`과 같은 요구 사항/예시 ID.
+- 실용적인 경우 라인 번호를 포함한 파일 경로.
+- 단순한 파일 추측이 아닌 코드 기반의 짧은 증거 노트.
+- 신뢰도 (Confidence): `High`, `Medium`, `Low`, 또는 `Unknown`.
 
-Prefer saying "I did not find a current inbox implementation for this surface" over forcing a speculative mapping. Missing surfaces are useful product findings and should stay in the brainstorm.
+추측성 매핑을 강제하기보다 "이 표면에 대한 현재 인박스(inbox) 구현을 찾지 못했습니다"라고 정직하게 기술하는 것이 좋습니다. 누락된 표면은 그 자체로 유용한 제품 발견 사항이며 브레인스토밍에 유지되어야 합니다.
 
-## Output shape
+## 출력 형태 (Output shape)
 
-The analyzer writes:
+분석기는 다음을 작성합니다:
 
-- `analysis.md`: session summary, transcript, selected moments, screenshot links, candidate findings, and review checklist.
-- `problem-analysis.md`: a categorized problem statement scaffold for visual, functional, requirement, and UX findings.
-- `review-prompt.md`: a filled prompt containing screenshot paths and transcript for a deeper visual analysis pass.
-- `source-materials.md`: a manifest linking the original source location, local-only raw files, transcript locations, chunks, local-only frames, and generated artifacts.
-- `requirements-kickoff.md`: a CE-friendly requirements starter with Problem Frame, Actors, Key Flows, R-IDs, Acceptance Examples, Success Criteria, Scope Boundaries, Questions, and Next Steps.
-- `analysis.json`: structured session, event, transcript, moment, and artifact metadata.
-- `frames/`: extracted PNG screenshots for selected moments. Local-only by default.
-- `raw/`: extracted zip contents and copied source media. Local-only by default.
+- `analysis.md`: 세션 요약, 트랜스크립트, 선택된 순간들, 스크린샷 링크, 후보 발견 사항 및 리뷰 체크리스트.
+- `problem-analysis.md`: 시각적, 기능적, 요구 사항 및 UX 발견 사항에 대해 카테고리화된 문제 정의서 초안.
+- `review-prompt.md`: 더 깊은 시각적 분석 패스를 위해 스크린샷 경로와 트랜스크립트가 포함된 채워진 프롬프트.
+- `source-materials.md`: 원본 소스 위치, 로컬 전용 원본 파일, 트랜스크립트 위치, 청크, 로컬 전용 프레임 및 생성된 아티팩트들을 연결하는 매니페스트.
+- `requirements-kickoff.md`: Problem Frame, Actors, Key Flows, R-ID, Acceptance Examples, Success Criteria, Scope Boundaries, Questions, Next Steps를 포함한 CE 친화적인 요구 사항 시작 문서.
+- `analysis.json`: 구조화된 세션, 이벤트, 트랜스크립트, 순간 및 아티팩트 메타데이터.
+- `frames/`: 선택된 순간들에 대해 추출된 PNG 스크린샷. 기본적으로 로컬 전용입니다.
+- `raw/`: 추출된 zip 내용물 및 복사된 원천 미디어. 기본적으로 로컬 전용입니다.
 
-Long media is transcribed in chunks when a single transcription request is too large. Chunk transcripts include timestamp prefixes so the review pass can still connect discussion points to approximate video regions.
+긴 미디어는 단일 트랜스크립션 요청이 너무 클 경우 청크 단위로 트랜스크립션됩니다. 청크 트랜스크립트에는 타임스탬프 접두사가 포함되어 리뷰 패스에서 여전히 논의 지점을 대략적인 비디오 영역과 연결할 수 있습니다.
 
-For audio-only or notes-only sources, the visual sections intentionally say that no frames are available. In those cases, extract functional problems, requirements, and UX friction from transcript or notes only.
+오디오 전용 또는 노트 전용 소스의 경우, 시각적 섹션에는 의도적으로 프레임을 사용할 수 없음을 명시합니다. 이 경우 트랜스크립트나 노트만을 바탕으로 기능적 문제, 요구 사항 및 UX 마찰 지점을 추출하십시오.
 
-## Review heuristics
+## 리뷰 휴리스틱 (Review heuristics)
 
-Select moments when they contain:
+순간(moments)이 다음을 포함할 때 선택하십시오:
 
-- Verbal complaint cues: "weird", "doesn't work", "can't", "broken", "bug", "problem", "confusing", "should".
-- Clicks on controls shortly before or after a complaint.
-- Repeated clicks on the same control.
-- Failed requests outside known development noise.
-- Console errors, uncaught exceptions, or failed form submissions.
-- Visible toasts, validation errors, disabled controls, empty states, or surprising navigation.
+- 언어적 불만 신호: "이상하다", "작동 안 하네", "~할 수 없다", "망가졌다", "버그", "문제", "혼란스럽다", "~해야 한다".
+- 불만 표현 직전이나 직후에 컨트롤을 클릭한 경우.
+- 동일한 컨트롤을 반복해서 클릭한 경우.
+- 알려진 개발 노이즈 외의 요청 실패.
+- 콘솔 에러, 처리되지 않은 예외 또는 폼 제출 실패.
+- 가시적인 토스트 메시지, 유효성 검사 에러, 비활성화된 컨트롤, 빈 상태(empty state) 또는 예기치 않은 내비게이션.
 
-The script's findings are deliberately conservative. Look at screenshots and transcript together before turning a candidate finding into a requirement.
+스크립트의 발견 사항은 의도적으로 보수적입니다. 후보 발견 사항을 요구 사항으로 바꾸기 전에 스크린샷과 트랜스크립트를 함께 확인하십시오.

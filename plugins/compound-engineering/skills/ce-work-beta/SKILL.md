@@ -1,442 +1,460 @@
 ---
 name: ce-work-beta
-description: "[BETA] Execute work with external delegate support. Same as ce-work but includes experimental Codex delegation mode for token-conserving code implementation."
+description: "[BETA] 외부 위임 지원을 통한 작업 실행. ce-work와 동일하지만 토큰 절약형 코드 구현을 위한 실험적인 Codex 위임 모드를 포함합니다."
 disable-model-invocation: true
-argument-hint: "[Plan doc path or description of work. Blank to auto use latest plan doc] [delegate:codex]"
+argument-hint: "[계획 문서 경로 또는 작업 설명. 최근 계획 문서를 자동으로 사용하려면 비워둠] [delegate:codex]"
+allowed-tools:
+  - gem
 ---
 
-# Work Execution Command
+# 작업 실행 명령
 
-Execute work efficiently while maintaining quality and finishing features.
+품질을 유지하고 기능을 완성하면서 효율적으로 작업을 수행합니다.
 
-## Introduction
+## 소개
 
-This command takes a work document (plan or specification) or a bare prompt describing the work, and executes it systematically. The focus is on **shipping complete features** by understanding requirements quickly, following existing patterns, and maintaining quality throughout.
+이 명령은 작업 문서(계획 또는 사양) 또는 작업을 설명하는 단순 프롬프트를 받아 체계적으로 실행합니다. 요구 사항을 빠르게 이해하고, 기존 패턴을 따르며, 전체 과정에서 품질을 유지하여 **완성된 기능을 제공(shipping)**하는 데 중점을 둡니다.
 
-**Beta rollout note:** Invoke `ce-work-beta` manually when you want to trial Codex delegation. During the beta period, planning and workflow handoffs remain pointed at stable `ce-work` to avoid dual-path orchestration complexity.
+**베타 출시 참고:** Codex 위임을 시도하려면 `ce-work-beta`를 수동으로 호출하세요. 베타 기간 동안 계획 및 워크플로우 핸드오프는 이중 경로 오케스트레이션의 복잡성을 피하기 위해 안정적인 `ce-work`를 계속 가리킵니다.
 
-## Input Document
+## 입력 문서
 
 <input_document> #$ARGUMENTS </input_document>
 
-## Argument Parsing
+## 다중 에이전트 협업 (Multi-Agent Collaboration)
 
-Parse `$ARGUMENTS` for the following optional tokens. Strip each recognized token before interpreting the remainder as the plan file path or bare prompt.
+사용자의 입력(`$ARGUMENTS`) 내에 `--add <ai-이름>` 형태의 플래그가 포함되어 있는지 확인하십시오. 
+현재 지원되는 외부 AI 인터페이스는 `--add gemini` (또는 `--add gem`)입니다.
 
-| Token | Example | Effect |
+만약 해당 플래그가 감지되면, 작업을 단독으로 확정하지 말고 다음 절차를 따르십시오:
+1. **의도 파악:** 플래그를 제외한 나머지 문자열을 실제 지시사항으로 간주합니다.
+2. **초안 작성:** 본인(주 에이전트)의 지식과 코드베이스 컨텍스트를 바탕으로 작업의 초기 뼈대나 접근법을 생각합니다.
+3. **MCP 협업 호출:** `gem` 도구를 호출하여 외부 Gemini 에이전트에게 조언이나 검토를 구합니다.
+   - 호출 시 전달할 메시지 예시: "나는 현재 이 작업에 대한 초안을 세우고 있어. 내 초안은 [초안 요약]이야. 이 접근 방식의 기술적 타당성을 검토하고 누락된 에지 케이스나 더 나은 패턴을 조언해줄 수 있어?"
+4. **결과 통합:** `gem` 도구가 반환한 피드백을 당신의 최종 결과물에 통합(Synthesis)합니다. 
+5. **명시적 표시:** 최종 산출물의 상단 또는 설명 부분에 "이 결과물은 Gemini와의 협업을 통해 검토 및 보완되었습니다."라는 문구를 추가하십시오.
+
+이 협업 절차를 염두에 두고 아래의 본래 스킬 워크플로우를 진행하십시오.
+
+
+## 인자 파싱
+
+`$ARGUMENTS`에서 다음 선택적 토큰을 파싱합니다. 나머지 부분을 계획 파일 경로 또는 단순 프롬프트로 해석하기 전에 인식된 각 토큰을 제거합니다.
+
+| 토큰 | 예시 | 효과 |
 |-------|---------|--------|
-| `delegate:codex` | `delegate:codex` | Activate Codex delegation mode for plan execution |
-| `delegate:local` | `delegate:local` | Deactivate delegation even if enabled in config |
+| `delegate:codex` | `delegate:codex` | 계획 실행을 위해 Codex 위임 모드 활성화 |
+| `delegate:local` | `delegate:local` | 설정에서 활성화되어 있더라도 위임 비활성화 |
 
-All tokens are optional. When absent, fall back to the resolution chain below.
+모든 토큰은 선택 사항입니다. 토큰이 없는 경우 아래의 해결 체인(resolution chain)을 따릅니다.
 
-**Fuzzy activation:** Also recognize imperative delegation-intent phrases such as "use codex", "delegate to codex", "codex mode", or "delegate mode" as equivalent to `delegate:codex`. A bare mention of "codex" in a prompt (e.g., "fix codex converter bugs") must NOT activate delegation -- only clear delegation intent triggers it.
+**퍼지 활성화 (Fuzzy activation):** "use codex", "delegate to codex", "codex mode", "delegate mode"와 같은 명령형 위임 의도 문구도 `delegate:codex`와 동일하게 인식합니다. 프롬프트에 "codex"라는 단어가 단순히 포함된 경우(예: "fix codex converter bugs")는 위임을 활성화해서는 안 되며, 명확한 위임 의도가 있는 경우에만 트리거됩니다.
 
-**Fuzzy deactivation:** Also recognize phrases such as "no codex", "local mode", "standard mode" as equivalent to `delegate:local`.
+**퍼지 비활성화 (Fuzzy deactivation):** "no codex", "local mode", "standard mode"와 같은 문구도 `delegate:local`과 동일하게 인식합니다.
 
-### Settings Resolution Chain
+### 설정 해결 체인
 
-After extracting tokens from arguments, resolve the delegation state using this precedence chain:
+인자에서 토큰을 추출한 후, 다음 우선순위에 따라 위임 상태를 결정합니다:
 
-1. **Argument flag** -- `delegate:codex` or `delegate:local` from the current invocation (highest priority)
-2. **Config file** -- extract settings from the config block below. Value `codex` for `work_delegate` activates delegation; `false` deactivates.
-3. **Hard default** -- `false` (delegation off)
+1. **인자 플래그** -- 현재 호출에서의 `delegate:codex` 또는 `delegate:local` (가장 높은 우선순위)
+2. **설정 파일** -- 아래의 설정 블록에서 설정을 추출합니다. `work_delegate`의 값이 `codex`이면 위임 활성화, `false`이면 비활성화입니다.
+3. **하드 기본값** -- `false` (위임 비활성)
 
-**Config (pre-resolved):**
+**설정 (사전 해결됨):**
 !`cat "$(git rev-parse --show-toplevel 2>/dev/null)/.compound-engineering/config.local.yaml" 2>/dev/null || echo '__NO_CONFIG__'`
 
-If the block above contains YAML key-value pairs, extract values for the keys listed below.
-If it shows `__NO_CONFIG__`, the file does not exist — all settings fall through to defaults.
-If it shows an unresolved command string, read `.compound-engineering/config.local.yaml` from the repo root using the native file-read tool (e.g., Read in Claude Code, read_file in Codex). If the file does not exist, all settings fall through to defaults.
+위의 블록에 YAML 키-값 쌍이 포함되어 있으면 아래 나열된 키에 대한 값을 추출합니다.
+`__NO_CONFIG__`가 표시되면 파일이 존재하지 않는 것이며, 모든 설정은 기본값을 따릅니다.
+해결되지 않은 명령 문자열이 표시되면 네이티브 파일 읽기 도구(예: Claude Code의 Read, Codex의 read_file)를 사용하여 저장소 루트에서 `.compound-engineering/config.local.yaml`을 읽습니다. 파일이 존재하지 않으면 모든 설정은 기본값을 따릅니다.
 
-If any setting has an unrecognized value, fall through to the hard default for that setting. For optional settings without a hard default (`work_delegate_model`, `work_delegate_effort`), an unrecognized or unparseable value resolves to **unset** — the corresponding flag is omitted from the `codex exec` invocation so Codex resolves from `~/.codex/config.toml`. Never substitute an invalid value into the CLI flags.
+설정에 인식되지 않는 값이 있는 경우 해당 설정의 하드 기본값을 따릅니다. 하드 기본값이 없는 선택적 설정(`work_delegate_model`, `work_delegate_effort`)의 경우, 인식할 수 없거나 파싱할 수 없는 값은 **설정되지 않음(unset)**으로 처리됩니다. 이 경우 `codex exec` 호출 시 해당 플래그가 생략되어 Codex가 `~/.codex/config.toml`에서 값을 결정합니다. CLI 플래그에 유효하지 않은 값을 절대 대입하지 마세요.
 
-Config keys:
-- `work_delegate` -- `codex` or default `false`
-- `work_delegate_consent` -- `true` or default `false`
-- `work_delegate_sandbox` -- `yolo` (default) or `full-auto`
-- `work_delegate_decision` -- `auto` (default) or `ask`
-- `work_delegate_model` -- Codex model to use. Optional — when unset or unparseable, defers to the user's `~/.codex/config.toml` default. Passthrough — any non-empty string is accepted as valid; only YAML parse failures or empty values resolve to unset.
-- `work_delegate_effort` -- one of `minimal`, `low`, `medium`, `high`, or `xhigh`. Optional — when unset or set to a value outside this enum, resolves to unset and defers to the user's `~/.codex/config.toml` default.
+설정 키:
+- `work_delegate` -- `codex` 또는 기본값 `false`
+- `work_delegate_consent` -- `true` 또는 기본값 `false`
+- `work_delegate_sandbox` -- `yolo` (기본값) 또는 `full-auto`
+- `work_delegate_decision` -- `auto` (기본값) 또는 `ask`
+- `work_delegate_model` -- 사용할 Codex 모델. 선택 사항 — 설정되지 않거나 파싱할 수 없는 경우 사용자의 `~/.codex/config.toml` 기본값을 따릅니다. 통과(Passthrough) — 비어 있지 않은 모든 문자열은 유효한 것으로 간주됩니다. YAML 파싱 실패 또는 빈 값만 설정되지 않음으로 처리됩니다.
+- `work_delegate_effort` -- `minimal`, `low`, `medium`, `high`, `xhigh` 중 하나. 선택 사항 — 설정되지 않거나 이 열거형 이외의 값으로 설정된 경우 설정되지 않음으로 처리되며 사용자의 `~/.codex/config.toml` 기본값을 따릅니다.
 
-Store the resolved state for downstream consumption:
-- `delegation_active` -- boolean, whether delegation mode is on
-- `delegation_source` -- `argument` or `config` or `default` -- how delegation was resolved (used by environment guard to decide notification verbosity)
-- `sandbox_mode` -- `yolo` or `full-auto` (from config or default `yolo`)
-- `consent_granted` -- boolean (from config `work_delegate_consent`)
-- `delegate_model` -- string from config, or unset (defer to Codex config)
-- `delegate_effort` -- string from config, or unset (defer to Codex config). Floor for per-batch effort selection; not passed directly to `codex exec`.
-- `effective_effort` -- per-batch derived value (`default | medium | high | xhigh`), computed before each batch from `delegate_effort` and the picked level per `references/codex-delegation-workflow.md` ("Per-Batch Effort"). Feeds the `codex exec` invocation in place of `delegate_effort`.
+다운스트림 소비를 위해 해결된 상태를 저장합니다:
+- `delegation_active` -- 불리언, 위임 모드 활성화 여부
+- `delegation_source` -- `argument`, `config`, `default` 중 하나 -- 위임이 어떻게 결정되었는지 (환경 가드에서 알림 상세도를 결정하는 데 사용)
+- `sandbox_mode` -- `yolo` 또는 `full-auto` (설정 또는 기본값 `yolo`)
+- `consent_granted` -- 불리언 (설정 `work_delegate_consent`로부터)
+- `delegate_model` -- 설정 파일의 문자열 또는 설정되지 않음 (Codex 설정에 위임)
+- `delegate_effort` -- 설정 파일의 문자열 또는 설정되지 않음 (Codex 설정에 위임). 배치별 노력(effort) 선택을 위한 기준점이며, `codex exec`에 직접 전달되지 않습니다.
+- `effective_effort` -- 배치별 파생 값 (`default | medium | high | xhigh`). 각 배치 전 `delegate_effort`와 `references/codex-delegation-workflow.md`("Per-Batch Effort")에 따라 선택된 레벨로부터 계산됩니다. `delegate_effort` 대신 `codex exec` 호출에 사용됩니다.
 
 ---
 
-## Execution Workflow
+## 실행 워크플로우
 
-### Phase 0: Input Triage
+### 0단계: 입력 분류 (Input Triage)
 
-Determine how to proceed based on what was provided in `<input_document>`.
+`<input_document>`에 제공된 내용을 기반으로 진행 방법을 결정합니다.
 
-**Plan document** (input is a file path to an existing plan or specification) → skip to Phase 1.
+**계획 문서** (입력이 기존 계획 또는 사양의 파일 경로인 경우) → 1단계로 건너뜁니다.
 
-**Bare prompt** (input is a description of work, not a file path):
+**단순 프롬프트** (입력이 파일 경로가 아닌 작업 설명인 경우):
 
-1. **Scan the work area**
+1. **작업 영역 스캔**
 
-   - Identify files likely to change based on the prompt
-   - Find existing test files for those areas (search for test/spec files that import, reference, or share names with the implementation files)
-   - Note local patterns and conventions in the affected areas
+   - 프롬프트를 기반으로 변경될 가능성이 높은 파일을 식별합니다.
+   - 해당 영역에 대한 기존 테스트 파일을 찾습니다 (구현 파일을 가져오거나 참조하거나 이름을 공유하는 테스트/사양 파일을 검색합니다).
+   - 영향을 받는 영역의 로컬 패턴 및 컨벤션을 기록합니다.
 
-2. **Assess complexity and route**
+2. **복잡성 평가 및 경로 지정**
 
-   | Complexity | Signals | Action |
+   | 복잡성 | 신호 | 작업 |
    |-----------|---------|--------|
-   | **Trivial** | 1-2 files, no behavioral change (typo, config, rename) | Proceed to Phase 1 step 2 (environment setup), then implement directly — no task list, no execution loop. Apply Test Discovery if the change touches behavior-bearing code |
-   | **Small / Medium** | Clear scope, under ~10 files | Build a task list from discovery. Proceed to Phase 1 step 2 |
-   | **Large** | Cross-cutting, architectural decisions, 10+ files, touches auth/payments/migrations | Inform the user this would benefit from `/ce-brainstorm` or `/ce-plan` to surface edge cases and scope boundaries. Honor their choice. If proceeding, build a task list and continue to Phase 1 step 2 |
+   | **사소함 (Trivial)** | 1-2개 파일, 동작 변경 없음 (오타, 설정, 이름 변경) | 1단계 2단계(환경 설정)로 진행한 후 직접 구현 — 작업 목록이나 실행 루프 없음. 변경 사항이 동작 관련 코드인 경우 테스트 발견(Test Discovery) 적용 |
+   | **소형 / 중형** | 명확한 범위, 약 10개 파일 미만 | 발견된 내용을 바탕으로 작업 목록을 작성합니다. 1단계 2단계로 진행합니다. |
+   | **대형** | 횡단적, 아키텍처 결정, 10개 이상의 파일, 인증/결제/마이그레이션 관련 | 사용자에게 엣지 케이스와 범위 경계를 파악하기 위해 `/ce-brainstorm` 또는 `/ce-plan`이 도움이 될 수 있음을 알립니다. 사용자의 선택을 따릅니다. 진행하는 경우 작업 목록을 작성하고 1단계 2단계로 계속합니다. |
 
 ---
 
-### Phase 1: Quick Start
+### 1단계: 빠른 시작
 
-1. **Read Plan and Clarify** _(skip if arriving from Phase 0 with a bare prompt)_
+1. **계획 읽기 및 명확화** _(단순 프롬프트로 0단계에서 온 경우 건너뜀)_
 
-   - Read the work document completely
-   - Treat the plan as a decision artifact, not an execution script
-   - If the plan includes sections such as `Implementation Units`, `Work Breakdown`, `Requirements` (or legacy `Requirements Trace`), `Files`, `Test Scenarios`, or `Verification`, use those as the primary source material for execution
-   - Check for `Execution note` on each implementation unit — these carry the plan's execution posture signal for that unit (for example, test-first or characterization-first). Note them when creating tasks.
-   - Check for a `Deferred to Implementation` or `Implementation-Time Unknowns` section — these are questions the planner intentionally left for you to resolve during execution. Note them before starting so they inform your approach rather than surprising you mid-task
-   - Check for a `Scope Boundaries` section — these are explicit non-goals. Refer back to them if implementation starts pulling you toward adjacent work
-   - Review any references or links provided in the plan
-   - If the user explicitly asks for TDD, test-first, or characterization-first execution in this session, honor that request even if the plan has no `Execution note`
-   - If anything is unclear or ambiguous, ask clarifying questions now
-   - If clarifying questions were needed above, get user approval on the resolved answers. If no clarifications were needed, proceed without a separate approval step — plan scope is the plan's authority, not something to renegotiate
-   - **Do not skip this** - better to ask questions now than build the wrong thing
-   - **Do not edit the plan body during execution.** The plan is a decision artifact; progress lives in git commits and the task tracker. The only plan mutation during ce-work is the final `status: active → completed` flip at shipping (see `references/shipping-workflow.md` Phase 4 Step 2). Legacy plans may contain `- [ ]` / `- [x]` marks on unit headings — ignore them as state; per-unit completion is determined during execution by reading the current file state.
+   - 작업 문서를 완전히 읽습니다.
+   - 계획을 실행 스크립트가 아닌 결정 결과물(decision artifact)로 취급합니다.
+   - 계획에 `Implementation Units`, `Work Breakdown`, `Requirements` (또는 레거시 `Requirements Trace`), `Files`, `Test Scenarios`, `Verification` 등의 섹션이 포함된 경우, 이를 실행의 주요 소스 자료로 사용합니다.
+   - 각 구현 단위(implementation unit)에서 `Execution note`를 확인합니다. 이는 해당 단위에 대한 계획의 실행 자세(execution posture) 신호를 담고 있습니다 (예: 테스트 우선 또는 특성 파악 우선). 작업을 생성할 때 이를 기록합니다.
+   - `Deferred to Implementation` 또는 `Implementation-Time Unknowns` 섹션을 확인합니다. 이는 기획자가 실행 중에 해결하도록 의도적으로 남겨둔 질문입니다. 작업을 시작하기 전에 이를 기록하여 작업 도중에 당황하지 않고 접근 방식에 반영되도록 합니다.
+   - `Scope Boundaries` 섹션을 확인합니다. 이는 명시적인 비목표(non-goals)입니다. 구현 중에 인접한 작업으로 끌려가는 경우 이를 다시 참조하세요.
+   - 계획에 제공된 참조나 링크를 검토합니다.
+   - 사용자가 이 세션에서 TDD, 테스트 우선(test-first) 또는 특성 파악 우선(characterization-first) 실행을 명시적으로 요청하는 경우, 계획에 `Execution note`가 없더라도 해당 요청을 따릅니다.
+   - 불명확하거나 모호한 점이 있으면 지금 명확한 질문을 던지세요.
+   - 위의 명확화 질문이 필요했던 경우, 해결된 답변에 대해 사용자의 승인을 받습니다. 명확화가 필요하지 않은 경우 별도의 승인 단계 없이 진행합니다 — 계획의 범위는 계획의 권한이며 재협상 대상이 아닙니다.
+   - **이 단계를 건너뛰지 마세요** - 잘못된 것을 만드는 것보다 지금 질문하는 것이 낫습니다.
+   - **실행 중에 계획 본문을 수정하지 마세요.** 계획은 결정 결과물이며, 진행 상황은 git 커밋과 작업 트래커에 기록됩니다. `ce-work` 중에 유일하게 계획을 변경하는 것은 배포 시의 최종 `status: active → completed` 전환뿐입니다 (`references/shipping-workflow.md` 4단계 2단계 참조). 레거시 계획에는 단위 제목에 `- [ ]` / `- [x]` 표시가 있을 수 있지만, 상태 정보로서 무시하세요. 단위별 완료 여부는 실행 중에 현재 파일 상태를 읽어 결정됩니다.
 
-2. **Setup Environment**
+2. **환경 설정**
 
-   First, check the current branch:
+   먼저 현재 브랜치를 확인합니다:
 
    ```bash
    current_branch=$(git branch --show-current)
    default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
 
-   # Fallback if remote HEAD isn't set
+   # 원격 HEAD가 설정되지 않은 경우 폴백
    if [ -z "$default_branch" ]; then
      default_branch=$(git rev-parse --verify origin/main >/dev/null 2>&1 && echo "main" || echo "master")
    fi
    ```
 
-   **If already on a feature branch** (not the default branch):
+   **이미 기능 브랜치에 있는 경우** (기본 브랜치가 아님):
 
-   First, check whether the branch name is **meaningful** — a name like `feat/crowd-sniff` or `fix/email-validation` tells future readers what the work is about. Auto-generated worktree names (e.g., `worktree-jolly-beaming-raven`) or other opaque names do not.
+   먼저 브랜치 이름이 **의미 있는지** 확인합니다 — `feat/crowd-sniff` 또는 `fix/email-validation`과 같은 이름은 미래의 독자에게 작업 내용을 알려줍니다. 자동 생성된 워크트리 이름(예: `worktree-jolly-beaming-raven`)이나 기타 불투명한 이름은 그렇지 않습니다.
 
-   If the branch name is meaningless or auto-generated, suggest renaming it before continuing:
+   브랜치 이름이 의미 없거나 자동 생성된 경우, 계속하기 전에 이름을 바꿀 것을 제안합니다:
    ```bash
    git branch -m <meaningful-name>
    ```
-   Derive the new name from the plan title or work description (e.g., `feat/crowd-sniff`). Present the rename as a recommended option alongside continuing as-is.
+   계획 제목이나 작업 설명에서 새 이름을 유도합니다(예: `feat/crowd-sniff`). 이름 변경을 있는 그대로 계속하는 것과 함께 권장 옵션으로 제시합니다.
 
-   Then ask: "Continue working on `[current_branch]`, or create a new branch?"
-   - If continuing (with or without rename), proceed to step 3
-   - If creating new, follow Option A or B below
+   그 다음 "현재 브랜치(`[current_branch]`)에서 작업을 계속할까요, 아니면 새 브랜치를 만들까요?"라고 묻습니다.
+   - 계속하는 경우(이름 변경 여부와 상관없이), 3단계로 진행합니다.
+   - 새로 만드는 경우, 아래 옵션 A 또는 B를 따릅니다.
 
-   **If on the default branch**, choose how to proceed:
+   **기본 브랜치에 있는 경우**, 진행 방법을 선택합니다:
 
-   **Option A: Create a new branch**
+   **옵션 A: 새 브랜치 생성**
    ```bash
    git pull origin [default_branch]
    git checkout -b feature-branch-name
    ```
-   Use a meaningful name based on the work (e.g., `feat/user-authentication`, `fix/email-validation`).
+   작업에 기반한 의미 있는 이름을 사용합니다 (예: `feat/user-authentication`, `fix/email-validation`).
 
-   **Option B: Use a worktree (recommended for parallel development)**
+   **옵션 B: 워크트리 사용 (병렬 개발 권장)**
    ```bash
    skill: ce-worktree
-   # The skill will create a new branch from the default branch in an isolated worktree
+   # 이 스킬은 격리된 워크트리에서 기본 브랜치로부터 새 브랜치를 생성합니다.
    ```
 
-   **Option C: Continue on the default branch**
-   - Requires explicit user confirmation
-   - Only proceed after user explicitly says "yes, commit to [default_branch]"
-   - Never commit directly to the default branch without explicit permission
+   **옵션 C: 기본 브랜치에서 계속**
+   - 사용자의 명시적인 확인이 필요합니다.
+   - 사용자가 명시적으로 "예, [default_branch]에 커밋하세요"라고 말한 경우에만 진행합니다.
+   - 명시적인 허가 없이 기본 브랜치에 직접 커밋하지 마세요.
 
-   **Recommendation**: Use worktree if:
-   - You want to work on multiple features simultaneously
-   - You want to keep the default branch clean while experimenting
-   - You plan to switch between branches frequently
+   **권장 사항**: 다음과 같은 경우 워크트리를 사용하세요:
+   - 여러 기능을 동시에 작업하고 싶은 경우
+   - 실험하는 동안 기본 브랜치를 깨끗하게 유지하고 싶은 경우
+   - 브랜치 간에 자주 전환할 계획인 경우
 
-3. **Create Task List** _(skip if Phase 0 already built one, or if Phase 0 routed as Trivial)_
-   - Use the platform's task tracking tool (`TaskCreate`/`TaskUpdate`/`TaskList` in Claude Code, `update_plan` in Codex, or the equivalent on other harnesses) to break the plan into actionable tasks
-   - Derive tasks from the plan's implementation units, dependencies, files, test targets, and verification criteria
-   - When the plan defines U-IDs for Implementation Units, preserve the unit's U-ID as a prefix in the task subject (e.g., "U3: Add parser coverage"). This keeps blocker references, deferred-work notes, and final summaries anchored to the same identifier the plan uses, so progress and traceability remain unambiguous across plan edits
-   - Carry each unit's `Execution note` into the task when present
-   - For each unit, read the `Patterns to follow` field before implementing — these point to specific files or conventions to mirror
-   - Use each unit's `Verification` field as the primary "done" signal for that task
-   - Do not expect the plan to contain implementation code, micro-step TDD instructions, or exact shell commands
-   - Include dependencies between tasks
-   - Prioritize based on what needs to be done first
-   - Include testing and quality check tasks
-   - Keep tasks specific and completable
+3. **작업 목록 생성** _(0단계에서 이미 작성했거나 0단계에서 사소함(Trivial)으로 분류된 경우 건너뜀)_
+   - 플랫폼의 작업 추적 도구(Claude Code의 `TaskCreate`/`TaskUpdate`/`TaskList`, Codex의 `update_plan` 또는 다른 하네스의 해당 도구)를 사용하여 계획을 실행 가능한 작업으로 나눕니다.
+   - 계획의 구현 단위(implementation units), 종속성, 파일, 테스트 대상 및 검증 기준에서 작업을 유도합니다.
+   - 계획이 구현 단위에 대해 `U-ID`를 정의하는 경우, 작업 제목에 단위의 `U-ID`를 접두사로 유지합니다 (예: "U3: 파서 커버리지 추가"). 이렇게 하면 블로커 참조, 연기된 작업 메모 및 최종 요약이 계획에서 사용하는 것과 동일한 식별자에 고정되어 계획 수정 전반에 걸쳐 진행 상황과 추적 가능성이 명확하게 유지됩니다.
+   - 단위의 `Execution note`가 있는 경우 작업에 반영합니다.
+   - 각 단위에 대해 구현하기 전에 `Patterns to follow` 필드를 읽습니다 — 이는 미러링할 특정 파일이나 컨벤션을 가리킵니다.
+   - 각 단위의 `Verification` 필드를 해당 작업의 주요 "완료" 신호로 사용합니다.
+   - 계획에 구현 코드, 세부 단계별 TDD 지침 또는 정확한 쉘 명령이 포함될 것으로 기대하지 마세요.
+   - 작업 간의 종속성을 포함합니다.
+   - 먼저 수행해야 할 작업에 따라 우선순위를 정합니다.
+   - 테스트 및 품질 체크 작업을 포함합니다.
+   - 작업을 구체적이고 완료 가능하게 유지합니다.
 
-4. **Choose Execution Strategy**
+4. **실행 전략 선택**
 
-   **Delegation routing gate:** If `delegation_active` is true AND the input is a plan file (not a bare prompt), read `references/codex-delegation-workflow.md` and follow its Pre-Delegation Checks and Delegation Decision flow. If all checks pass and delegation proceeds, force **serial execution** and proceed directly to Phase 2 using the workflow's batched execution loop. If any check disables delegation, fall through to the standard strategy table below. If delegation is active but the input is a bare prompt (no plan file), set `delegation_active` to false with a brief note: "Codex delegation requires a plan file -- using standard mode." and continue with the standard strategy selection below.
+   **위임 라우팅 게이트:** `delegation_active`가 true이고 입력이 계획 파일(단순 프롬프트 아님)인 경우, `references/codex-delegation-workflow.md`를 읽고 사전 위임 체크 및 위임 결정 흐름을 따릅니다. 모든 체크를 통과하고 위임이 진행되면 **직렬 실행(serial execution)**을 강제하고 워크플로우의 배치 실행 루프를 사용하여 2단계로 직접 진행합니다. 체크 결과 위임이 비활성화되면 아래의 표준 전략 테이블을 따릅니다. 위임이 활성화되었지만 입력이 단순 프롬프트(계획 파일 없음)인 경우, "Codex 위임에는 계획 파일이 필요합니다 -- 표준 모드를 사용합니다."라는 짤막한 메모와 함께 `delegation_active`를 false로 설정하고 아래의 표준 전략 선택을 계속합니다.
 
-   After creating the task list, decide how to execute based on the plan's size and dependency structure:
+   작업 목록을 생성한 후, 계획의 규모와 종속성 구조에 따라 실행 방법을 결정합니다:
 
-   | Strategy | When to use |
+   | 전략 | 사용 시기 |
    |----------|-------------|
-   | **Inline** | 1-2 small tasks, or tasks needing user interaction mid-flight. **Default for bare-prompt work** — bare prompts rarely produce enough structured context to justify subagent dispatch |
-   | **Serial subagents** | 3+ tasks with dependencies between them. Each subagent gets a fresh context window focused on one unit — prevents context degradation across many tasks. Requires plan-unit metadata (Goal, Files, Approach, Test scenarios) |
-   | **Parallel subagents** | 3+ tasks that pass the Parallel Safety Check (below). Dispatch independent units simultaneously, run dependent units after their prerequisites complete. Requires plan-unit metadata |
+   | **인라인 (Inline)** | 1-2개의 작은 작업, 또는 진행 중 사용자 상호 작용이 필요한 작업. **단순 프롬프트 작업의 기본값** — 단순 프롬프트는 서브에이전트 파견을 정당화할 만큼 구조화된 컨텍스트를 생성하는 경우가 드뭅니다. |
+   | **직렬 서브에이전트 (Serial subagents)** | 종속성이 있는 3개 이상의 작업. 각 서브에이전트는 하나의 단위에 집중된 신선한 컨텍스트 창을 가집니다 — 많은 작업에 걸친 컨텍스트 저하를 방지합니다. 계획 단위 메타데이터(목표, 파일, 접근 방식, 테스트 시나리오)가 필요합니다. |
+   | **병렬 서브에이전트 (Parallel subagents)** | 병렬 안전성 체크(아래)를 통과하는 3개 이상의 작업. 독립적인 단위를 동시에 파견하고, 종속된 단위는 전제 조건이 완료된 후 실행합니다. 계획 단위 메타데이터가 필요합니다. |
 
-   **Parallel Safety Check** — required before choosing parallel dispatch:
+   **병렬 안전성 체크 (Parallel Safety Check)** — 병렬 파견을 선택하기 전에 필수:
 
-   1. Build a file-to-unit mapping from every candidate unit's `Files:` section (Create, Modify, and Test paths)
-   2. Check for intersection — any file path appearing in 2+ units means overlap
-   3. **If overlap is found AND worktree isolation is unavailable**: downgrade to serial subagents. Log the reason (e.g., "Units 2 and 4 share `config/routes.rb` — using serial dispatch"). Serial subagents still provide context-window isolation without shared-directory write races.
-   4. **If overlap is found AND worktree isolation is available**: parallel dispatch is still safe — subagents work in isolation, and the overlap surfaces as a predictable merge conflict the orchestrator handles via the post-batch flow below. Log the predicted overlap so the post-batch flow knows which merges to expect conflicts on.
+   1. 각 후보 단위의 `Files:` 섹션(생성, 수정 및 테스트 경로)에서 파일-단위 매핑을 빌드합니다.
+   2. 교차 여부를 확인합니다 — 2개 이상의 단위에 나타나는 파일 경로는 겹침(overlap)을 의미합니다.
+   3. **겹침이 발견되었고 워크트리 격리를 사용할 수 없는 경우**: 직렬 서브에이전트로 강등합니다. 이유를 기록합니다 (예: "단위 2와 4가 `config/routes.rb`를 공유하므로 직렬 파견을 사용합니다"). 직렬 서브에이전트는 공유 디렉토리 쓰기 경쟁 없이 컨텍스트 창 격리를 제공합니다.
+   4. **겹침이 발견되었고 워크트리 격리를 사용할 수 있는 경우**: 병렬 파견이 여전히 안전합니다 — 서브에이전트는 격리된 상태에서 작업하며, 겹침은 아래의 배치 후 흐름을 통해 오케스트레이터가 처리하는 예측 가능한 머지 충돌로 나타납니다. 배치 후 흐름에서 어떤 머지에서 충돌이 예상되는지 알 수 있도록 예측된 겹침을 기록합니다.
 
-   Even with no file overlap, parallel subagents sharing the orchestrator's working directory face git index contention (concurrent staging/committing corrupts the index) and test interference (concurrent test runs pick up each other's in-progress changes). Worktree isolation eliminates both; the shared-directory fallback constraints below mitigate them.
+   파일 겹침이 없더라도 오케스트레이터의 작업 디렉토리를 공유하는 병렬 서브에이전트는 git 인덱스 경합(동시 스테이징/커밋이 인덱스를 손상시킴) 및 테스트 간섭(동시 테스트 실행이 서로의 진행 중인 변경 사항을 감지함)에 직면합니다. 워크트리 격리는 이 두 가지 문제를 모두 제거하며, 아래의 공유 디렉토리 폴백 제약 조건은 이를 완화합니다.
 
-   **Subagent isolation** — give each parallel subagent its own working tree:
-   - **Claude Code (`Agent` tool):** pass `isolation: "worktree"` and `run_in_background: true`. The harness creates a per-subagent worktree under `.claude/worktrees/agent-<id>` on its own branch. Verify `.claude/worktrees/` is gitignored before relying on this.
-   - **Other platforms** without built-in worktree isolation (e.g., Codex `spawn_agent`, Pi `subagent`): subagents share the orchestrator's directory.
+   **서브에이전트 격리** — 각 병렬 서브에이전트에게 고유한 작업 트리 부여:
+   - **Claude Code (`Agent` 도구):** `isolation: "worktree"` 및 `run_in_background: true`를 전달합니다. 하네스는 자체 브랜치의 `.claude/worktrees/agent-<id>` 아래에 서브에이전트별 워크트리를 생성합니다. 이 기능에 의존하기 전에 `.claude/worktrees/`가 gitignore되어 있는지 확인하세요.
+   - **워크트리 격리가 내장되지 않은 기타 플랫폼** (예: Codex `spawn_agent`, Pi `subagent`): 서브에이전트가 오케스트레이터의 디렉토리를 공유합니다.
 
-   **Subagent dispatch** uses your available subagent or task spawning mechanism. For each unit, give the subagent:
-   - The full plan file path (for overall context)
-   - The specific unit's Goal, Files, Approach, Execution note, Patterns, Test scenarios, and Verification
-   - Any resolved deferred questions relevant to that unit
-   - Instruction to check whether the unit's test scenarios cover all applicable categories (happy paths, edge cases, error paths, integration) and supplement gaps before writing tests
+   **서브에이전트 파견** 시 사용 가능한 서브에이전트 또는 작업 생성 메커니즘을 사용합니다. 각 단위에 대해 서브에이전트에게 다음을 제공합니다:
+   - 전체 계획 파일 경로 (전반적인 컨텍스트용)
+   - 특정 단위의 Goal, Files, Approach, Execution note, Patterns, Test scenarios, Verification
+   - 해당 단위와 관련된 해결된 연기된 질문들
+   - 단위의 테스트 시나리오가 모든 해당 카테고리(정상 경로, 엣지 케이스, 오류 경로, 통합)를 포괄하는지 확인하고 테스트를 작성하기 전에 공백을 보완하라는 지침
 
-   **Shared-directory fallback constraints** — apply only when worktree isolation is unavailable:
-   - Instruct each subagent: "Do not stage files (`git add`), create commits, or run the project test suite. The orchestrator handles testing, staging, and committing after all parallel units complete."
-   - These constraints prevent git index contention and test interference between concurrent subagents.
-   - With worktree isolation active, omit these constraints — subagents may stage, commit, and run their unit's tests within their own worktree branch.
+   **공유 디렉토리 폴백 제약 조건** — 워크트리 격리를 사용할 수 없는 경우에만 적용:
+   - 각 서브에이전트에게 지침을 내립니다: "파일을 스테이징(`git add`)하거나, 커밋을 생성하거나, 프로젝트 테스트 스위트를 실행하지 마세요. 모든 병렬 단위가 완료된 후 오케스트레이터가 테스트, 스테이징 및 커밋을 처리합니다."
+   - 이러한 제약 조건은 동시 서브에이전트 간의 git 인덱스 경합 및 테스트 간섭을 방지합니다.
+   - 워크트리 격리가 활성화된 경우 이러한 제약 조건을 생략합니다 — 서브에이전트는 자신의 워크트리 브랜치 내에서 스테이징, 커밋 및 단위 테스트를 실행할 수 있습니다.
 
-   **Permission mode:** Omit the `mode` parameter when dispatching subagents so the user's configured permission settings apply. Do not pass `mode: "auto"` — it overrides user-level settings like `bypassPermissions`.
+   **권한 모드 (Permission mode):** 서브에이전트를 파견할 때 `mode` 파라미터를 생략하여 사용자가 설정한 권한 설정이 적용되도록 합니다. `mode: "auto"`를 전달하지 마세요 — 이는 `bypassPermissions`와 같은 사용자 수준 설정을 덮어씁니다.
 
-   **After each subagent completes (serial mode):**
-   1. Review the subagent's diff — verify changes match the unit's scope and `Files:` list
-   2. Run the relevant test suite to confirm the tree is healthy
-   3. If tests fail, diagnose and fix before proceeding — do not dispatch dependent units on a broken tree
-   4. Update the task list (do not edit the plan body — progress is carried by the commit)
-   5. Dispatch the next unit
+   **각 서브에이전트 완료 후 (직렬 모드):**
+   1. 서브에이전트의 diff를 검토합니다 — 변경 사항이 단위의 범위 및 `Files:` 목록과 일치하는지 확인합니다.
+   2. 트리가 정상인지 확인하기 위해 관련 테스트 스위트를 실행합니다.
+   3. 테스트가 실패하면 진행하기 전에 진단하고 수정합니다 — 깨진 트리에서 종속 단위를 파견하지 마세요.
+   4. 작업 목록을 업데이트합니다 (계획 본문을 수정하지 마세요 — 진행 상황은 커밋에 기록됩니다).
+   5. 다음 단위를 파견합니다.
 
-   **After all parallel subagents in a batch complete (worktree-isolated mode):**
-   1. Wait for every subagent in the current parallel batch to finish.
-   2. For each completed subagent, in dependency order: review the worktree's diff against the orchestrator's branch. If the subagent did not commit its own work, stage and commit it inside that worktree.
-   3. Merge each subagent's branch into the orchestrator's branch sequentially in dependency order. **If a merge conflict surfaces, abort the merge (`git merge --abort`) and re-dispatch the conflicting unit serially against the now-merged tree** — hand-resolving silently picks a side and discards one unit's intent. (Predicted overlap from the Parallel Safety Check surfaces here as a conflict, not as silent data loss in shared-directory mode.)
-   4. After each merge, run the relevant test suite. If tests fail, diagnose and fix before merging the next branch.
-   5. Update the task list (progress is carried by the merge commits).
-   6. After merging, remove each subagent's worktree and delete its branch. Use the absolute path and branch name returned in the subagent's result.
-      - Unlock the worktree first — the harness locks per-subagent worktrees: `git worktree unlock <absolute-path>`
-      - Remove the worktree: `git worktree remove <absolute-path>`
-      - Delete the branch: `git branch -d <branch-name>` (the branch outlives the worktree by default and accumulates as orphans if not cleaned up; `-d` lowercase refuses to delete unmerged branches, which is the safety we want — if it fails, investigate before forcing)
-   7. Dispatch the next batch of independent units, or the next dependent unit.
+   **배치의 모든 병렬 서브에이전트 완료 후 (워크트리 격리 모드):**
+   1. 현재 병렬 배치의 모든 서브에이전트가 끝날 때까지 기다립니다.
+   2. 완료된 각 서브에이전트에 대해 종속성 순서대로: 워크트리의 diff를 오케스트레이터의 브랜치와 대조하여 검토합니다. 서브에이전트가 직접 커밋하지 않은 경우 해당 워크트리 내에서 스테이징하고 커밋합니다.
+   3. 각 서브에이전트의 브랜치를 종속성 순서대로 오케스트레이터의 브랜치에 순차적으로 머지합니다. **머지 충돌이 발생하면 머지를 중단(`git merge --abort`)하고, 이제 머지된 트리와 대조하여 충돌하는 단위를 직렬로 다시 파견합니다** — 수동으로 충돌을 해결하는 것은 조용히 한쪽을 선택하고 다른 단위의 의도를 버리는 결과를 낳습니다. (병렬 안전성 체크에서 예측된 겹침은 여기서 충돌로 나타나며, 공유 디렉토리 모드에서와 같은 조용한 데이터 손실로 나타나지 않습니다.)
+   4. 각 머지 후 관련 테스트 스위트를 실행합니다. 테스트가 실패하면 다음 브랜치를 머지하기 전에 진단하고 수정합니다.
+   5. 작업 목록을 업데이트합니다 (진행 상황은 머지 커밋에 기록됩니다).
+   6. 머지 후 각 서브에이전트의 워크트리를 제거하고 브랜치를 삭제합니다. 서브에이전트 결과에서 반환된 절대 경로와 브랜치 이름을 사용합니다.
+      - 먼저 워크트리의 잠금을 해제합니다 — 하네스는 서브에이전트별 워크트리를 잠급니다: `git worktree unlock <absolute-path>`
+      - 워크트리 제거: `git worktree remove <absolute-path>`
+      - 브랜치 삭제: `git branch -d <branch-name>` (브랜치는 기본적으로 워크트리보다 오래 남으며 정리하지 않으면 고아 브랜치로 쌓입니다. 소문자 `-d`는 머지되지 않은 브랜치 삭제를 거부하므로 우리가 원하는 안전 장치입니다 — 실패하면 강제로 삭제하기 전에 조사하세요.)
+   7. 독립적인 작업의 다음 배치를 파견하거나 다음 종속 단위를 파견합니다.
 
-   **After all parallel subagents in a batch complete (shared-directory fallback):**
-   1. Wait for every subagent in the current parallel batch to finish before acting on any of their results
-   2. Cross-check for discovered file collisions: compare the actual files modified by all subagents in the batch (not just their declared `Files:` lists). Subagents may create or modify files not anticipated during planning — this is expected, since plans describe *what* not *how*. A collision only matters when 2+ subagents in the same batch modified the same file. In a shared working directory, only the last writer's version survives — the other unit's changes to that file are lost. If a collision is detected: commit all non-colliding files from all units first, then re-run the affected units serially for the shared file so each builds on the other's committed work
-   3. For each completed unit, in dependency order: review the diff, run the relevant test suite, stage only that unit's files, and commit with a conventional message derived from the unit's Goal
-   4. If tests fail after committing a unit's changes, diagnose and fix before committing the next unit
-   5. Update the task list (do not edit the plan body — progress is carried by the commits just made)
-   6. Dispatch the next batch of independent units, or the next dependent unit
+   **배치의 모든 병렬 서브에이전트 완료 후 (공유 디렉토리 폴백):**
+   1. 현재 병렬 배치의 모든 서브에이전트가 끝날 때까지 기다린 후 결과를 처리합니다.
+   2. 발견된 파일 충돌을 교차 확인합니다: 선언된 `Files:` 목록뿐만 아니라 배치의 모든 서브에이전트가 실제로 수정한 파일을 비교합니다. 서브에이전트는 계획 단계에서 예상치 못한 파일을 생성하거나 수정할 수 있으며, 계획은 '어떻게'가 아닌 '무엇'을 설명하므로 이는 예상된 일입니다. 동일한 배치의 2개 이상의 서브에이전트가 동일한 파일을 수정한 경우에만 충돌이 발생합니다. 공유 작업 디렉토리에서는 마지막 작성자의 버전만 남고 다른 단위의 해당 파일 변경 사항은 손실됩니다. 충돌이 감지되면: 먼저 모든 단위의 충돌하지 않는 파일을 모두 커밋한 다음, 공유 파일에 대해 영향을 받는 단위를 직렬로 다시 실행하여 각 단위가 서로의 커밋된 작업을 기반으로 빌드되도록 합니다.
+   3. 완료된 각 단위에 대해 종속성 순서대로: diff를 검토하고, 관련 테스트 스위트를 실행하고, 해당 단위의 파일만 스테이징한 후 단위의 Goal에서 유도된 관례적인 메시지로 커밋합니다.
+   4. 단위의 변경 사항을 커밋한 후 테스트가 실패하면 다음 단위를 커밋하기 전에 진단하고 수정합니다.
+   5. 작업 목록을 업데이트합니다 (계획 본문을 수정하지 마세요 — 진행 상황은 방금 생성된 커밋에 기록됩니다).
+   6. 독립적인 작업의 다음 배치를 파견하거나 다음 종속 단위를 파견합니다.
 
-### Phase 2: Execute
+### 2단계: 실행
 
-1. **Task Execution Loop**
+1. **작업 실행 루프**
 
-   For each task in priority order:
+   우선순위 순서대로 각 작업에 대해:
 
    ```
-   while (tasks remain):
-     - Mark task as in-progress
-     - Read any referenced files from the plan or discovered during Phase 0
-     - **If the unit's work is already present and matches the plan's intent** (files exist with the expected capability, or the unit's `Verification` criteria are already satisfied by the current code), the work has likely shipped on a prior branch or session. Verify it matches, mark the task complete, and move on. Do not silently reimplement.
-     - Look for similar patterns in codebase
-     - Find existing test files for implementation files being changed (Test Discovery — see below)
-     - If delegation_active: branch to the Codex Delegation Execution Loop
-       (see `references/codex-delegation-workflow.md`)
-     - Otherwise: implement following existing conventions
-     - Add, update, or remove tests to match implementation changes (see Test Discovery below)
-     - Run System-Wide Test Check (see below)
-     - Run tests after changes
-     - Assess testing coverage: did this task change behavior? If yes, were tests written or updated? If no tests were added, is the justification deliberate (e.g., pure config, no behavioral change)?
-     - Mark task as completed
-     - Evaluate for incremental commit (see below)
+   while (작업이 남아 있음):
+     - 작업을 진행 중으로 표시
+     - 계획에서 참조된 파일이나 0단계에서 발견된 파일을 읽음
+     - **단위의 작업이 이미 존재하고 계획의 의도와 일치하는 경우** (파일이 예상된 기능을 갖추고 있거나 단위의 Verification 기준이 현재 코드에 의해 이미 충족된 경우), 해당 작업은 이전 브랜치나 세션에서 이미 배포된 것일 수 있습니다. 일치하는지 확인하고 작업을 완료로 표시한 후 넘어갑니다. 조용히 다시 구현하지 마세요.
+     - 코드베이스에서 유사한 패턴을 검색
+     - 변경되는 구현 파일에 대한 기존 테스트 파일 찾기 (테스트 발견 — 아래 참조)
+     - delegation_active인 경우: Codex 위임 실행 루프로 분기
+       (references/codex-delegation-workflow.md 참조)
+     - 그렇지 않은 경우: 기존 컨벤션을 따르며 구현
+     - 구현 변경 사항에 맞춰 테스트를 추가, 업데이트 또는 제거 (아래의 테스트 발견 참조)
+     - 시스템 전반 테스트 체크 실행 (아래 참조)
+     - 변경 후 테스트 실행
+     - 테스트 커버리지 평가: 이 작업이 동작을 변경했는가? 그렇다면 테스트가 작성되거나 업데이트되었는가? 테스트가 추가되지 않았다면 정당한 이유가 있는가(예: 순수 설정, 동작 변경 없음)?
+     - 작업을 완료로 표시
+     - 증분 커밋 평가 (아래 참조)
    ```
 
-   When a unit carries an `Execution note`, honor it. For test-first units, write the failing test before implementation for that unit. For characterization-first units, capture existing behavior before changing it. For units without an `Execution note`, proceed pragmatically.
+   단위가 `Execution note`를 가지고 있는 경우 이를 존중합니다. 테스트 우선 단위의 경우 해당 단위의 구현 전에 실패하는 테스트를 작성합니다. 특성 파악 우선 단위의 경우 변경하기 전에 기존 동작을 캡처합니다. `Execution note`가 없는 단위의 경우 실용적으로 진행합니다.
 
-   Guardrails for execution posture:
-   - Do not write the test and implementation in the same step when working test-first
-   - Do not skip verifying that a new test fails before implementing the fix or feature
-   - Do not over-implement beyond the current behavior slice when working test-first
-   - Skip test-first discipline for trivial renames, pure configuration, and pure styling work
+   실행 자세를 위한 가드레일:
+   - 테스트 우선 작업 시 테스트 작성과 구현을 동일한 단계에서 수행하지 마세요.
+   - 수정을 구현하거나 기능을 추가하기 전에 새 테스트가 실패하는지 확인하는 과정을 건너뛰지 마세요.
+   - 테스트 우선 작업 시 현재 동작 슬라이스를 넘어서는 과도한 구현을 하지 마세요.
+   - 단순한 이름 변경, 순수 설정 및 스타일 작업의 경우 테스트 우선 원칙을 건너뜁니다.
 
-   **Test Discovery** — Before implementing changes to a file, find its existing test files (search for test/spec files that import, reference, or share naming patterns with the implementation file). When a plan specifies test scenarios or test files, start there, then check for additional test coverage the plan may not have enumerated. Changes to implementation files should be accompanied by corresponding test updates — new tests for new behavior, modified tests for changed behavior, removed or updated tests for deleted behavior.
+   **테스트 발견 (Test Discovery)** — 파일 변경 사항을 구현하기 전에 해당 파일의 기존 테스트 파일을 찾습니다 (구현 파일을 가져오거나 참조하거나 명명 패턴을 공유하는 테스트/사양 파일을 검색합니다). 계획에 테스트 시나리오나 테스트 파일이 명시된 경우 거기서 시작한 다음, 계획에 열거되지 않았을 수 있는 추가 테스트 커버리지를 확인합니다. 구현 파일의 변경 사항에는 그에 상응하는 테스트 업데이트가 수반되어야 합니다 — 새로운 동작에 대한 새로운 테스트, 변경된 동작에 대한 수정된 테스트, 삭제된 동작에 대한 제거 또는 업데이트된 테스트.
 
-   **Test Scenario Completeness** — Before writing tests for a feature-bearing unit, check whether the plan's `Test scenarios` cover all categories that apply to this unit. If a category is missing or scenarios are vague (e.g., "validates correctly" without naming inputs and expected outcomes), supplement from the unit's own context before writing tests:
+   **테스트 시나리오 완결성 (Test Scenario Completeness)** — 기능 관련 단위에 대한 테스트를 작성하기 전에 계획의 `Test scenarios`가 이 단위에 적용되는 모든 카테고리를 포괄하는지 확인합니다. 카테고리가 누락되었거나 시나리오가 모호한 경우(예: 입력 및 예상 결과 명시 없이 "올바르게 검증함"), 테스트를 작성하기 전에 단위의 자체 컨텍스트에서 보완합니다:
 
-   | Category | When it applies | How to derive if missing |
+   | 카테고리 | 적용 시기 | 누락 시 도출 방법 |
    |----------|----------------|------------------------|
-   | **Happy path** | Always for feature-bearing units | Read the unit's Goal and Approach for core input/output pairs |
-   | **Edge cases** | When the unit has meaningful boundaries (inputs, state, concurrency) | Identify boundary values, empty/nil inputs, and concurrent access patterns |
-   | **Error/failure paths** | When the unit has failure modes (validation, external calls, permissions) | Enumerate invalid inputs the unit should reject, permission/auth denials it should enforce, and downstream failures it should handle |
-   | **Integration** | When the unit crosses layers (callbacks, middleware, multi-service) | Identify the cross-layer chain and write a scenario that exercises it without mocks |
+   | **정상 경로 (Happy path)** | 기능 관련 단위의 경우 항상 | 단위의 Goal 및 Approach에서 핵심 입력/출력 쌍을 읽습니다. |
+   | **엣지 케이스 (Edge cases)** | 단위에 유의미한 경계(입력, 상태, 동시성)가 있는 경우 | 경계값, 비어 있거나 nil인 입력, 동시 액세스 패턴을 식별합니다. |
+   | **오류/실패 경로** | 단위에 실패 모드(검증, 외부 호출, 권한)가 있는 경우 | 단위가 거부해야 하는 잘못된 입력, 강제해야 하는 권한/인증 거부, 처리해야 하는 하위 실패를 열거합니다. |
+   | **통합 (Integration)** | 단위가 레이어를 가로지르는 경우 (콜백, 미들웨어, 멀티 서비스) | 레이어 간 체인을 식별하고 모의 객체(mock) 없이 이를 실행하는 시나리오를 작성합니다. |
 
-   **System-Wide Test Check** — Before marking a task done, pause and ask:
+   **시스템 전반 테스트 체크 (System-Wide Test Check)** — 작업을 완료로 표시하기 전에 잠시 멈추고 질문합니다:
 
-   | Question | What to do |
+   | 질문 | 수행할 작업 |
    |----------|------------|
-   | **What fires when this runs?** Callbacks, middleware, observers, event handlers — trace two levels out from your change. | Read the actual code (not docs) for callbacks on models you touch, middleware in the request chain, `after_*` hooks. |
-   | **Do my tests exercise the real chain?** If every dependency is mocked, the test proves your logic works *in isolation* — it says nothing about the interaction. | Write at least one integration test that uses real objects through the full callback/middleware chain. No mocks for the layers that interact. |
-   | **Can failure leave orphaned state?** If your code persists state (DB row, cache, file) before calling an external service, what happens when the service fails? Does retry create duplicates? | Trace the failure path with real objects. If state is created before the risky call, test that failure cleans up or that retry is idempotent. |
-   | **What other interfaces expose this?** Mixins, DSLs, alternative entry points (Agent vs Chat vs ChatMethods). | Grep for the method/behavior in related classes. If parity is needed, add it now — not as a follow-up. |
-   | **Do error strategies align across layers?** Retry middleware + application fallback + framework error handling — do they conflict or create double execution? | List the specific error classes at each layer. Verify your rescue list matches what the lower layer actually raises. |
+   | **이것이 실행될 때 무엇이 호출되는가?** 콜백, 미들웨어, 옵저버, 이벤트 핸들러 — 변경 사항에서 두 단계 밖까지 추적합니다. | 수정하는 모델의 콜백, 요청 체인의 미들웨어, `after_*` 후크에 대한 실제 코드(문서가 아님)를 읽습니다. |
+   | **내 테스트가 실제 체인을 실행하는가?** 모든 종속성이 모킹된 경우, 테스트는 로직이 *격리된 상태에서* 작동함을 증명할 뿐입니다 — 상호 작용에 대해서는 아무것도 말해주지 않습니다. | 모의 객체 없이 실제 객체를 사용하여 전체 콜백/미들웨어 체인을 통과하는 통합 테스트를 적어도 하나 작성합니다. 상호 작용하는 레이어에 대해 모킹하지 마세요. |
+   | **실패가 고아 상태를 남길 수 있는가?** 외부 서비스를 호출하기 전에 코드에서 상태(DB 행, 캐시, 파일)를 유지하는 경우, 서비스가 실패하면 어떻게 됩니까? 재시도가 중복을 생성합니까? | 실제 객체로 실패 경로를 추적합니다. 위험한 호출 전에 상태가 생성되는 경우, 실패 시 정리되거나 재시도가 멱등성을 갖는지 테스트합니다. |
+   | **이것을 노출하는 다른 인터페이스는 무엇인가?** 믹스인, DSL, 대체 진입점 (Agent vs Chat vs ChatMethods). | 관련 클래스에서 메서드/동작을 grep합니다. 패리티가 필요한 경우 지금 추가하세요 — 후속 작업으로 남겨두지 마세요. |
+   | **오류 전략이 레이어 전반에서 일치하는가?** 재시도 미들웨어 + 애플리케이션 폴백 + 프레임워크 오류 처리 — 이들이 충돌하거나 이중 실행을 생성합니까? | 각 레이어의 구체적인 오류 클래스를 나열합니다. 복구(rescue) 목록이 하위 레이어에서 실제로 발생하는 것과 일치하는지 확인합니다. |
 
-   **When to skip:** Leaf-node changes with no callbacks, no state persistence, no parallel interfaces. If the change is purely additive (new helper method, new view partial), the check takes 10 seconds and the answer is "nothing fires, skip."
+   **건너뛸 때:** 콜백, 상태 유지, 병렬 인터페이스가 없는 리프 노드(leaf-node) 변경 시. 변경 사항이 순수하게 추가적인 경우(새 도우미 메서드, 새 뷰 파셜), 체크하는 데 10초가 걸리며 답변은 "호출되는 것 없음, 건너뜀"입니다.
 
-   **When this matters most:** Any change that touches models with callbacks, error handling with fallback/retry, or functionality exposed through multiple interfaces.
+   **이것이 가장 중요할 때:** 콜백이 있는 모델, 폴백/재시도가 있는 오류 처리 또는 여러 인터페이스를 통해 노출되는 기능과 관련된 모든 변경 시.
 
 
-2. **Incremental Commits**
+2. **증분 커밋 (Incremental Commits)**
 
-   After completing each task, evaluate whether to create an incremental commit:
+   각 작업을 완료한 후 증분 커밋을 생성할지 평가합니다:
 
-   | Commit when... | Don't commit when... |
+   | 커밋할 때... | 커밋하지 않을 때... |
    |----------------|---------------------|
-   | Logical unit complete (model, service, component) | Small part of a larger unit |
-   | Tests pass + meaningful progress | Tests failing |
-   | About to switch contexts (backend → frontend) | Purely scaffolding with no behavior |
-   | About to attempt risky/uncertain changes | Would need a "WIP" commit message |
+   | 논리적 단위 완료 (모델, 서비스, 컴포넌트) | 대규모 단위의 작은 부분일 때 |
+   | 테스트 통과 + 유의미한 진전 | 테스트 실패 중일 때 |
+   | 문맥을 전환하기 직전 (백엔드 → 프런트엔드) | 동작 없이 스캐폴딩만 있을 때 |
+   | 위험하거나 불확실한 변경을 시도하기 직전 | 커밋 메시지가 "WIP"가 될 것 같을 때 |
 
-   **Heuristic:** "Can I write a commit message that describes a complete, valuable change? If yes, commit. If the message would be 'WIP' or 'partial X', wait."
+   **휴리스틱:** "완전하고 가치 있는 변경 사항을 설명하는 커밋 메시지를 작성할 수 있는가? 그렇다면 커밋하세요. 메시지가 'WIP' 또는 '부분적인 X'가 된다면 기다리세요."
 
-   If the plan has Implementation Units, use them as a starting guide for commit boundaries — but adapt based on what you find during implementation. A unit might need multiple commits if it's larger than expected, or small related units might land together. Use each unit's Goal to inform the commit message.
+   계획에 구현 단위가 있는 경우 이를 커밋 경계의 시작 가이드로 사용하되, 구현 중에 발견한 내용을 바탕으로 조정하세요. 단위가 예상보다 큰 경우 여러 커밋이 필요할 수 있고, 작은 관련 단위들은 함께 묶일 수 있습니다. 각 단위의 Goal을 사용하여 커밋 메시지를 작성하세요.
 
-   **Commit workflow:**
+   **커밋 워크플로우:**
    ```bash
-   # 1. Verify tests pass (use project's test command)
-   # Examples: bin/rails test, npm test, pytest, go test, etc.
+   # 1. 테스트 통과 확인 (프로젝트의 테스트 명령 사용)
+   # 예: bin/rails test, npm test, pytest, go test 등
 
-   # 2. Stage only files related to this logical unit (not `git add .`)
-   git add <files related to this logical unit>
+   # 2. 이 논리적 단위와 관련된 파일만 스테이징 (`git add .` 지양)
+   git add <이 논리적 단위와 관련된 파일들>
 
-   # 3. Commit with conventional message
-   git commit -m "feat(scope): description of this unit"
+   # 3. 관례적인 메시지로 커밋
+   git commit -m "feat(scope): 이 단위에 대한 설명"
    ```
 
-   **Handling merge conflicts:** If conflicts arise during rebasing or merging, resolve them immediately. Incremental commits make conflict resolution easier since each commit is small and focused.
+   **머지 충돌 처리:** 리베이스나 머지 중에 충돌이 발생하면 즉시 해결합니다. 증분 커밋은 각 커밋이 작고 집중되어 있어 충돌 해결을 더 쉽게 만들어 줍니다.
 
-   **Note:** Incremental commits use clean conventional messages without attribution footers. The final Phase 4 commit/PR includes the full attribution.
+   **참고:** 증분 커밋은 속성 푸터(attribution footers) 없이 깨끗하고 관례적인 메시지를 사용합니다. 최종 4단계 커밋/PR에 전체 속성이 포함됩니다.
 
-   **Parallel subagent mode:** Commit ownership is split by isolation mode (see Phase 1 Step 4):
-   - **Worktree-isolated:** subagents may stage and commit inside their own worktree branch; the orchestrator merges those branches in dependency order after the batch.
-   - **Shared-directory fallback:** subagents do not commit; the orchestrator stages and commits each unit after the entire parallel batch completes.
+   **병렬 서브에이전트 모드:** 커밋 소유권은 격리 모드에 따라 나뉩니다 (1단계 4단계 참조):
+   - **워크트리 격리:** 서브에이전트는 자신의 워크트리 브랜치 내에서 스테이징하고 커밋할 수 있습니다. 오케스트레이터는 배치가 끝난 후 종속성 순서대로 해당 브랜치들을 머지합니다.
+   - **공유 디렉토리 폴백:** 서브에이전트는 커밋하지 않습니다. 오케스트레이터는 전체 병렬 배치가 완료된 후 각 단위를 스테이징하고 커밋합니다.
 
-3. **Follow Existing Patterns**
+3. **기존 패턴 따르기**
 
-   - The plan should reference similar code - read those files first
-   - Match naming conventions exactly
-   - Reuse existing components where possible
-   - Follow project coding standards (see AGENTS.md; use CLAUDE.md only if the repo still keeps a compatibility shim)
-   - When in doubt, grep for similar implementations
+   - 계획은 유사한 코드와 패턴을 참조해야 합니다 - 해당 파일을 먼저 읽으세요.
+   - 명명 규칙을 정확히 일치시킵니다.
+   - 가능한 경우 기존 구성 요소를 재사용합니다.
+   - 프로젝트 코딩 표준을 따릅니다 (`AGENTS.md` 참조. 저장소에 여전히 호환성 심(shim)이 있는 경우에만 `CLAUDE.md` 사용).
+   - 의심스러운 경우 유사한 구현을 grep합니다.
 
-4. **Test Continuously**
+4. **지속적인 테스트**
 
-   - Run relevant tests after each significant change
-   - Don't wait until the end to test
-   - Fix failures immediately
-   - Add new tests for new behavior, update tests for changed behavior, remove tests for deleted behavior
-   - **Unit tests with mocks prove logic in isolation. Integration tests with real objects prove the layers work together.** If your change touches callbacks, middleware, or error handling — you need both.
+   - 중요한 변경을 할 때마다 관련 테스트를 실행합니다.
+   - 테스트를 위해 마지막까지 기다리지 마세요.
+   - 실패는 즉시 수정합니다.
+   - 새로운 동작에 대해서는 테스트를 추가하고, 변경된 동작은 테스트를 업데이트하며, 삭제된 동작은 테스트를 제거합니다.
+   - **모의 객체를 사용한 단위 테스트는 격리된 로직을 증명합니다. 실제 객체를 사용한 통합 테스트는 레이어가 함께 작동함을 증명합니다.** 변경 사항이 콜백, 미들웨어 또는 오류 처리와 관련된 경우 두 가지 모두 필요합니다.
 
-5. **Simplify as You Go**
+5. **진행하면서 단순화하기**
 
-   After completing a cluster of related implementation units (or every 2-3 units), review recently changed files for simplification opportunities — consolidate duplicated patterns, extract shared helpers, and improve code reuse and efficiency. This is especially valuable when using subagents, since each agent works with isolated context and can't see patterns emerging across units.
+   일련의 관련 구현 단위(또는 2-3개 단위마다)를 완료한 후, 최근에 변경된 파일을 검토하여 단순화 기회를 찾습니다 — 중복된 패턴을 통합하고, 공유 도우미를 추출하며, 코드 재사용성과 효율성을 개선합니다. 서브에이전트를 사용할 때 특히 유용합니다. 각 에이전트는 격리된 컨텍스트에서 작업하므로 단위 간에 나타나는 패턴을 볼 수 없기 때문입니다.
 
-   Don't simplify after every single unit — early patterns may look duplicated but diverge intentionally in later units. Wait for a natural phase boundary or when you notice accumulated complexity.
+   모든 단일 단위 후에 단순화하지 마세요 — 초기 패턴은 중복되어 보일 수 있지만 나중 단위에서 의도적으로 갈라질 수 있습니다. 자연스러운 단계 경계나 누적된 복잡성이 눈에 띄 때까지 기다리세요.
 
-   If a `/simplify` skill or equivalent is available, use it. Otherwise, review the changed files yourself for reuse and consolidation opportunities.
+   `/simplify` 스킬이나 그에 상응하는 도구가 있는 경우 사용하세요. 그렇지 않으면 변경된 파일을 직접 검토하여 재사용 및 통합 기회를 찾으세요.
 
-6. **Figma Design Sync** (if applicable)
+6. **Figma 디자인 동기화** (해당하는 경우)
 
-   For UI work with Figma designs:
+   Figma 디자인이 있는 UI 작업의 경우:
 
-   - Implement components following design specs
-   - Use ce-figma-design-sync agent iteratively to compare
-   - Fix visual differences identified
-   - Repeat until implementation matches design
+   - 디자인 사양에 따라 컴포넌트를 구현합니다.
+   - `ce-figma-design-sync` 에이전트를 반복적으로 사용하여 비교합니다.
+   - 식별된 시각적 차이를 수정합니다.
+   - 구현이 디자인과 일치할 때까지 반복합니다.
 
-7. **Frontend Design Guidance** (if applicable)
+7. **프론트엔드 디자인 가이드** (해당하는 경우)
 
-   For UI tasks without a Figma design -- where the implementation touches view, template, component, layout, or page files, creates user-visible routes, or the plan contains explicit UI/frontend/design language:
+   Figma 디자인이 없는 UI 작업의 경우 -- 구현이 뷰, 템플릿, 컴포넌트, 레이아웃 또는 페이지 파일을 수정하거나, 사용자에게 보이는 경로를 생성하거나, 계획에 명시적인 UI/프론트엔드/디자인 언어가 포함된 경우:
 
-   - Load the `ce-frontend-design` skill before implementing
-   - Follow its detection, guidance, and verification flow
-   - If the skill produced a verification screenshot, it satisfies Phase 4's screenshot requirement -- no need to capture separately. If the skill fell back to mental review (no browser access), Phase 4's screenshot capture still applies
+   - 구현하기 전에 `ce-frontend-design` 스킬을 로드합니다.
+   - 해당 스킬의 감지, 안내 및 검증 흐름을 따릅니다.
+   - 스킬이 검증 스크린샷을 생성한 경우, 4단계의 스크린샷 요구 사항을 충족하므로 별도로 캡처할 필요가 없습니다. 스킬이 멘탈 리뷰(브라우저 접근 불가)로 폴백된 경우, 4단계의 스크린샷 캡처가 여전히 적용됩니다.
 
-8. **Track Progress**
-   - Keep the task list updated as you complete tasks
-   - Note any blockers or unexpected discoveries
-   - Create new tasks if scope expands
-   - Keep user informed of major milestones
-   - When the plan defines U-IDs for Implementation Units, or the plan or origin document carries stable R-IDs (and optionally A/F/AE IDs), reference them in blockers, deferred-work notes, task summaries, and final verification — not routine status updates. U-IDs anchor units across plan edits; R/A/F/AE anchor product intent across the brainstorm-plan handoff. Use the IDs the plan supplies and do not invent ones it does not. This preserves traceability without burying signal under noise.
+8. **진행 상황 추적**
+   - 작업을 완료할 때마다 작업 목록을 업데이트합니다.
+   - 블로커나 예상치 못한 발견 사항을 기록합니다.
+   - 범위가 확장되면 새 작업을 생성합니다.
+   - 주요 마일스톤을 사용자에게 알립니다.
+   - 계획이 구현 단위에 대해 `U-ID`를 정의하거나, 계획 또는 원본 문서가 안정적인 `R-ID`(선택적으로 `A/F/AE ID`)를 가지고 있는 경우, 일상적인 상태 업데이트가 아닌 블로커, 연기된 작업 메모, 작업 요약 및 최종 검증에서 이를 참조합니다. `U-ID`는 계획 수정 전반에 걸쳐 단위를 고정하며, `R/A/F/AE`는 브레인스토밍-계획 핸드오프 전반에 걸쳐 제품 의도를 고정합니다. 계획이 제공하는 ID를 사용하고 제공되지 않은 ID를 발명하지 마세요. 이렇게 하면 신호를 소음 아래 묻지 않고 추적 가능성을 유지할 수 있습니다.
 
-### Phase 3-4: Quality Check and Finishing Work
+### 3-4단계: 품질 체크 및 마무리 작업
 
-When all Phase 2 tasks are complete and execution transitions to quality check, read `references/shipping-workflow.md` for the full shipping workflow: quality checks, code review, final validation, PR creation, and notification.
-
----
-
-## Codex Delegation Mode
-
-When `delegation_active` is true after argument parsing, read `references/codex-delegation-workflow.md` for the complete delegation workflow: pre-checks, batching, prompt template, execution loop, and result classification.
+모든 2단계 작업이 완료되고 실행이 품질 체크로 전환되면, 품질 체크, 코드 리뷰, 최종 검증, PR 생성 및 알림에 대한 전체 배포 워크플로우를 위해 `references/shipping-workflow.md`를 읽으세요.
 
 ---
 
-## Key Principles
+## Codex 위임 모드
 
-### Start Fast, Execute Faster
+인자 파싱 후 `delegation_active`가 true인 경우, 사전 체크, 배치, 프롬프트 템플릿, 실행 루프 및 결과 분류에 대한 전체 위임 워크플로우를 위해 `references/codex-delegation-workflow.md`를 읽으세요.
 
-- Get clarification once at the start, then execute
-- Don't wait for perfect understanding - ask questions and move
-- The goal is to **finish the feature**, not create perfect process
+---
 
-### The Plan is Your Guide
+## 핵심 원칙
 
-- Work documents should reference similar code and patterns
-- Load those references and follow them
-- Don't reinvent - match what exists
+### 빠르게 시작하고, 더 빠르게 실행하세요
 
-### Test As You Go
+- 처음에 한 번 명확하게 확인한 다음 실행하세요.
+- 완벽하게 이해할 때까지 기다리지 마세요 - 질문하고 움직이세요.
+- 목표는 완벽한 프로세스를 만드는 것이 아니라 **기능을 완성**하는 것입니다.
 
-- Run tests after each change, not at the end
-- Fix failures immediately
-- Continuous testing prevents big surprises
+### 계획은 가이드입니다
 
-### Quality is Built In
+- 작업 문서는 유사한 코드와 패턴을 참조해야 합니다.
+- 해당 참조를 로드하고 따르세요.
+- 새로 발명하지 마세요 - 존재하는 것과 맞추세요.
 
-- Follow existing patterns
-- Write tests for new code
-- Run linting before pushing
-- Review every change — inline for simple additive work, full review for everything else
+### 진행하면서 테스트하세요
 
-### Ship Complete Features
+- 마지막이 아니라 각 변경 후에 테스트를 실행하세요.
+- 실패는 즉시 수정하세요.
+- 지속적인 테스트는 큰 놀라움을 방지합니다.
 
-- Mark all tasks completed before moving on
-- Don't leave features 80% done
-- A finished feature that ships beats a perfect feature that doesn't
+### 품질은 내장되어 있습니다
 
-## Common Pitfalls to Avoid
+- 기존 패턴을 따르세요.
+- 새 코드에 대한 테스트를 작성하세요.
+- 푸시하기 전에 린팅을 실행하세요.
+- 모든 변경 사항을 검토하세요 — 단순한 추가 작업은 인라인으로, 나머지는 전체 리뷰를 수행하세요.
 
-- **Analysis paralysis** - Don't overthink, read the plan and execute
-- **Skipping clarifying questions** - Ask now, not after building wrong thing
-- **Ignoring plan references** - The plan has links for a reason
-- **Testing at the end** - Test continuously or suffer later
-- **Forgetting to track progress** - Update task status as you go or lose track of what's done
-- **80% done syndrome** - Finish the feature, don't move on early
-- **Skipping review** - Every change gets reviewed; only the depth varies
-- **Re-scoping the plan into human-time phases** - The plan's Implementation Units define the scope of execution. Do not estimate human-hours per unit, propose multi-day breakdowns, or ask the user to pick a subset of units for "this session". Agents execute at agent speed, and context-window pressure is addressed by subagent dispatch (Phase 1 Step 4), not by phased sessions. If a plan-file input is genuinely too large for a single execution, say so plainly and suggest the user return to `/ce-plan` to reduce scope — don't invent session phases as a workaround. For bare-prompt input, Phase 0's Large routing already handles oversized work
+### 완성된 기능을 제공하세요
+
+- 다음으로 넘어가기 전에 모든 작업을 완료로 표시하세요.
+- 기능을 80%만 완료된 채로 두지 마세요.
+- 배포되는 완성된 기능이 배포되지 않는 완벽한 기능보다 낫습니다.
+
+## 피해야 할 일반적인 실수
+
+- **분석 마비 (Analysis paralysis)** - 과도하게 생각하지 말고 계획을 읽고 실행하세요.
+- **명확화 질문 건너뛰기** - 잘못된 것을 만든 후가 아니라 지금 질문하세요.
+- **계획 참조 무시** - 계획에 링크가 있는 데는 이유가 있습니다.
+- **마지막에 몰아서 테스트하기** - 지속적으로 테스트하지 않으면 나중에 고생합니다.
+- **진행 상황 추적 잊기** - 작업 상태를 업데이트하지 않으면 무엇이 완료되었는지 놓치게 됩니다.
+- **80% 완료 증후군** - 기능을 완전히 끝내세요. 도중에 멈추지 마세요.
+- **검토 건너뛰기** - 모든 변경 사항은 검토 대상입니다. 깊이만 다를 뿐입니다.
+- **계획을 인간 시간 단계로 다시 범위 지정하기** - 계획의 구현 단위는 실행 범위를 정의합니다. 단위당 사람 시간을 추정하거나, 며칠간의 분석을 제안하거나, 사용자에게 "이 세션"을 위해 단위의 하위 집합을 선택하도록 요청하지 마세요. 에이전트는 에이전트 속도로 실행되며, 컨텍스트 창 압박은 세션 단계화가 아닌 서브에이전트 파견(1단계 4단계)을 통해 해결됩니다. 계획 파일 입력이 단일 실행에 너무 크다면 솔직하게 말하고 사용자에게 범위를 줄이기 위해 `/ce-plan`으로 돌아갈 것을 제안하세요 — 우회책으로 세션 단계를 발명하지 마세요. 단순 프롬프트 입력의 경우 0단계의 대형(Large) 라우팅이 이미 대규모 작업을 처리합니다.

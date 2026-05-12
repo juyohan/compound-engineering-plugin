@@ -1,36 +1,54 @@
 ---
 name: ce-riffrec-feedback-analysis
-description: Riffrec product-feedback workflow. ALWAYS load when the user posts a `riffrec-*.zip`, a bundle with `session.json` + `events.json` + `recording.webm` + `voice.webm`, a video/audio recording for product feedback, or asks how to capture and share Riffrec sessions. Routes between setup, quick bug report, and extensive analysis.
+description: Riffrec 제품 피드백 워크플로우입니다. 사용자가 `riffrec-*.zip`, `session.json` + `events.json` + `recording.webm` + `voice.webm` 번들, 제품 피드백을 위한 비디오/오디오 녹화본을 게시하거나, Riffrec 세션을 캡처하고 공유하는 방법을 물어볼 때 항상 로드합니다. 설정, 빠른 버그 보고, 광범위한 분석 사이에서 경로를 지정합니다.
+allowed-tools:
+  - gem
 ---
 
-# Riffrec Feedback Analysis
+# Riffrec 피드백 분석 (Riffrec Feedback Analysis)
 
-Turn raw product feedback into structured evidence for downstream agents. This skill is the consumption side of [Riffrec](https://github.com/kieranklaassen/riffrec), a capture tool that records synchronized screen + voice + event sessions and emits a `riffrec-*.zip` bundle.
+## 다중 에이전트 협업 (Multi-Agent Collaboration)
 
-## Choose the path
+사용자의 입력(`$ARGUMENTS`) 내에 `--add <ai-이름>` 형태의 플래그가 포함되어 있는지 확인하십시오. 
+현재 지원되는 외부 AI 인터페이스는 `--add gemini` (또는 `--add gem`)입니다.
 
-Route to the matching reference based on the input. Read only that reference; do not load the others.
+만약 해당 플래그가 감지되면, 작업을 단독으로 확정하지 말고 다음 절차를 따르십시오:
+1. **의도 파악:** 플래그를 제외한 나머지 문자열을 실제 지시사항으로 간주합니다.
+2. **초안 작성:** 본인(주 에이전트)의 지식과 코드베이스 컨텍스트를 바탕으로 작업의 초기 뼈대나 접근법을 생각합니다.
+3. **MCP 협업 호출:** `gem` 도구를 호출하여 외부 Gemini 에이전트에게 조언이나 검토를 구합니다.
+   - 호출 시 전달할 메시지 예시: "나는 현재 이 작업에 대한 초안을 세우고 있어. 내 초안은 [초안 요약]이야. 이 접근 방식의 기술적 타당성을 검토하고 누락된 에지 케이스나 더 나은 패턴을 조언해줄 수 있어?"
+4. **결과 통합:** `gem` 도구가 반환한 피드백을 당신의 최종 결과물에 통합(Synthesis)합니다. 
+5. **명시적 표시:** 최종 산출물의 상단 또는 설명 부분에 "이 결과물은 Gemini와의 협업을 통해 검토 및 보완되었습니다."라는 문구를 추가하십시오.
 
-- **Setup** — user has no recording yet and asks how to install Riffrec, capture a session, or share feedback. Read `references/install-riffrec.md`.
-- **Quick bug report** — input is a short recording (under ~60 seconds), the user describes a single specific issue, or asks for "quick", "small", or "just transcribe". Read `references/quick-bug-report.md`. Emit one concise bug report; skip the full artifact set and brainstorm handoff.
-- **Extensive analysis** — input is a longer recording, contains multiple issues / requirements / workflow walkthroughs, or the user wants requirements or brainstorm material. Read `references/extensive-analysis.md`. Always continue into the `ce-brainstorm` skill.
+이 협업 절차를 염두에 두고 아래의 본래 스킬 워크플로우를 진행하십시오.
 
-When the input is ambiguous (e.g., a zip arrived without context), inspect the recording length and event count before choosing. If still unclear, ask the user which path applies before running anything heavy.
 
-## Common rules
+원시 제품 피드백을 다운스트림 에이전트를 위한 구조화된 증거로 변환합니다. 이 스킬은 화면, 음성, 이벤트 세션을 동기화하여 녹화하고 `riffrec-*.zip` 번들을 생성하는 캡처 도구인 [Riffrec](https://github.com/kieranklaassen/riffrec)의 소비 측면을 담당합니다.
 
-- Keep raw recordings, audio chunks, zip contents, session dumps, and extracted screenshots local-only by default. Do not commit `raw/` or `frames/` directories unless the user explicitly asks and privacy is acceptable.
-- Text/metadata artifacts (requirements docs, analysis summaries, problem analyses, source manifests) may be committed when they are needed for traceability and contain no sensitive data.
-- Use repo-relative screenshot paths in any committed doc so later agents can open the evidence without absolute local paths.
+## 경로 선택 (Choose the path)
 
-## Analyzer entrypoint
+입력 내용에 따라 일치하는 참조 문서를 찾아 경로를 지정합니다. 해당 참조 문서만 읽고 다른 문서는 로드하지 마세요.
 
-All non-setup paths share the same analyzer:
+- **설정 (Setup)** — 사용자가 아직 녹화본이 없으며 Riffrec 설치, 세션 캡처 또는 피드백 공유 방법을 묻는 경우입니다. `references/install-riffrec.md`를 읽으세요.
+- **빠른 버그 보고 (Quick bug report)** — 입력값이 짧은 녹화본(약 60초 미만)이거나, 사용자가 단일 특정 문제를 설명하거나, "빠른(quick)", "작은(small)" 또는 "그냥 전사해줘(just transcribe)"라고 요청하는 경우입니다. `references/quick-bug-report.md`를 읽으세요. 간결한 버그 보고서 하나를 생성하며, 전체 아티팩트 세트 생성 및 브레인스토밍 전달 과정은 건너뜁니다.
+- **광범위한 분석 (Extensive analysis)** — 입력값이 긴 녹화본이거나, 여러 문제/요구 사항/워크플로우 시연이 포함되어 있거나, 사용자가 요구 사항 정의 또는 브레인스토밍 자료를 원하는 경우입니다. `references/extensive-analysis.md`를 읽으세요. 항상 `ce-brainstorm` 스킬로 연계하여 진행합니다.
+
+입력이 모호한 경우(예: 컨텍스트 없이 zip 파일만 도착한 경우), 경로를 선택하기 전에 녹화 시간과 이벤트 수를 확인하세요. 여전히 불분명하다면 무거운 작업을 실행하기 전에 사용자에게 어떤 경로가 적용되는지 물어보세요.
+
+## 공통 규칙 (Common rules)
+
+- 원시 녹화본, 오디오 청크, zip 내용, 세션 덤프 및 추출된 스크린샷은 기본적으로 로컬에만 유지합니다. 사용자가 명시적으로 요청하고 개인정보 보호 측면에서 수용 가능한 경우가 아니면 `raw/` 또는 `frames/` 디렉토리를 커밋하지 마세요.
+- 텍스트/메타데이터 아티팩트(요구 사항 문서, 분석 요약, 문제 분석, 소스 매니페스트)는 추적 가능성을 위해 필요하고 민감한 데이터가 포함되지 않은 경우 커밋할 수 있습니다.
+- 커밋되는 모든 문서에는 리포지토리 상대 경로(repo-relative)의 스크린샷 경로를 사용하여, 나중에 다른 에이전트가 절대 경로 없이도 증거를 열어볼 수 있도록 하세요.
+
+## 분석기 진입점 (Analyzer entrypoint)
+
+설정을 제외한 모든 경로는 동일한 분석기를 공유합니다:
 
 ```bash
 python scripts/analyze_riffrec_zip.py /path/to/input
 ```
 
-Accepted inputs: a Riffrec `.zip`, an `.mp4` / `.mov` / `.webm` video, an `.m4a` / `.mp3` / `.wav` audio file, or a meeting-notes `.md`. Use `--output-dir <dir>` to control where artifacts land. In repos with `docs/brainstorms/`, the default is `docs/brainstorms/riffrec-feedback/`. The quick path overrides the output dir to a temp location so nothing pollutes the repo.
+허용되는 입력: Riffrec `.zip`, `.mp4` / `.mov` / `.webm` 비디오, `.m4a` / `.mp3` / `.wav` 오디오 파일 또는 회의록 `.md`. 아티팩트가 저장될 위치를 제어하려면 `--output-dir <dir>`를 사용하세요. `docs/brainstorms/`가 있는 리포지토리의 기본값은 `docs/brainstorms/riffrec-feedback/`입니다. 빠른 경로는 리포지토리를 오염시키지 않도록 출력 디렉토리를 임시 위치로 재정의합니다.
 
-The Compound Engineering output format used by the extensive path is documented in `references/compound-engineering-feedback-format.md`.
+광범위한 경로에서 사용되는 Compound Engineering 출력 형식은 `references/compound-engineering-feedback-format.md`에 정의되어 있습니다.

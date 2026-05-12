@@ -1,414 +1,415 @@
 ---
 name: ce-compound
-description: Document a recently solved problem to compound your team's knowledge
+description: 최근에 해결된 문제를 문서화하여 팀의 지식을 축적(compound)합니다.
+allowed-tools:
+  - gem
 ---
 
 # /ce-compound
 
-Coordinate multiple subagents working in parallel to document a recently solved problem.
+## 다중 에이전트 협업 (Multi-Agent Collaboration)
 
-## Purpose
+사용자의 입력(`$ARGUMENTS`) 내에 `--add <ai-이름>` 형태의 플래그가 포함되어 있는지 확인하십시오. 
+현재 지원되는 외부 AI 인터페이스는 `--add gemini` (또는 `--add gem`)입니다.
 
-Captures problem solutions while context is fresh, creating structured documentation in `docs/solutions/` with YAML frontmatter for searchability and future reference. Uses parallel subagents for maximum efficiency.
+만약 해당 플래그가 감지되면, 작업을 단독으로 확정하지 말고 다음 절차를 따르십시오:
+1. **의도 파악:** 플래그를 제외한 나머지 문자열을 실제 지시사항으로 간주합니다.
+2. **초안 작성:** 본인(주 에이전트)의 지식과 코드베이스 컨텍스트를 바탕으로 작업의 초기 뼈대나 접근법을 생각합니다.
+3. **MCP 협업 호출:** `gem` 도구를 호출하여 외부 Gemini 에이전트에게 조언이나 검토를 구합니다.
+   - 호출 시 전달할 메시지 예시: "나는 현재 이 작업에 대한 초안을 세우고 있어. 내 초안은 [초안 요약]이야. 이 접근 방식의 기술적 타당성을 검토하고 누락된 에지 케이스나 더 나은 패턴을 조언해줄 수 있어?"
+4. **결과 통합:** `gem` 도구가 반환한 피드백을 당신의 최종 결과물에 통합(Synthesis)합니다. 
+5. **명시적 표시:** 최종 산출물의 상단 또는 설명 부분에 "이 결과물은 Gemini와의 협업을 통해 검토 및 보완되었습니다."라는 문구를 추가하십시오.
 
-**Why "compound"?** Each documented solution compounds your team's knowledge. The first time you solve a problem takes research. Document it, and the next occurrence takes minutes. Knowledge compounds.
+이 협업 절차를 염두에 두고 아래의 본래 스킬 워크플로우를 진행하십시오.
 
-## Usage
+
+병렬로 작동하는 여러 하위 에이전트를 조율하여 최근에 해결된 문제를 문서화합니다.
+
+## 목적
+
+문맥이 생생할 때 문제 해결 방법을 캡처하여, `docs/solutions/` 아래에 검색 및 향후 참조가 용이하도록 YAML frontmatter를 포함한 구조화된 문서를 생성합니다. 최대의 효율성을 위해 병렬 하위 에이전트를 사용합니다.
+
+**왜 "compound"인가요?** 문서화된 각 해결책은 팀의 지식을 복리로 쌓아줍니다. 문제를 처음 해결할 때는 조사가 필요하지만, 이를 문서화해두면 다음에 같은 문제가 발생했을 때 단 몇 분 만에 해결할 수 있습니다. 지식은 축적됩니다.
+
+## 사용법
 
 ```bash
-/ce-compound                    # Document the most recent fix
-/ce-compound [brief context]    # Provide additional context hint
+/ce-compound                    # 가장 최근의 수정 사항 문서화
+/ce-compound [간략한 문맥]       # 추가적인 문맥 힌트 제공
 ```
 
-## Pre-resolved context
+## 사전 확인된 컨텍스트 (Pre-resolved context)
 
-**Git branch (pre-resolved):** !`git rev-parse --abbrev-ref HEAD 2>/dev/null || true`
+**Git 브랜치 (사전 확인됨):** !`git rev-parse --abbrev-ref HEAD 2>/dev/null || true`
 
-If the line above resolved to a plain branch name (like `feat/my-branch`), pass it into the Session Historian dispatch in Phase 1 so the agent does not waste a turn deriving it. If it still contains a backtick command string or is empty, omit it and let the agent derive it at runtime.
+위의 라인이 일반적인 브랜치 이름(예: `feat/my-branch`)으로 확인되면, 단계 1의 세션 히스토리 조사 시 이를 전달하여 에이전트가 브랜치 이름을 찾는 데 턴을 낭비하지 않도록 하십시오. 만약 여전히 백틱 명령 문자열이거나 비어 있다면 생략하고 에이전트가 런타임에 확인하도록 하십시오.
 
-## Support Files
+## 지원 파일
 
-These files are the durable contract for the workflow. Read them on-demand at the step that needs them — do not bulk-load at skill start.
+이 파일들은 워크플로우의 지속적인 규약입니다. 필요할 때만 읽으십시오 — 스킬 시작 시 한꺼번에 로드하지 마십시오.
 
-- `references/schema.yaml` — canonical frontmatter fields and enum values (read when validating YAML)
-- `references/yaml-schema.md` — category mapping from problem_type to directory (read when classifying)
-- `assets/resolution-template.md` — section structure for new docs (read when assembling)
+- `references/schema.yaml` — 표준 frontmatter 필드 및 enum 값 (YAML 검증 시 읽음)
+- `references/yaml-schema.md` — problem_type에서 디렉토리로의 카테고리 매핑 (분류 시 읽음)
+- `assets/resolution-template.md` — 새 문서의 섹션 구조 (조립 시 읽음)
 
-When spawning subagents, pass the relevant file contents into the task prompt so they have the contract without needing cross-skill paths.
+하위 에이전트를 생성할 때 관련 파일 내용을 작업 프롬프트에 전달하여, 하위 에이전트가 다른 스킬 경로를 참조하지 않고도 규약을 알 수 있게 하십시오.
 
-## Execution Strategy
+## 실행 전략
 
-Present the user with two options before proceeding, using the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to presenting options in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question.
-
-```
-1. Full (recommended) — the complete compound workflow. Researches,
-   cross-references, and reviews your solution to produce documentation
-   that compounds your team's knowledge.
-
-2. Lightweight — same documentation, single pass. Faster and uses
-   fewer tokens, but won't detect duplicates or cross-reference
-   existing docs. Best for simple fixes or long sessions nearing
-   context limits.
-```
-
-Do NOT pre-select a mode. Do NOT skip this prompt. Wait for the user's choice before proceeding.
-
-**If the user chooses Full**, ask one follow-up question before proceeding. Detect which harness is running (Claude Code, Codex, or Cursor) and ask:
+진행하기 전에 플랫폼의 질문 도구를 사용하여 사용자에게 두 가지 옵션을 제시하십시오: Claude Code의 `AskUserQuestion` (스키마가 로드되지 않은 경우 `ToolSearch`로 `select:AskUserQuestion` 먼저 호출), Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user` (`pi-ask-user` 확장 필요). 도구가 없거나 오류가 발생하는 경우에만 채팅 창에 옵션을 제시하십시오. 질문을 소리 없이 건너뛰지 마십시오.
 
 ```
-Would you also like to search your [harness name] session history
-for relevant knowledge to help the Compound process? This adds
-time and token usage.
+1. Full (추천) — 전체 compound 워크플로우를 실행합니다. 해결책을 조사하고, 
+   교차 참조 및 검토를 거쳐 팀의 지식을 축적하는 문서를 생성합니다.
+
+2. Lightweight — 동일한 문서를 단일 패스로 작성합니다. 속도가 빠르고 
+   토큰 사용량이 적지만, 중복 감지나 기존 문서와의 교차 참조는 수행하지 
+   않습니다. 단순한 수정이나 컨텍스트 제한에 도달한 긴 세션에 적합합니다.
 ```
 
-If the user says yes, dispatch the Session Historian in Phase 1. If no, skip it. Do not ask this in lightweight mode.
+모드를 미리 선택하지 마십시오. 이 프롬프트를 건너뛰지 마십시오. 사용자의 선택을 기다린 후 진행하십시오.
+
+**사용자가 Full 모드를 선택한 경우**, 진행하기 전에 한 가지 추가 질문을 하십시오. 현재 실행 중인 환경(Claude Code, Codex 또는 Cursor)을 감지하고 다음과 같이 묻습니다:
+
+```
+Compound 프로세스를 돕기 위해 [환경 이름] 세션 히스토리에서 관련 지식을 
+검색하시겠습니까? 시간과 토큰 사용량이 늘어날 수 있습니다.
+```
+
+사용자가 예라고 답하면 단계 1에서 세션 히스토리 조사 에이전트를 실행합니다. 아니오라면 건너뜁니다. Lightweight 모드에서는 이 질문을 하지 마십시오.
 
 ---
 
-### Full Mode
+### Full 모드
 
 <critical_requirement>
-**The primary output is ONE file - the final documentation.**
+**주요 출력물은 단 하나의 파일 - 최종 문서입니다.**
 
-Phase 1 subagents return TEXT DATA to the orchestrator. They must NOT use Write, Edit, or create any files. Only the orchestrator writes files: the solution doc in Phase 2, and — if the Discoverability Check finds a gap — a small edit to a project instruction file (AGENTS.md or CLAUDE.md). The instruction-file edit is maintenance, not a second deliverable; it ensures future agents can discover the knowledge store.
+단계 1의 하위 에이전트들은 오케스트레이터에게 텍스트 데이터를 반환합니다. 이들은 Write, Edit를 사용하거나 파일을 생성해서는 안 됩니다. 오직 오케스트레이터만이 파일을 작성합니다: 단계 2의 해결 문서, 그리고 발견 가능성 확인(Discoverability Check)에서 격차가 발견된 경우 프로젝트 지침 파일(AGENTS.md 또는 CLAUDE.md)에 대한 사소한 편집입니다. 지침 파일 편집은 유지보수 차원이지 두 번째 결과물이 아닙니다. 이는 미래의 에이전트들이 지식 저장소를 발견할 수 있도록 보장하기 위함입니다.
 </critical_requirement>
 
-### Phase 0.5: Auto Memory Scan
+### 단계 0.5: 자동 메모 스캔 (Auto Memory Scan)
 
-Before launching Phase 1 subagents, check the auto-memory block injected into your system prompt for notes relevant to the problem being documented.
+단계 1의 하위 에이전트들을 실행하기 전에, 시스템 프롬프트에 주입된 자동 메모 블록에서 문서화하려는 문제와 관련된 메모가 있는지 확인하십시오.
 
-1. Look for a block labeled "user's auto-memory" (Claude Code only) already present in your system prompt context — MEMORY.md's entries are inlined there
-2. If the block is absent, empty, or this is a non-Claude-Code platform, skip this step and proceed to Phase 1 unchanged
-3. Scan the entries for anything related to the problem being documented -- use semantic judgment, not keyword matching
-4. If relevant entries are found, prepare a labeled excerpt block:
+1. 시스템 프롬프트 컨텍스트에 이미 존재하는 "user's auto-memory"로 라벨링된 블록을 찾으십시오 (Claude Code 전용) — MEMORY.md의 항목들이 그곳에 인라인으로 포함되어 있습니다.
+2. 블록이 없거나 비어 있거나 Claude Code 이외의 플랫폼인 경우, 이 단계를 건너뛰고 단계 1로 진행하십시오.
+3. 문서화하려는 문제와 관련된 항목이 있는지 스캔하십시오 — 키워드 매칭이 아닌 의미론적 판단을 사용하십시오.
+4. 관련 항목이 발견되면 라벨이 붙은 발췌 블록을 준비하십시오:
 
 ```
-## Supplementary notes from auto memory
-Treat as additional context, not primary evidence. Conversation history
-and codebase findings take priority over these notes.
+## 자동 메모(auto memory)의 보조 메모
+기본 증거가 아닌 추가 컨텍스트로 취급하십시오. 대화 히스토리와 
+코드베이스 발견 사항이 이 메모보다 우선합니다.
 
-[relevant entries here]
+[관련 항목들]
 ```
 
-5. Pass this block as additional context to the Context Analyzer and Solution Extractor task prompts in Phase 1. If any memory notes end up in the final documentation (e.g., as part of the investigation steps or root cause analysis), tag them with "(auto memory [claude])" so their origin is clear to future readers.
+5. 이 블록을 단계 1의 컨텍스트 분석기(Context Analyzer)와 해결책 추출기(Solution Extractor) 작업 프롬프트에 추가 컨텍스트로 전달하십시오. 만약 메모 내용이 최종 문서에 포함되는 경우(예: 조사 단계나 근본 원인 분석의 일부), 미래의 독자들이 출처를 알 수 있도록 "(auto memory [claude])" 태그를 붙이십시오.
 
-If no relevant entries are found, proceed to Phase 1 without passing memory context.
+관련 항목이 없다면 메모 컨텍스트 전달 없이 단계 1로 진행하십시오.
 
-### Phase 1: Research
+### 단계 1: 조사 (Research)
 
-Launch research subagents. Each returns text data to the orchestrator.
+조사 하위 에이전트들을 실행합니다. 각 에이전트는 오케스트레이터에게 텍스트 데이터를 반환합니다.
 
-**Dispatch order:**
-- Launch `Context Analyzer`, `Solution Extractor`, and `Related Docs Finder` in parallel (background)
-- Then dispatch `ce-session-historian` in foreground — it reads session files outside the working directory that background agents may not have access to
-- The foreground dispatch runs while the background agents work, adding no wall-clock time
+**실행 순서:**
+- `컨텍스트 분석기(Context Analyzer)`, `해결책 추출기(Solution Extractor)`, `관련 문서 검색기(Related Docs Finder)`를 병렬로 실행합니다 (백그라운드).
+- 그 후 `ce-session-historian`을 포그라운드에서 실행합니다. 이 에이전트는 백그라운드 에이전트가 접근하지 못할 수도 있는 작업 디렉토리 밖의 세션 파일들을 읽습니다.
+- 포그라운드 실행은 백그라운드 에이전트들이 작동하는 동안 함께 진행되므로 총 소요 시간은 늘어나지 않습니다.
 
 <parallel_tasks>
 
-#### 1. **Context Analyzer**
-   - Extracts conversation history
-   - Reads `references/schema.yaml` for enum validation and **track classification**
-   - Determines the track (bug or knowledge) from the problem_type
-   - Identifies problem type, component, and track-appropriate fields:
-     - **Bug track**: symptoms, root_cause, resolution_type
-     - **Knowledge track**: applies_when (symptoms/root_cause/resolution_type optional)
-   - Incorporates auto memory excerpts (if provided by the orchestrator) as supplementary evidence
-   - Reads `references/yaml-schema.md` for category mapping into `docs/solutions/`
-   - Suggests a filename using the pattern `[sanitized-problem-slug]-[date].md`
-   - Returns: YAML frontmatter skeleton (must include `category:` field mapped from problem_type), category directory path, suggested filename, and which track applies
-   - Does not invent enum values, categories, or frontmatter fields from memory; reads the schema and mapping files above
-   - Does not force bug-track fields onto knowledge-track learnings or vice versa
+#### 1. **컨텍스트 분석기 (Context Analyzer)**
+   - 대화 히스토리를 추출합니다.
+   - `references/schema.yaml`을 읽어 enum 검증 및 **트랙 분류(track classification)**를 수행합니다.
+   - problem_type으로부터 트랙(버그 또는 지식)을 결정합니다.
+   - 문제 유형, 컴포넌트, 그리고 트랙에 맞는 필드들을 식별합니다:
+     - **버그 트랙**: symptoms, root_cause, resolution_type
+     - **지식 트랙**: applies_when (symptoms/root_cause/resolution_type은 선택 사항)
+   - 오케스트레이터가 제공한 경우 자동 메모 발췌본을 보조 증거로 포함합니다.
+   - `references/yaml-schema.md`를 읽어 `docs/solutions/` 내의 카테고리 매핑을 확인합니다.
+   - `[정제된-문제-슬러그]-[날짜].md` 패턴을 사용하여 파일 이름을 제안합니다.
+   - 반환값: YAML frontmatter 골격 (problem_type에서 매핑된 `category:` 필드 포함 필수), 카테고리 디렉토리 경로, 제안된 파일 이름, 그리고 적용되는 트랙.
+   - 기억에 의존하여 enum 값, 카테고리 또는 frontmatter 필드를 지어내지 마십시오. 위의 스키마 및 매핑 파일을 읽으십시오.
+   - 지식 트랙의 학습 내용에 버그 트랙 필드를 강요하거나 그 반대로 하지 마십시오.
 
-#### 2. **Solution Extractor**
-   - Reads `references/schema.yaml` for track classification (bug vs knowledge)
-   - Adapts output structure based on the problem_type track
-   - Incorporates auto memory excerpts (if provided by the orchestrator) as supplementary evidence -- conversation history and the verified fix take priority; if memory notes contradict the conversation, note the contradiction as cautionary context
+#### 2. **해결책 추출기 (Solution Extractor)**
+   - `references/schema.yaml`을 읽어 트랙 분류(버그 vs 지식)를 확인합니다.
+   - 트랙에 따라 출력 구조를 조정합니다.
+   - 오케스트레이터가 제공한 경우 자동 메모 발췌본을 보조 증거로 포함합니다. 대화 히스토리와 검증된 수정 사항이 우선이며, 메모가 대화와 모순되는 경우 주의가 필요한 컨텍스트로 기록하십시오.
 
-   **Bug track output sections:**
+   **버그 트랙 출력 섹션:**
+   - **Problem (문제)**: 이슈에 대한 1~2문장 설명
+   - **Symptoms (증상)**: 관찰 가능한 증상 (에러 메시지, 동작)
+   - **What Didn't Work (시도했으나 실패한 것)**: 실패한 조사 시도와 실패 이유
+   - **Solution (해결책)**: 코드 예시를 포함한 실제 수정 사항 (적절한 경우 before/after 포함)
+   - **Why This Works (작동 원리)**: 근본 원인 설명 및 해결책이 이를 어떻게 해결하는지
+   - **Prevention (예방)**: 재발 방지 전략, 모범 사례 및 테스트 케이스. 적절한 경우 구체적인 코드 예시 포함 (예: 라이브러리 설정, 테스트 어설션, 린트 규칙)
 
-   - **Problem**: 1-2 sentence description of the issue
-   - **Symptoms**: Observable symptoms (error messages, behavior)
-   - **What Didn't Work**: Failed investigation attempts and why they failed
-   - **Solution**: The actual fix with code examples (before/after when applicable)
-   - **Why This Works**: Root cause explanation and why the solution addresses it
-   - **Prevention**: Strategies to avoid recurrence, best practices, and test cases. Include concrete code examples where applicable (e.g., gem configurations, test assertions, linting rules)
+   **지식 트랙 출력 섹션:**
+   - **Context (문맥)**: 어떤 상황, 격차 또는 마찰이 이 지침을 만들게 했는지
+   - **Guidance (지침)**: 유용한 코드 예시를 포함한 관행, 패턴 또는 권장 사항
+   - **Why This Matters (중요성)**: 이 지침을 따르거나 따르지 않았을 때의 근거와 영향
+   - **When to Apply (적용 시점)**: 이 내용이 적용되는 조건이나 상황
+   - **Examples (예시)**: 실제 적용 모습을 보여주는 구체적인 before/after 또는 사용 예시
 
-   **Knowledge track output sections:**
+#### 3. **관련 문서 검색기 (Related Docs Finder)**
+   - `docs/solutions/`에서 관련 문서를 검색합니다.
+   - 교차 참조 및 링크를 식별합니다.
+   - 관련된 GitHub 이슈를 찾습니다.
+   - 이제는 노후화되었거나, 모순되거나, 너무 광범위해진 관련 학습 또는 패턴 문서에 플래그를 세웁니다.
+   - **중복도 평가**: 문제 정의, 근본 원인, 해결 접근 방식, 참조 파일, 예방 규칙의 5개 차원에서 새로 생성되는 문서와의 중복도를 평가합니다. 다음과 같이 점수를 매깁니다:
+     - **High (높음)**: 4~5개 차원 일치 — 본질적으로 동일한 문제를 다시 해결함
+     - **Moderate (중간)**: 2~3개 차원 일치 — 동일 영역이지만 다른 각도나 해결책
+     - **Low (낮음)**: 0~1개 차원 일치 — 관련은 있으나 별개임
+   - 반환값: 링크, 관계, 새로고침 후보, 그리고 중복도 평가 (점수 + 일치한 차원)
 
-   - **Context**: What situation, gap, or friction prompted this guidance
-   - **Guidance**: The practice, pattern, or recommendation with code examples when useful
-   - **Why This Matters**: Rationale and impact of following or not following this guidance
-   - **When to Apply**: Conditions or situations where this applies
-   - **Examples**: Concrete before/after or usage examples showing the practice in action
-
-#### 3. **Related Docs Finder**
-   - Searches `docs/solutions/` for related documentation
-   - Identifies cross-references and links
-   - Finds related GitHub issues
-   - Flags any related learning or pattern docs that may now be stale, contradicted, or overly broad
-   - **Assesses overlap** with the new doc being created across five dimensions: problem statement, root cause, solution approach, referenced files, and prevention rules. Score as:
-     - **High**: 4-5 dimensions match — essentially the same problem solved again
-     - **Moderate**: 2-3 dimensions match — same area but different angle or solution
-     - **Low**: 0-1 dimensions match — related but distinct
-   - Returns: Links, relationships, refresh candidates, and overlap assessment (score + which dimensions matched)
-
-   **Search strategy (grep-first filtering for efficiency):**
-
-   1. Extract keywords from the problem context: module names, technical terms, error messages, component types
-   2. If the problem category is clear, narrow search to the matching `docs/solutions/<category>/` directory
-   3. Use the native content-search tool (e.g., Grep in Claude Code) to pre-filter candidate files BEFORE reading any content. Run multiple searches in parallel, case-insensitive, targeting frontmatter fields. These are template patterns -- substitute actual keywords:
+   **검색 전략 (효율성을 위해 Grep 필터링 우선):**
+   1. 문제 컨텍스트에서 키워드 추출: 모듈 이름, 기술 용어, 에러 메시지, 컴포넌트 타입
+   2. 문제 카테고리가 명확하다면 일치하는 `docs/solutions/<category>/` 디렉토리로 검색 범위를 좁힙니다.
+   3. 내용을 읽기 전에 네이티브 콘텐츠 검색 도구(예: Claude Code의 Grep)를 사용하여 후보 파일을 미리 필터링합니다. frontmatter 필드를 타겟으로 하여 여러 검색을 병렬로, 대소문자 구분 없이 실행합니다. 다음은 템플릿 패턴입니다 — 실제 키워드로 대체하십시오:
       - `title:.*<keyword>`
       - `tags:.*(<keyword1>|<keyword2>)`
-      - `module:.*<module name>`
+      - `module:.*<module 이름>`
       - `component:.*<component>`
-   4. If search returns >25 candidates, re-run with more specific patterns. If <3, broaden to full content search
-   5. Read only frontmatter (first 30 lines) of candidate files to score relevance
-   6. Fully read only strong/moderate matches
-   7. Return distilled links and relationships, not raw file contents
+   4. 검색 결과가 25개를 초과하면 더 구체적인 패턴으로 다시 실행합니다. 3개 미만이면 전체 콘텐츠 검색으로 확장합니다.
+   5. 후보 파일의 frontmatter(처음 30줄)만 읽어 관련성 점수를 매깁니다.
+   6. 강한/중간 일치 항목만 전체 내용을 읽습니다.
+   7. 가공되지 않은 파일 내용이 아닌 정제된 링크와 관계 정보를 반환합니다.
 
-   **GitHub issue search:**
-
-   Prefer the `gh` CLI for searching related issues: `gh issue list --search "<keywords>" --state all --limit 5`. If `gh` is not installed, fall back to the GitHub MCP tools (e.g., `unblocked` data_retrieval) if available. If neither is available, skip GitHub issue search and note it was skipped in the output.
+   **GitHub 이슈 검색:**
+   관련 이슈 검색 시 `gh` CLI 사용을 선호합니다: `gh issue list --search "<키워드>" --state all --limit 5`. `gh`가 설치되어 있지 않다면 가용한 경우 GitHub MCP 도구(예: `unblocked` data_retrieval)를 사용합니다. 둘 다 없다면 GitHub 이슈 검색을 건너뛰고 출력에 기록합니다.
 
 </parallel_tasks>
 
-#### 4. **Session Historian** (foreground, after launching the above — only if the user opted in)
-   - **Skip entirely** if the user declined session history in the follow-up question
-   - Dispatched as `ce-session-historian`
-   - Dispatch in **foreground** — this agent reads session files outside the working directory (`~/.claude/projects/`, `~/.codex/sessions/`, `~/.cursor/projects/`) which background agents may not have access to
-   - Omit the `mode` parameter so the user's configured permission settings apply
-   - Dispatch on the mid-tier model (e.g., `model: "sonnet"` in Claude Code) — the synthesis feeds into compound assembly and doesn't need frontier reasoning
+#### 4. **세션 히스토리 조사기 (Session Historian)** (상단 에이전트 실행 후 포그라운드에서 실행 — 사용자가 동의한 경우에만)
+   - 사용자가 추가 질문에서 세션 히스토리 검색을 거절했다면 **완전히 건너뜁니다**.
+   - `ce-session-historian`으로 실행됩니다.
+   - **포그라운드**에서 실행합니다 — 이 에이전트는 백그라운드 에이전트가 접근하지 못할 수 있는 작업 디렉토리 밖의 세션 파일들(`~/.claude/projects/`, `~/.codex/sessions/`, `~/.cursor/projects/`)을 읽습니다.
+   - 사용자의 권한 설정이 적용되도록 `mode` 파라미터는 생략하십시오.
+   - 중간 단계 모델(예: Claude Code의 `model: "sonnet"`)에서 실행합니다 — 이 요약 결과는 compound 조립에 입력되므로 최고 성능의 추론이 필요하지는 않습니다.
 
-   **Dispatch prompt — keep tight.** A long, keyword-rich prompt licenses the agent to keep widening. Use this shape:
-
-   - **Pre-resolved context** (only if values resolved cleanly above; otherwise omit and let the agent derive): repo name, current git branch.
-   - **Time window**: explicit `7 days` unless the documented problem clearly spans a longer arc.
-   - **Problem topic**: one sentence naming the concrete issue — error message, module name, what broke and how it was fixed. Not a paragraph; not a bullet list of related topics.
-   - **Filter rule (one line)**: "Only surface findings directly relevant to this specific problem. Ignore unrelated work from the same sessions or branches."
-   - **Output schema**:
-
+   **실행 프롬프트 — 간결하게 유지.** 키워드가 너무 많은 긴 프롬프트는 에이전트의 검색 범위를 불필요하게 넓힐 수 있습니다. 다음 형식을 사용하십시오:
+   - **사전 확인된 컨텍스트** (위에서 깨끗하게 확인된 경우에만 포함, 아니면 생략): 저장소 이름, 현재 git 브랜치.
+   - **시간 범위**: 명시적으로 `7 days`. 단, 문서화하려는 문제가 명확하게 더 긴 기간에 걸친 것이라면 조정 가능.
+   - **문제 주제**: 구체적인 이슈를 명명하는 한 문장 — 에러 메시지, 모듈 이름, 무엇이 고장 났고 어떻게 고쳤는지 등. 문단이나 관련 주제 목록이 아닌 한 문장으로 작성.
+   - **필터 규칙 (한 줄)**: "이 특정 문제와 직접적으로 관련된 발견 사항만 도출하십시오. 동일한 세션이나 브랜치에서의 관련 없는 작업은 무시하십시오."
+   - **출력 스키마**:
      ```
-     Structure your response with these sections (omit any with no findings):
-     - What was tried before
-     - What didn't work
-     - Key decisions
-     - Related context
+     다음 섹션으로 답변을 구조화하십시오 (발견 사항이 없는 섹션은 제외):
+     - 이전에 시도했던 것
+     - 작동하지 않았던 것
+     - 주요 결정 사항
+     - 관련 컨텍스트
      ```
+   추가 컨텍스트 블록, 제외 목록, 또는 주제 키워드 목록을 덧붙이지 마십시오. 장황한 프롬프트는 에이전트의 검색 범위를 넓혀 소요 시간을 급격히 늘릴 수 있습니다. 에이전트에게 키워드 검색이 필요하다면 `ce-session-inventory`의 `--keyword` 모드를 통해 스스로 결정하도록 합니다.
+   - 반환값: 이전 세션에서 발견한 사항의 구조화된 요약, 또는 발견된 것이 없는 경우 "관련된 이전 세션 없음".
 
-   Do not append additional context blocks, exclusion lists, or topic-keyword bullets — verbose dispatch prompts give the agent license to keep widening the search and rapidly compound wall time. If the agent needs keyword search, it owns that decision via the `--keyword` mode on `ce-session-inventory`.
-   - Returns: structured digest of findings from prior sessions, or "no relevant prior sessions" if none found
-
-### Phase 2: Assembly & Write
+### 단계 2: 조립 및 작성 (Assembly & Write)
 
 <sequential_tasks>
 
-**WAIT for all Phase 1 subagents to complete before proceeding.**
+**진행하기 전에 모든 단계 1 하위 에이전트가 완료될 때까지 기다리십시오.**
 
-The orchestrating agent (main conversation) performs these steps:
+오케스트레이팅 에이전트(메인 대화)는 다음 단계들을 수행합니다:
 
-1. Collect all text results from Phase 1 subagents
-2. **Check the overlap assessment** from the Related Docs Finder before deciding what to write:
+1. 단계 1 하위 에이전트들로부터 모든 텍스트 결과를 수집합니다.
+2. 작성 내용을 결정하기 전에 관련 문서 검색기의 **중복도 평가**를 확인합니다:
 
-   | Overlap | Action |
+   | 중복도 | 작업 |
    |---------|--------|
-   | **High** — existing doc covers the same problem, root cause, and solution | **Update the existing doc** with fresher context (new code examples, updated references, additional prevention tips) rather than creating a duplicate. The existing doc's path and structure stay the same. |
-   | **Moderate** — same problem area but different angle, root cause, or solution | **Create the new doc** normally. Flag the overlap for Phase 2.5 to recommend consolidation review. |
-   | **Low or none** | **Create the new doc** normally. |
+   | **High (높음)** — 기존 문서가 동일한 문제, 원인 및 해결책을 다룸 | 중복 문서를 만드는 대신, 최신 문맥(새 코드 예시, 업데이트된 참조, 추가 예방 팁)으로 **기존 문서를 업데이트**합니다. 기존 문서의 경로와 구조는 유지합니다. |
+   | **Moderate (중간)** — 동일 문제 영역이지만 각도, 원인 또는 해결책이 다름 | **새 문서를 생성**합니다. 단계 2.5에서 통합 검토를 권장할 수 있도록 중복 사실을 플래그로 표시합니다. |
+   | **Low (낮음) 또는 없음** | **새 문서를 생성**합니다. |
 
-   The reason to update rather than create: two docs describing the same problem and solution will inevitably drift apart. The newer context is fresher and more trustworthy, so fold it into the existing doc rather than creating a second one that immediately needs consolidation.
+   생성 대신 업데이트를 하는 이유: 동일한 문제와 해결책을 설명하는 두 문서는 결국 서로 내용이 달라지게 됩니다. 최신 문맥이 더 신선하고 신뢰할 수 있으므로, 즉시 통합이 필요할 두 번째 문서를 만드는 대신 기존 문서에 내용을 녹여내십시오.
 
-   When updating an existing doc, preserve its file path and frontmatter structure. Update the solution, code examples, prevention tips, and any stale references. Add a `last_updated: YYYY-MM-DD` field to the frontmatter. Do not change the title unless the problem framing has materially shifted.
+   기존 문서를 업데이트할 때는 파일 경로와 frontmatter 구조를 보존하십시오. 해결책, 코드 예시, 예방 팁, 그리고 오래된 참조들을 업데이트합니다. frontmatter에 `last_updated: YYYY-MM-DD` 필드를 추가하십시오. 문제의 프레임이 실질적으로 바뀌지 않았다면 제목은 변경하지 마십시오.
 
-3. **Incorporate session history findings** (if available). When the Session History Researcher returned relevant prior-session context:
-   - Fold investigation dead ends and failed approaches into the **What Didn't Work** section (bug track) or **Context** section (knowledge track)
-   - Use cross-session patterns to enrich the **Prevention** or **Why This Matters** sections
-   - Tag session-sourced content with "(session history)" so its origin is clear to future readers
-   - If findings are thin or "no relevant prior sessions," proceed without session context
-4. Assemble complete markdown file from the collected pieces, reading `assets/resolution-template.md` for the section structure of new docs
-5. Validate YAML frontmatter against `references/schema.yaml`, including the YAML-safety quoting rule for array items (see `references/yaml-schema.md` > YAML Safety Rules)
-6. Create directory if needed: `mkdir -p docs/solutions/[category]/`
-7. Write the file: either the updated existing doc or the new `docs/solutions/[category]/[filename].md`
-8. **Run `python3 scripts/validate-frontmatter.py <output-path>`** to catch silent-corruption parser-safety issues that the prose rules miss: malformed `---` delimiter lines, unquoted ` #` in scalar values (silent comment truncation), and unquoted `: ` in scalar values (silent mapping confusion). Exit 0 means the doc is parser-safe; exit 1 means the script's stderr names the offending field(s) and what to fix — quote the value(s), re-write the doc, and re-run until exit 0. Do not declare success while validation fails. The script does not enforce schema rules and does not flag YAML reserved-indicator characters (those produce loud parser errors downstream rather than silent corruption — out of scope). Uses Python 3 stdlib only (no PyYAML or other deps).
+3. **세션 히스토리 발견 사항 반영** (가용한 경우). 세션 히스토리 조사기가 관련 세션 문맥을 반환한 경우:
+   - 조사 중 막다른 길이었던 내용이나 실패한 접근 방식들을 **시도했으나 실패한 것 (What Didn't Work)** 섹션(버그 트랙) 또는 **문맥 (Context)** 섹션(지식 트랙)에 포함합니다.
+   - 여러 세션에 걸친 패턴을 사용하여 **예방 (Prevention)** 또는 **중요성 (Why This Matters)** 섹션을 풍성하게 만듭니다.
+   - 세션에서 가져온 내용에는 "(session history)" 태그를 붙여 미래의 독자가 출처를 알 수 있게 합니다.
+   - 내용이 부실하거나 "관련된 이전 세션 없음"인 경우 세션 문맥 없이 진행합니다.
+4. 수집된 조각들을 모아 전체 마크다운 파일을 구성합니다. 새 문서를 만드는 경우 `assets/resolution-template.md`를 읽어 섹션 구조를 확인합니다.
+5. `references/schema.yaml`을 기준으로 YAML frontmatter를 검증합니다. 배열 항목에 대한 YAML 안전 따옴표 규칙을 적용하십시오 (`references/yaml-schema.md` > YAML Safety Rules 참조).
+6. 필요한 경우 디렉토리를 생성합니다: `mkdir -p docs/solutions/[category]/`
+7. 파일을 작성합니다: 업데이트된 기존 문서 또는 새로운 `docs/solutions/[category]/[filename].md`
+8. **`python3 scripts/validate-frontmatter.py <출력-경로>`를 실행하십시오.** 텍스트 규칙이 놓치기 쉬운 파서 안전 이슈들을 잡아냅니다: 잘못된 `---` 구분선, 스칼라 값 내의 따옴표 없는 ` #` (주석 잘림), 따옴표 없는 `: ` (매핑 오인) 등입니다. Exit 0은 안전함을, Exit 1은 수정이 필요한 필드를 의미합니다. 에러가 나면 값을 따옴표로 감싸고 문서를 다시 쓴 뒤 Exit 0이 될 때까지 반복하십시오. 검증에 실패한 상태에서 성공을 선언하지 마십시오. 이 스크립트는 Python 3 표준 라이브러리만 사용합니다.
 
-When creating a new doc, preserve the section order from `assets/resolution-template.md` unless the user explicitly asks for a different structure.
+새 문서를 만들 때는 사용자가 명시적으로 다른 구조를 요청하지 않는 한 `assets/resolution-template.md`의 섹션 순서를 유지하십시오.
 
 </sequential_tasks>
 
-### Phase 2.5: Selective Refresh Check
+### 단계 2.5: 선택적 새로고침 확인 (Selective Refresh Check)
 
-After writing the new learning, decide whether this new solution is evidence that older docs should be refreshed.
+새로운 학습 내용을 작성한 후, 이 해결책이 오래된 문서들을 새로고침해야 할 증거가 되는지 결정합니다.
 
-`ce-compound-refresh` is **not** a default follow-up. Use it selectively when the new learning suggests an older learning or pattern doc may now be inaccurate.
+`ce-compound-refresh`는 기본적으로 따라오는 후속 작업이 **아닙니다**. 새로운 학습 내용이 기존의 학습 또는 패턴 문서가 부정확해졌음을 시사할 때만 선택적으로 사용하십시오.
 
-It makes sense to invoke `ce-compound-refresh` when one or more of these are true:
+다음 중 하나 이상이 참일 때 `ce-compound-refresh` 호출이 타당합니다:
+1. 관련 학습 또는 패턴 문서가 이번에 확인된 수정 사항과 상충되는 방식을 권장함
+2. 이번 수정 사항이 이전에 문서화된 해결책을 명확히 대체(supersede)함
+3. 이번 작업에 리팩토링, 마이그레이션, 이름 변경 또는 의존성 업그레이드가 포함되어 기존 문서의 참조들이 무효화되었을 가능성이 높음
+4. 패턴 문서가 이제는 너무 광범위해 보이거나, 구식이거나, 변화된 현실을 반영하지 못함
+5. 관련 문서 검색기가 동일 문제 공간에서 새로고침이 필요한 높은 확신의 후보들을 찾아냄
+6. 관련 문서 검색기가 기존 문서와 **중간 정도의 중복(moderate overlap)**을 보고함 — 집중적인 검토를 통해 통합할 기회가 있을 수 있음
 
-1. A related learning or pattern doc recommends an approach that the new fix now contradicts
-2. The new fix clearly supersedes an older documented solution
-3. The current work involved a refactor, migration, rename, or dependency upgrade that likely invalidated references in older docs
-4. A pattern doc now looks overly broad, outdated, or no longer supported by the refreshed reality
-5. The Related Docs Finder surfaced high-confidence refresh candidates in the same problem space
-6. The Related Docs Finder reported **moderate overlap** with an existing doc — there may be consolidation opportunities that benefit from a focused review
+다음의 경우에는 `ce-compound-refresh`를 호출할 필요가 **없습니다**:
+1. 관련 문서가 발견되지 않음
+2. 관련 문서들이 새로운 학습 내용과 여전히 일관성을 유지함
+3. 중복이 표면적이며 이전의 지침을 바꾸지 않음
+4. 새로고침을 위해 근거가 빈약한 광범위한 히스토리 조사가 필요함
 
-It does **not** make sense to invoke `ce-compound-refresh` when:
+다음 규칙을 따르십시오:
+- **명백히 오래된 후보가 하나** 있는 경우, 새 학습 내용 작성이 완료된 후 해당 파일로 범위를 좁혀 `ce-compound-refresh`를 호출합니다.
+- **동일 영역에 여러 후보**가 있는 경우, 해당 모듈, 카테고리 또는 패턴 세트에 대해 타겟팅된 새로고침을 실행할지 사용자에게 묻습니다.
+- 컨텍스트가 이미 부족하거나 Lightweight 모드인 경우, 자동으로 광범위한 새로고침으로 확장하지 마십시오. 대신 범위 힌트와 함께 `ce-compound-refresh`를 다음 단계로 권장하십시오.
 
-1. No related docs were found
-2. Related docs still appear consistent with the new learning
-3. The overlap is superficial and does not change prior guidance
-4. Refresh would require a broad historical review with weak evidence
+`ce-compound-refresh`를 호출하거나 권장할 때는 전달할 인자를 명확히 하십시오. 가장 좁고 유용한 범위를 선호하십시오:
+- 오래되었을 가능성이 높은 **특정 파일**
+- 검토가 필요한 여러 문서가 포함된 **모듈 또는 컴포넌트 이름**
+- 노후화가 집중된 특정 해결 영역의 **카테고리 이름**
+- `docs/solutions/patterns/`에 있는 **패턴 파일 이름 또는 패턴 주제**
 
-Use these rules:
-
-- If there is **one obvious stale candidate**, invoke `ce-compound-refresh` with a narrow scope hint after the new learning is written
-- If there are **multiple candidates in the same area**, ask the user whether to run a targeted refresh for that module, category, or pattern set
-- If context is already tight or you are in lightweight mode, do not expand into a broad refresh automatically; instead recommend `ce-compound-refresh` as the next step with a scope hint
-
-When invoking or recommending `ce-compound-refresh`, be explicit about the argument to pass. Prefer the narrowest useful scope:
-
-- **Specific file** when one learning or pattern doc is the likely stale artifact
-- **Module or component name** when several related docs may need review
-- **Category name** when the drift is concentrated in one solutions area
-- **Pattern filename or pattern topic** when the stale guidance lives in `docs/solutions/patterns/`
-
-Examples:
-
+예시:
 - `/ce-compound-refresh plugin-versioning-requirements`
 - `/ce-compound-refresh payments`
 - `/ce-compound-refresh performance-issues`
 - `/ce-compound-refresh critical-patterns`
 
-A single scope hint may still expand to multiple related docs when the change is cross-cutting within one domain, category, or pattern area.
+단일 범위 힌트라도 변경 사항이 한 도메인, 카테고리 또는 패턴 영역 내에서 횡단적인 경우 여러 관련 문서로 확장될 수 있습니다.
 
-Do not invoke `ce-compound-refresh` without an argument unless the user explicitly wants a broad sweep.
+사용자가 명시적으로 광범위한 조사를 원하는 경우가 아니라면 인자 없이 `ce-compound-refresh`를 호출하지 마십시오.
 
-Always capture the new learning first. Refresh is a targeted maintenance follow-up, not a prerequisite for documentation.
+항상 새로운 학습 내용을 먼저 캡처하십시오. 새로고침은 타겟팅된 유지보수 후속 작업이지 문서화의 전제 조건이 아닙니다.
 
-### Discoverability Check
+### 발견 가능성 확인 (Discoverability Check)
 
-After the learning is written and the refresh decision is made, check whether the project's instruction files would lead an agent to discover and search `docs/solutions/` before starting work in a documented area. This runs every time — the knowledge store only compounds value when agents can find it.
+학습 내용 작성이 완료되고 새로고침 여부가 결정된 후, 프로젝트 지침 파일이 에이전트에게 문서화된 영역에서 작업을 시작하기 전에 `docs/solutions/`를 발견하고 검색하도록 안내하는지 확인합니다. 지식 저장소는 에이전트가 이를 발견하고 사용할 수 있을 때만 가치를 창출합니다.
 
-1. Identify which root-level instruction files exist (AGENTS.md, CLAUDE.md, or both). Read the file(s) and determine which holds the substantive content — one file may just be a shim that `@`-includes the other (e.g., `CLAUDE.md` containing only `@AGENTS.md`, or vice versa). The substantive file is the assessment and edit target; ignore shims. If neither file exists, skip this check entirely.
-2. Assess whether an agent reading the instruction files would learn three things:
-   - That a searchable knowledge store of documented solutions exists
-   - Enough about its structure to search effectively (category organization, YAML frontmatter fields like `module`, `tags`, `problem_type`)
-   - When to search it (before implementing features, debugging issues, or making decisions in documented areas — learnings may cover bugs, best practices, workflow patterns, or other institutional knowledge)
+1. 루트 수준의 지침 파일(AGENTS.md, CLAUDE.md 또는 둘 다)이 존재하는지 확인합니다. 파일을 읽고 실질적인 내용을 담고 있는 파일을 식별합니다 — 하나는 다른 파일을 `@`로 포함하는 단순한 래퍼일 수 있습니다. 실질적인 내용이 있는 파일이 평가 및 수정 대상입니다. 둘 다 없다면 이 확인을 건너뜁니다.
+2. 에이전트가 지침 파일을 읽었을 때 다음 세 가지를 배울 수 있는지 평가합니다:
+   - 문서화된 해결책이 모인 검색 가능한 지식 저장소가 존재함
+   - 효과적으로 검색할 수 있을 만큼 구조를 알고 있음 (카테고리 구성, `module`, `tags`, `problem_type`과 같은 YAML frontmatter 필드)
+   - 언제 검색해야 하는지 알고 있음 (기능 구현, 이슈 디버깅, 혹은 문서화된 영역에서 결정을 내리기 전 — 학습 내용은 버그, 모범 사례, 워크플로우 패턴 등을 다룰 수 있음)
 
-   This is a semantic assessment, not a string match. The information could be a line in an architecture section, a bullet in a gotchas section, spread across multiple places, or expressed without ever using the exact path `docs/solutions/`. Use judgment — if an agent would reasonably discover and use the knowledge store after reading the file, the check passes.
+   이는 문자열 매칭이 아닌 의미론적 평가입니다. 정보는 아키텍처 섹션의 한 줄일 수도, gotchas 섹션의 글머리 기호일 수도 있으며, 여러 곳에 흩어져 있거나 `docs/solutions/`라는 정확한 경로를 사용하지 않고 표현될 수도 있습니다. 판단력을 발휘하십시오 — 에이전트가 파일을 읽은 후 지식 저장소를 합리적으로 발견하고 사용할 수 있다면 통과입니다.
 
-3. If the spirit is already met, no action needed — move on.
-4. If not:
-   a. Based on the file's existing structure, tone, and density, identify where a mention fits naturally. Before creating a new section, check whether the information could be a single line in the closest related section — an architecture tree, a directory listing, a documentation section, or a conventions block. A line added to an existing section is almost always better than a new headed section. Only add a new section as a last resort when the file has clear sectioned structure and nothing is even remotely related.
-   b. Draft the smallest addition that communicates the three things. Match the file's existing style and density. The addition should describe the knowledge store itself, not the plugin — an agent without the plugin should still find value in it.
+3. 취지가 이미 충족되었다면 아무 작업도 필요 없습니다.
+4. 그렇지 않다면:
+   a. 파일의 기존 구조, 톤, 밀도에 따라 언급이 자연스럽게 어울리는 위치를 식별합니다. 새로운 섹션을 만들기 전에, 아키텍처 트리, 디렉토리 목록, 문서 섹션, 또는 규칙 블록 등 가장 관련 있는 기존 섹션에 한 줄로 추가할 수 있는지 확인하십시오. 기존 섹션에 추가하는 것이 새로운 섹션을 만드는 것보다 거의 항상 낫습니다. 파일에 명확한 섹션 구조가 있고 관련 있는 곳이 전혀 없는 경우에만 최후의 수단으로 새 섹션을 추가하십시오.
+   b. 세 가지 사실을 전달하는 가장 작은 추가안을 작성합니다. 파일의 기존 스타일과 밀도에 맞춥니다. 추가 내용은 플러그인이 아닌 지식 저장소 자체를 설명해야 합니다 — 플러그인이 없는 에이전트도 그 가치를 찾을 수 있어야 합니다.
 
-      Keep the tone informational, not imperative. Express timing as description, not instruction — "relevant when implementing or debugging in documented areas" rather than "check before implementing or debugging." Imperative directives like "always search before implementing" cause redundant reads when a workflow already includes a dedicated search step. The goal is awareness: agents learn the folder exists and what's in it, then use their own judgment about when to consult it.
+      톤을 강요가 아닌 정보 제공형으로 유지하십시오. 타이밍을 지시가 아닌 설명으로 표현하십시오 — "검색해야 함"이 아니라 "문서화된 영역에서 구현하거나 디버깅할 때 관련이 있음"과 같이 표현하십시오. "구현 전 항상 검색하라"와 같은 강압적인 지시는 워크플로우에 이미 전용 검색 단계가 포함된 경우 중복 읽기를 유발합니다. 목표는 인지입니다: 에이전트가 폴더의 존재와 내용을 알게 되면, 언제 참고할지는 스스로 판단하게 됩니다.
 
-      Examples of calibration (not templates — adapt to the file):
+      조정 예시 (템플릿이 아님 — 파일에 맞게 조정):
 
-      When there's an existing directory listing or architecture section — add a line:
+      기존 디렉토리 목록이나 아키텍처 섹션이 있는 경우 — 한 줄 추가:
       ```
-      docs/solutions/  # documented solutions to past problems (bugs, best practices, workflow patterns), organized by category with YAML frontmatter (module, tags, problem_type)
+      docs/solutions/  # 과거 문제(버그, 모범 사례, 워크플로우 패턴)에 대한 문서화된 해결책. 카테고리별로 구성되어 있으며 YAML frontmatter(module, tags, problem_type)를 포함함.
       ```
 
-      When nothing in the file is a natural fit — a small headed section is appropriate:
+      파일에 적절한 곳이 없는 경우 — 작은 섹션 추가:
       ```
-      ## Documented Solutions
+      ## 문서화된 해결책 (Documented Solutions)
 
-      `docs/solutions/` — documented solutions to past problems (bugs, best practices, workflow patterns), organized by category with YAML frontmatter (`module`, `tags`, `problem_type`). Relevant when implementing or debugging in documented areas.
+      `docs/solutions/` — 과거 문제(버그, 모범 사례, 워크플로우 패턴)에 대한 문서화된 해결책. 카테고리별로 구성되어 있으며 YAML frontmatter(`module`, `tags`, `problem_type`)를 포함함. 문서화된 영역에서 구현하거나 디버깅할 때 관련이 있음.
       ```
-   c. In full mode, explain to the user why this matters — agents working in this repo (including fresh sessions, other tools, or collaborators without the plugin) won't know to check `docs/solutions/` unless the instruction file surfaces it. Show the proposed change and where it would go, then use the platform's blocking question tool to get consent before making the edit: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to presenting the proposal in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question. In lightweight mode, output a one-liner note and move on
+   c. Full 모드에서는 사용자에게 이것이 왜 중요한지 설명하십시오 — 이 저장소에서 작업하는 에이전트들(새로운 세션, 다른 도구, 혹은 플러그인이 없는 협업자 포함)은 지침 파일에 명시되지 않으면 `docs/solutions/`를 확인해야 한다는 것을 알 수 없습니다. 제안된 변경 사항과 위치를 보여준 뒤, 플랫폼의 질문 도구를 사용하여 편집 전 동의를 얻으십시오. 질문을 소리 없이 건너뛰지 마십시오. Lightweight 모드에서는 한 줄의 노트를 출력하고 넘어갑니다.
 
-### Phase 3: Optional Enhancement
+### 단계 3: 선택적 강화 (Optional Enhancement)
 
-**WAIT for Phase 2 to complete before proceeding.**
+**진행하기 전에 단계 2가 완료될 때까지 기다리십시오.**
 
 <parallel_tasks>
 
-Based on problem type, optionally invoke specialized agents to review the documentation:
-
+문제 유형에 따라 선택적으로 전문 에이전트를 호출하여 문서를 검토합니다:
 - **performance_issue** → `ce-performance-oracle`
 - **security_issue** → `ce-security-sentinel`
 - **database_issue** → `ce-data-integrity-guardian`
-- Any code-heavy issue → always run `ce-code-simplicity-reviewer`, and additionally run the kieran reviewer that matches the repo's primary stack:
-  - Ruby/Rails → also run `ce-kieran-rails-reviewer`
-  - Python → also run `ce-kieran-python-reviewer`
-  - TypeScript/JavaScript → also run `ce-kieran-typescript-reviewer`
-  - Other stacks → no kieran reviewer needed
+- 코드 비중이 높은 모든 이슈 → 항상 `ce-code-simplicity-reviewer`를 실행하고, 저장소의 주 사용 스택에 맞는 kieran 리뷰어를 추가로 실행합니다:
+  - Ruby/Rails → `ce-kieran-rails-reviewer` 추가 실행
+  - Python → `ce-kieran-python-reviewer` 추가 실행
+  - TypeScript/JavaScript → `ce-kieran-typescript-reviewer` 추가 실행
+  - 기타 스택 → kieran 리뷰어 불필요
 
 </parallel_tasks>
 
 ---
 
-### Lightweight Mode
+### Lightweight 모드
 
 <critical_requirement>
-**Single-pass alternative — same documentation, fewer tokens.**
+**단일 패스 대안 — 동일 문서, 적은 토큰.**
 
-This mode skips parallel subagents entirely. The orchestrator performs all work in a single pass, producing the same solution document without cross-referencing or duplicate detection.
+이 모드는 병렬 하위 에이전트를 완전히 생략합니다. 오케스트레이터가 단일 패스로 모든 작업을 수행하며, 교차 참조나 중복 감지 없이 동일한 해결 문서를 생성합니다.
 </critical_requirement>
 
-The orchestrator (main conversation) performs ALL of the following in one sequential pass:
+오케스트레이터(메인 대화)는 다음 모든 작업을 하나의 순차적 패스로 수행합니다:
 
-1. **Extract from conversation**: Identify the problem and solution from conversation history. Also scan the "user's auto-memory" block injected into your system prompt, if present (Claude Code only) -- use any relevant notes as supplementary context alongside conversation history. Tag any memory-sourced content incorporated into the final doc with "(auto memory [claude])"
-2. **Classify**: Read `references/schema.yaml` and `references/yaml-schema.md`, then determine track (bug vs knowledge), category, and filename
-3. **Write minimal doc**: Create `docs/solutions/[category]/[filename].md` using the appropriate track template from `assets/resolution-template.md`, with:
-   - YAML frontmatter with track-appropriate fields, applying the YAML-safety quoting rule for array items (see `references/yaml-schema.md` > YAML Safety Rules)
-   - Bug track: Problem, root cause, solution with key code snippets, one prevention tip
-   - Knowledge track: Context, guidance with key examples, one applicability note
-4. **Skip specialized agent reviews** (Phase 3) to conserve context
+1. **대화에서 추출**: 대화 히스토리에서 문제와 해결책을 식별합니다. 또한 시스템 프롬프트에 주입된 "user's auto-memory" 블록(Claude Code 전용)을 스캔하여 관련 메모가 있다면 대화 히스토리와 함께 보조 컨텍스트로 사용합니다. 최종 문서에 포함된 메모 기반 내용에는 "(auto memory [claude])" 태그를 붙입니다.
+2. **분류**: `references/schema.yaml` 및 `references/yaml-schema.md`를 읽고 트랙(버그 vs 지식), 카테고리 및 파일 이름을 결정합니다.
+3. **최소 문서 작성**: `assets/resolution-template.md`에서 적절한 트랙 템플릿을 사용하여 `docs/solutions/[category]/[filename].md`를 생성합니다:
+   - 트랙에 맞는 필드를 포함한 YAML frontmatter (배열 항목에 대한 YAML 안전 따옴표 규칙 적용)
+   - 버그 트랙: 문제, 근본 원인, 주요 코드 스니펫이 포함된 해결책, 예방 팁 하나
+   - 지식 트랙: 문맥, 주요 예시가 포함된 지침, 적용 참고 사항 하나
+4. **전문 에이전트 리뷰 생략** (단계 3): 컨텍스트 보존을 위해 생략합니다.
 
-**Lightweight output:**
+**Lightweight 출력:**
 ```
-✓ Documentation complete (lightweight mode)
+✓ 문서화 완료 (lightweight 모드)
 
-File created:
+생성된 파일:
 - docs/solutions/[category]/[filename].md
 
-[If discoverability check found instruction files don't surface the knowledge store:]
-Tip: Your AGENTS.md/CLAUDE.md doesn't surface docs/solutions/ to agents —
-a brief mention helps all agents discover these learnings.
+[발견 가능성 확인에서 지침 파일이 지식 저장소를 노출하지 않는 경우:]
+팁: 현재 AGENTS.md/CLAUDE.md가 에이전트들에게 docs/solutions/를 안내하지 않고 있습니다 — 
+간략한 언급만으로도 모든 에이전트가 이 학습 내용들을 발견하는 데 도움이 됩니다.
 
-Note: This was created in lightweight mode. For richer documentation
-(cross-references, detailed prevention strategies, specialized reviews),
-re-run /ce-compound in a fresh session.
+참고: 이 문서는 lightweight 모드로 생성되었습니다. 더 풍부한 문서
+(교차 참조, 상세 예방 전략, 전문 리뷰 등)가 필요하다면, 
+새 세션에서 /ce-compound를 다시 실행하십시오.
 ```
 
-**No subagents are launched. No parallel tasks. One file written.**
+**하위 에이전트는 실행되지 않습니다. 병렬 작업도 없습니다. 파일 하나가 작성됩니다.**
 
-In lightweight mode, the overlap check is skipped (no Related Docs Finder subagent). This means lightweight mode may create a doc that overlaps with an existing one. That is acceptable — `ce-compound-refresh` will catch it later. Only suggest `ce-compound-refresh` if there is an obvious narrow refresh target. Do not broaden into a large refresh sweep from a lightweight session.
+Lightweight 모드에서는 중복 확인을 건너뜁니다 (Related Docs Finder 하위 에이전트 없음). 즉, 기존 문서와 겹치는 문서를 생성할 수도 있습니다. 이는 허용됩니다 — 나중에 `ce-compound-refresh`가 이를 잡아낼 것입니다. 명백하고 좁은 새로고침 대상이 있는 경우에만 `ce-compound-refresh`를 제안하십시오. Lightweight 세션에서 광범위한 새로고침으로 확장하지 마십시오.
 
 ---
 
-## What It Captures
+## 캡처하는 내용
 
-- **Problem symptom**: Exact error messages, observable behavior
-- **Investigation steps tried**: What didn't work and why
-- **Root cause analysis**: Technical explanation
-- **Working solution**: Step-by-step fix with code examples
-- **Prevention strategies**: How to avoid in future
-- **Cross-references**: Links to related issues and docs
+- **문제 증상 (Problem symptom)**: 정확한 에러 메시지, 관찰 가능한 동작
+- **시도한 조사 단계 (Investigation steps tried)**: 작동하지 않은 것과 그 이유
+- **근본 원인 분석 (Root cause analysis)**: 기술적 설명
+- **작동하는 해결책 (Working solution)**: 코드 예시를 포함한 단계별 수정 사항
+- **예방 전략 (Prevention strategies)**: 향후 재발 방지 방법
+- **교차 참조 (Cross-references)**: 관련 이슈 및 문서 링크
 
-## Preconditions
+## 전제 조건 (Preconditions)
 
 <preconditions enforcement="advisory">
   <check condition="problem_solved">
-    Problem has been solved (not in-progress)
+    문제가 해결됨 (진행 중 아님)
   </check>
   <check condition="solution_verified">
-    Solution has been verified working
+    해결책이 작동하는지 검증됨
   </check>
   <check condition="non_trivial">
-    Non-trivial problem (not simple typo or obvious error)
+    사소하지 않은 문제 (단순한 오타나 뻔한 에러 아님)
   </check>
 </preconditions>
 
-## What It Creates
+## 생성물
 
-**Organized documentation:**
+**정리된 문서:**
+- 파일: `docs/solutions/[category]/[filename].md`
 
-- File: `docs/solutions/[category]/[filename].md`
+**문제로부터 자동 감지되는 카테고리:**
 
-**Categories auto-detected from problem:**
-
-Bug track:
+버그 트랙:
 - build-errors/
 - test-failures/
 - runtime-errors/
@@ -419,126 +420,125 @@ Bug track:
 - integration-issues/
 - logic-errors/
 
-Knowledge track:
-- architecture-patterns/ — architectural or structural patterns (agent/skill/pipeline/workflow shape decisions)
-- design-patterns/ — reusable non-architectural design approaches (content generation, interaction patterns, prompt shapes)
-- tooling-decisions/ — language, library, or tool choices with durable rationale
-- conventions/ — team-agreed way of doing something, captured so it survives turnover
+지식 트랙:
+- architecture-patterns/ — 아키텍처 또는 구조적 패턴 (에이전트/스킬/파이프라인/워크플로우 형태 결정 사항)
+- design-patterns/ — 재사용 가능한 비아키텍처적 설계 접근 방식 (콘텐츠 생성, 상호작용 패턴, 프롬프트 형태)
+- tooling-decisions/ — 지속적인 근거가 있는 언어, 라이브러리 또는 도구 선택
+- conventions/ — 팀이 합의한 방식 (인원 교체 시에도 유지되도록 캡처됨)
 - workflow-issues/
 - developer-experience/
 - documentation-gaps/
-- best-practices/ — fallback only, use when no narrower knowledge-track value applies
+- best-practices/ — 다른 세부 지식 트랙 카테고리에 해당하지 않을 때의 폴백
 
-## Common Mistakes to Avoid
+## 피해야 할 흔한 실수
 
-| ❌ Wrong | ✅ Correct |
+| ❌ 잘못된 방식 | ✅ 올바른 방식 |
 |----------|-----------|
-| Subagents write files like `context-analysis.md`, `solution-draft.md` | Subagents return text data; orchestrator writes one final file |
-| Research and assembly run in parallel | Research completes → then assembly runs |
-| Multiple files created during workflow | One solution doc written or updated: `docs/solutions/[category]/[filename].md` (plus an optional small edit to a project instruction file for discoverability) |
-| Creating a new doc when an existing doc covers the same problem | Check overlap assessment; update the existing doc when overlap is high |
+| 하위 에이전트가 `context-analysis.md`, `solution-draft.md` 같은 파일을 작성함 | 하위 에이전트는 텍스트 데이터만 반환하고, 오케스트레이터가 하나의 최종 파일을 작성함 |
+| 조사와 조립을 병렬로 실행함 | 조사가 완료된 후 조립을 시작함 |
+| 워크플로우 중에 여러 파일이 생성됨 | 하나의 해결 문서가 작성되거나 업데이트됨: `docs/solutions/[category]/[filename].md` (발견 가능성을 위한 지침 파일의 사소한 수정 제외) |
+| 기존 문서가 동일 문제를 다루는데 새 문서를 만듦 | 중복도 평가를 확인하여, 중복도가 높으면 기존 문서를 업데이트함 |
 
-## Success Output
+## 성공 출력
 
 ```
-✓ Documentation complete
+✓ 문서화 완료
 
-Auto memory: 2 relevant entries used as supplementary evidence
+자동 메모: 2개의 관련 항목이 보조 증거로 사용됨
 
-Subagent Results:
-  ✓ Context Analyzer: Identified performance_issue in brief_system, category: performance-issues/
-  ✓ Solution Extractor: 3 code fixes, prevention strategies
-  ✓ Related Docs Finder: 2 related issues
-  ✓ Session History: 3 prior sessions on same branch, 2 failed approaches surfaced
+하위 에이전트 결과:
+  ✓ Context Analyzer: brief_system에서 performance_issue 식별, 카테고리: performance-issues/
+  ✓ Solution Extractor: 3개의 코드 수정 사항, 예방 전략 추출
+  ✓ Related Docs Finder: 2개의 관련 이슈 발견
+  ✓ Session History: 동일 브랜치에서 3개의 이전 세션 확인, 2개의 실패한 접근 방식 도출
 
-Specialized Agent Reviews (Auto-Triggered):
-  ✓ ce-performance-oracle: Validated query optimization approach
-  ✓ ce-kieran-rails-reviewer: Code examples meet Rails conventions
-  ✓ ce-code-simplicity-reviewer: Solution is appropriately minimal
+전문 에이전트 리뷰 (자동 실행됨):
+  ✓ ce-performance-oracle: 쿼리 최적화 접근 방식 검증됨
+  ✓ ce-kieran-rails-reviewer: 코드 예시가 Rails 컨벤션을 준수함
+  ✓ ce-code-simplicity-reviewer: 해결책이 적절히 최소화됨
 
-File created:
+생성된 파일:
 - docs/solutions/performance-issues/n-plus-one-brief-generation.md
 
-This documentation will be searchable for future reference when similar
-issues occur in the Email Processing or Brief System modules.
+이 문서는 Email Processing 또는 Brief System 모듈에서 유사한 이슈가 
+발생했을 때 향후 참조를 위해 검색 가능해집니다.
 
-What's next?
-1. Continue workflow (recommended)
-2. Link related documentation
-3. Update other references
-4. View documentation
-5. Other
+다음 작업은 무엇입니까?
+1. 워크플로우 계속 진행 (추천)
+2. 관련 문서 링크 추가
+3. 다른 참조 업데이트
+4. 문서 보기
+5. 기타
 ```
 
-**After displaying the success output, present the "What's next?" options using the platform's blocking question tool:** `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to numbered options in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question. Do not continue the workflow or end the turn without the user's selection.
+**성공 출력을 표시한 후, 플랫폼의 질문 도구를 사용하여 "다음 작업은 무엇입니까?" 옵션을 제시하십시오:** `AskUserQuestion` (Claude Code), `request_user_input` (Codex), `ask_user` (Gemini/Pi). 도구가 없거나 오류가 발생하는 경우에만 채팅 창에 번호가 매겨진 옵션을 제시하십시오. 질문을 소리 없이 건너뛰지 마십시오. 사용자의 선택 없이는 워크플로우를 계속하거나 턴을 종료하지 마십시오.
 
-**Alternate output (when updating an existing doc due to high overlap):**
-
-```
-✓ Documentation updated (existing doc refreshed with current context)
-
-Overlap detected: docs/solutions/performance-issues/n-plus-one-queries.md
-  Matched dimensions: problem statement, root cause, solution, referenced files
-  Action: Updated existing doc with fresher code examples and prevention tips
-
-File updated:
-- docs/solutions/performance-issues/n-plus-one-queries.md (added last_updated: 2026-03-24)
-```
-
-## The Compounding Philosophy
-
-This creates a compounding knowledge system:
-
-1. First time you solve "N+1 query in brief generation" → Research (30 min)
-2. Document the solution → docs/solutions/performance-issues/n-plus-one-briefs.md (5 min)
-3. Next time similar issue occurs → Quick lookup (2 min)
-4. Knowledge compounds → Team gets smarter
-
-The feedback loop:
+**기존 문서를 업데이트한 경우의 출력 (중복도가 높을 때):**
 
 ```
-Build → Test → Find Issue → Research → Improve → Document → Validate → Deploy
-    ↑                                                                      ↓
-    └──────────────────────────────────────────────────────────────────────┘
+✓ 문서 업데이트 완료 (기존 문서를 현재 문맥으로 새로고침함)
+
+중복 감지됨: docs/solutions/performance-issues/n-plus-one-queries.md
+  일치하는 차원: 문제 정의, 근본 원인, 해결책, 참조 파일
+  수행 작업: 기존 문서를 최신 코드 예시와 예방 팁으로 업데이트함
+
+업데이트된 파일:
+- docs/solutions/performance-issues/n-plus-one-queries.md (last_updated: 2026-03-24 추가됨)
 ```
 
-**Each unit of engineering work should make subsequent units of work easier—not harder.**
+## 축적(Compounding)의 철학
 
-## Auto-Invoke
+이는 복리로 쌓이는 지식 시스템을 만듭니다:
+
+1. 처음으로 "요약 생성 시 N+1 쿼리" 해결 → 조사 (30분)
+2. 해결책 문서화 → docs/solutions/performance-issues/n-plus-one-briefs.md (5분)
+3. 다음에 비슷한 이슈 발생 → 빠른 조회 (2분)
+4. 지식 축적 → 팀의 역량 강화
+
+피드백 루프:
+```
+빌드 → 테스트 → 이슈 발견 → 조사 → 개선 → 문서화 → 검증 → 배포
+    ↑                                                        ↓
+    └───────────────────────────────────────────────────────┘
+```
+
+**모든 엔지니어링 작업 단위는 다음 작업 단위를 더 어렵게가 아니라 더 쉽게 만들어야 합니다.**
+
+## 자동 호출 (Auto-Invoke)
 
 <auto_invoke> <trigger_phrases> - "that worked" - "it's fixed" - "working now" - "problem solved" </trigger_phrases>
 
-<manual_override> Use /ce-compound [context] to document immediately without waiting for auto-detection. </manual_override> </auto_invoke>
+<manual_override> 자동 감지를 기다리지 않고 즉시 문서화하려면 /ce-compound [문맥] 명령을 사용하십시오. </manual_override> </auto_invoke>
 
-## Output
+## 출력
 
-Writes the final learning directly into `docs/solutions/`.
+최종 학습 내용을 `docs/solutions/`에 직접 작성합니다.
 
-## Applicable Specialized Agents
+## 적용 가능한 전문 에이전트
 
-Based on problem type, these agents can enhance documentation:
+문제 유형에 따라 다음 에이전트들이 문서의 질을 높일 수 있습니다:
 
-### Code Quality & Review
-- **ce-kieran-rails-reviewer**: Reviews code examples for Rails best practices
-- **ce-kieran-python-reviewer**: Reviews code examples for Python best practices
-- **ce-kieran-typescript-reviewer**: Reviews code examples for TypeScript best practices
-- **ce-code-simplicity-reviewer**: Ensures solution code is minimal and clear
-- **ce-pattern-recognition-specialist**: Identifies anti-patterns or repeating issues
+### 코드 품질 및 리뷰
+- **ce-kieran-rails-reviewer**: Rails 모범 사례를 기준으로 코드 예시 검토
+- **ce-kieran-python-reviewer**: Python 모범 사례를 기준으로 코드 예시 검토
+- **ce-kieran-typescript-reviewer**: TypeScript 모범 사례를 기준으로 코드 예시 검토
+- **ce-code-simplicity-reviewer**: 해결 코드가 최소화되고 명확한지 확인
+- **ce-pattern-recognition-specialist**: 안티 패턴이나 반복되는 이슈 식별
 
-### Specific Domain Experts
-- **ce-performance-oracle**: Analyzes performance_issue category solutions
-- **ce-security-sentinel**: Reviews security_issue solutions for vulnerabilities
-- **ce-data-integrity-guardian**: Reviews database_issue migrations and queries
+### 특정 도메인 전문가
+- **ce-performance-oracle**: performance_issue 카테고리 해결책 분석
+- **ce-security-sentinel**: security_issue 해결책의 취약점 검토
+- **ce-data-integrity-guardian**: database_issue 마이그레이션 및 쿼리 검토
 
-### Enhancement & Research
-- **ce-best-practices-researcher**: Enriches solution with industry best practices
-- **ce-framework-docs-researcher**: Links to framework/library documentation references
+### 강화 및 조사
+- **ce-best-practices-researcher**: 업계 모범 사례로 해결책 보강
+- **ce-framework-docs-researcher**: 프레임워크/라이브러리 문서 참조 링크 추가
 
-### When to Invoke
-- **Auto-triggered** (optional): Agents can run post-documentation for enhancement
-- **Manual trigger**: User can invoke agents after /ce-compound completes for deeper review
+### 호출 시점
+- **자동 실행** (선택 사항): 문서화 후 강화 목적으로 실행 가능
+- **수동 실행**: 사용자가 /ce-compound 완료 후 더 깊은 검토를 위해 호출 가능
 
-## Related Commands
+## 관련 명령
 
-- `/research [topic]` - Deep investigation (searches docs/solutions/ for patterns)
-- `/ce-plan` - Planning workflow (references documented solutions)
+- `/research [주제]` - 심층 조사 (docs/solutions/에서 패턴 검색)
+- `/ce-plan` - 계획 워크플로우 (문서화된 해결책 참조)

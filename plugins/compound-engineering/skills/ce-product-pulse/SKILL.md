@@ -1,8 +1,10 @@
 ---
 name: ce-product-pulse
-description: "Generate a time-windowed pulse report on what users experienced and how the product performed - usage, quality, errors, signals worth investigating. Use when the user says 'run a pulse', 'show me the pulse', 'how are we doing', 'weekly recap', 'launch-day check', or passes a time window like '24h' or '7d'. Configures via .compound-engineering/config.local.yaml and saves reports to docs/pulse-reports/."
-argument-hint: "[lookback window, e.g. '24h', '7d', '1h'; default 24h]"
+description: "사용자가 경험한 것과 제품이 어떻게 작동했는지(사용량, 품질, 에러, 조사할 가치가 있는 신호)에 대해 시간 범위별 펄스(pulse) 보고서를 생성합니다. 사용자가 'run a pulse', 'show me the pulse', 'how are we doing', 'weekly recap', 'launch-day check'라고 말하거나 '24h', '7d'와 같은 시간 범위를 전달할 때 사용합니다. .compound-engineering/config.local.yaml을 통해 설정하며 보고서를 docs/pulse-reports/에 저장합니다."
+argument-hint: "[lookback window, 예: '24h', '7d', '1h'; 기본값 24h]"
 allowed-tools:
+  - gem
+
   - Read
   - Write
   - Glob
@@ -11,170 +13,187 @@ allowed-tools:
   - AskUserQuestion
 ---
 
-# Product Pulse
+# 제품 펄스 (Product Pulse)
 
-`ce-product-pulse` queries the product's data sources for a given time window and produces a compact, single-page report covering usage, performance, errors, and followups. The report is saved to `docs/pulse-reports/` and the key points are surfaced in chat.
+`ce-product-pulse`는 주어진 시간 범위 동안 제품의 데이터 소스를 쿼리하고 사용량, 성능, 에러 및 후속 조치를 포함하는 압축된 단일 페이지 보고서를 생성합니다. 보고서는 `docs/pulse-reports/`에 저장되며 주요 포인트는 채팅에 표시됩니다.
 
-The skill does not mutate the product, the database, or any external system. Its only writes are pulse settings appended to `.compound-engineering/config.local.yaml` (the unified CE local config, gitignored, machine-local) and the report file (`docs/pulse-reports/...`). MCP and other data-source tools are invoked read-only; if a tool offers write modes, do not use them.
+이 스킬은 제품, 데이터베이스 또는 외부 시스템을 수정하지 않습니다. 유일한 쓰기 작업은 `.compound-engineering/config.local.yaml`(통합 CE 로컬 설정, gitignore됨, 머신 로컬)에 추가되는 펄스 설정과 보고서 파일(`docs/pulse-reports/...`)입니다. MCP 및 기타 데이터 소스 도구는 읽기 전용으로 호출됩니다. 도구가 쓰기 모드를 제공하더라도 사용하지 마십시오.
 
-## Interaction Method
+## 상호작용 방식 (Interaction Method)
 
-Default to the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to numbered options in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question.
+플랫폼의 차단 질문 도구를 기본으로 사용합니다: Claude Code의 `AskUserQuestion` (스키마가 로드되지 않은 경우 `ToolSearch`를 `select:AskUserQuestion`으로 먼저 호출), Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user` (`pi-ask-user` 확장 프로그램 필요). 도구에 차단 도구가 없거나 호출 에러가 발생하는 경우(예: Codex 편집 모드)에만 채팅에 번호가 매겨진 옵션으로 폴백합니다. 스키마 로드가 필요하다는 이유로 폴백하지 마십시오. 질문을 조용히 건너뛰지 마십시오.
 
-Ask one question at a time. Reserve multi-select for first-run configuration only.
+한 번에 하나의 질문만 던집니다. 다중 선택은 첫 실행 설정 시에만 사용하십시오.
 
-## Lookback Window
+## 룩백 윈도우 (Lookback Window)
 
 <lookback> #$ARGUMENTS </lookback>
 
-Interpret the argument as a time window. Common forms:
+## 다중 에이전트 협업 (Multi-Agent Collaboration)
 
-- `24h`, `48h`, `72h` - trailing hours
-- `7d`, `30d` - trailing days
-- `1h` - short-window (useful during launches)
+사용자의 입력(`$ARGUMENTS`) 내에 `--add <ai-이름>` 형태의 플래그가 포함되어 있는지 확인하십시오. 
+현재 지원되는 외부 AI 인터페이스는 `--add gemini` (또는 `--add gem`)입니다.
 
-If the argument is empty, default to `pulse_lookback_default` from config (resolved in Phase 0); if that is also unset, fall through to the hard default of `24h`. If the argument is unparseable, ask the user to clarify.
+만약 해당 플래그가 감지되면, 작업을 단독으로 확정하지 말고 다음 절차를 따르십시오:
+1. **의도 파악:** 플래그를 제외한 나머지 문자열을 실제 지시사항으로 간주합니다.
+2. **초안 작성:** 본인(주 에이전트)의 지식과 코드베이스 컨텍스트를 바탕으로 작업의 초기 뼈대나 접근법을 생각합니다.
+3. **MCP 협업 호출:** `gem` 도구를 호출하여 외부 Gemini 에이전트에게 조언이나 검토를 구합니다.
+   - 호출 시 전달할 메시지 예시: "나는 현재 이 작업에 대한 초안을 세우고 있어. 내 초안은 [초안 요약]이야. 이 접근 방식의 기술적 타당성을 검토하고 누락된 에지 케이스나 더 나은 패턴을 조언해줄 수 있어?"
+4. **결과 통합:** `gem` 도구가 반환한 피드백을 당신의 최종 결과물에 통합(Synthesis)합니다. 
+5. **명시적 표시:** 최종 산출물의 상단 또는 설명 부분에 "이 결과물은 Gemini와의 협업을 통해 검토 및 보완되었습니다."라는 문구를 추가하십시오.
 
-Apply a **15-minute trailing buffer** to the window's upper bound. Many analytics and tracing tools have ingestion lag; querying right up to `now` under-reports the most recent events. For a `24h` window, query `[now - 24h - 15m, now - 15m]`.
+이 협업 절차를 염두에 두고 아래의 본래 스킬 워크플로우를 진행하십시오.
 
-## Core Principles
 
-1. **Read it like a founder.** No hardcoded thresholds. Do not label things "bad" or "good" by default - present the numbers and let the reader judge.
-2. **Single page.** Target 30-40 lines of terminal output. If the report is getting long, cut.
-3. **No PII in saved reports.** Do not include user emails, account IDs, or message content in the report written to disk.
-4. **Parallel where safe, serial where it matters.** Analytics and tracing queries run in parallel. Database queries run serially to avoid load.
-5. **Memory through saved reports.** Every run writes to `docs/pulse-reports/` so past pulses are browseable as a timeline.
-6. **Read-only database access only.** If a database is used as a data source, the connection must be read-only. The interview refuses to accept read-write credentials. Database access is optional - many products complete the pulse with analytics and tracing alone.
-7. **Strategy-seeded when available.** If `STRATEGY.md` exists, the interview reads it before asking questions and carries forward the product name and key metrics as seeds. The goal of data-source setup is to wire up whatever connections are needed to actually measure those metrics.
+인자를 시간 범위로 해석합니다. 일반적인 형식:
 
-## Execution Flow
+- `24h`, `48h`, `72h` - 지난 시간 단위
+- `7d`, `30d` - 지난 일 단위
+- `1h` - 짧은 기간 (출시 당일 유용)
 
-### Phase 0: Route by Config State
+인자가 비어 있으면 설정의 `pulse_lookback_default`(Phase 0에서 확인됨)를 기본값으로 사용합니다. 이 역시 설정되어 있지 않으면 `24h`를 강제 기본값으로 사용합니다. 인자를 파싱할 수 없으면 사용자에게 설명을 요청하십시오.
 
-**Config (pre-resolved):**
+윈도우의 상한선에 **15분 후행 버퍼**를 적용합니다. 많은 분석 및 트레이싱 도구에 수집 지연이 있으므로 '현재' 시점까지 바로 쿼리하면 가장 최근 이벤트가 누락될 수 있습니다. `24h` 윈도우의 경우 `[현재 - 24h - 15m, 현재 - 15m]` 범위를 쿼리합니다.
+
+## 핵심 원칙
+
+1. **창업자의 관점에서 읽으십시오.** 하드코딩된 임계값을 두지 마십시오. 기본적으로 어떤 것을 "나쁨" 또는 "좋음"으로 라벨링하지 마십시오. 숫자만 제시하고 독자가 판단하게 하십시오.
+2. **단일 페이지.** 터미널 출력 기준 30~40줄을 목표로 합니다. 보고서가 길어지면 내용을 줄이십시오.
+3. **저장된 보고서에 개인정보(PII) 포함 금지.** 디스크에 작성되는 보고서에 사용자 이메일, 계정 ID 또는 메시지 본문을 포함하지 마십시오.
+4. **안전한 곳은 병렬로, 중요한 곳은 순차적으로.** 분석 및 트레이싱 쿼리는 병렬로 실행합니다. 데이터베이스 쿼리는 부하를 피하기 위해 순차적으로 실행합니다.
+5. **저장된 보고서를 통한 기억.** 매 실행 시 `docs/pulse-reports/`에 기록하여 과거의 펄스를 타임라인으로 탐색할 수 있게 합니다.
+6. **읽기 전용 데이터베이스 액세스만 허용.** 데이터베이스를 데이터 소스로 사용하는 경우 연결은 반드시 읽기 전용이어야 합니다. 인터뷰 과정에서 읽기-쓰기 권한을 수락하지 마십시오. 데이터베이스 액세스는 선택 사항입니다. 많은 제품이 분석 및 트레이싱만으로 펄스를 완료합니다.
+7. **가능한 경우 전략 기반 시작.** `STRATEGY.md`가 존재하면 질문을 던지기 전에 이를 읽고 제품 이름과 주요 지표를 초기값으로 가져옵니다. 데이터 소스 설정의 목표는 해당 지표를 실제로 측정하는 데 필요한 연결을 구성하는 것입니다.
+
+## 실행 흐름
+
+### Phase 0: 설정 상태에 따른 라우팅
+
+**Config (사전 확인):**
 !`(top=$(git rev-parse --show-toplevel 2>/dev/null); [ -n "$top" ] && cat "$top/.compound-engineering/config.local.yaml" 2>/dev/null) || echo '__NO_CONFIG__'`
 
-If the block above contains YAML key-value pairs, extract values for the `pulse_*` keys listed under "Config keys" below.
-If it shows `__NO_CONFIG__`, the file does not exist — treat this as a first run.
-If it shows an unresolved command string, read `.compound-engineering/config.local.yaml` from the repo root using the native file-read tool (e.g., Read in Claude Code, read_file in Codex). If the file does not exist, treat as first run.
+위 블록에 YAML 키-값 쌍이 포함되어 있으면 아래 "Config keys"에 나열된 `pulse_*` 키의 값을 추출합니다.
+`__NO_CONFIG__`가 표시되면 파일이 존재하지 않는 것이므로 첫 실행으로 간주합니다.
+확인되지 않은 명령 문자열이 표시되면 기본 파일 읽기 도구(예: Claude Code의 Read, Codex의 read_file)를 사용하여 레포지토리 루트에서 `.compound-engineering/config.local.yaml`을 읽습니다. 파일이 없으면 첫 실행으로 처리합니다.
 
 **Config keys:**
-- `pulse_product_name` -- string, used in report titles. Required for routing: if unset, skill is unconfigured.
-- `pulse_lookback_default` -- one of `1h`, `24h`, `7d`, `30d` (default: `24h`)
-- `pulse_primary_event` -- string, the engagement event name
-- `pulse_value_event` -- string, the value-realization event name
-- `pulse_completion_events` -- comma-separated string of 0-3 event names
-- `pulse_quality_scoring` -- `true` or default `false` (AI products only)
-- `pulse_quality_dimension` -- string scored 1-5 when `pulse_quality_scoring` is true; ignored otherwise
-- `pulse_analytics_source` -- string identifying analytics provider (e.g., `posthog`, `mixpanel`, `custom`)
-- `pulse_tracing_source` -- string identifying tracing provider (e.g., `sentry`, `datadog`, `custom`)
-- `pulse_payments_source` -- string identifying payments provider (e.g., `stripe`, `custom`); omit if not used
-- `pulse_db_enabled` -- `true` or default `false`; when `true`, read-only DB access is part of the pulse
-- `pulse_metric_sources` -- comma-separated `metric=source` pairs giving per-strategy-metric source overrides (e.g., `retention_d7=posthog,nps=delighted`). Strategy metrics not listed fall back to `pulse_analytics_source` and are rendered with a `(default source)` marker so the implicit routing is visible.
-- `pulse_pending_metrics` -- comma-separated string of strategy-doc metric names awaiting instrumentation; rendered as `no data` in each pulse report until instrumentation lands
-- `pulse_excluded_metrics` -- comma-separated string of strategy-doc metric names intentionally excluded from the pulse; the metric stays in `STRATEGY.md` but is not surfaced in pulse reports
+- `pulse_product_name` -- 문자열, 보고서 제목에 사용됨. 라우팅에 필수: 설정되지 않은 경우 스킬이 구성되지 않은 것으로 간주함.
+- `pulse_lookback_default` -- `1h`, `24h`, `7d`, `30d` 중 하나 (기본값: `24h`)
+- `pulse_primary_event` -- 문자열, 참여(engagement) 이벤트 이름
+- `pulse_value_event` -- 문자열, 가치 실현(value-realization) 이벤트 이름
+- `pulse_completion_events` -- 0~3개의 이벤트 이름을 쉼표로 구분한 문자열
+- `pulse_quality_scoring` -- `true` 또는 기본값 `false` (AI 제품 전용)
+- `pulse_quality_dimension` -- `pulse_quality_scoring`이 true일 때 1~5점으로 점수가 매겨지는 문자열. 그 외에는 무시됨.
+- `pulse_analytics_source` -- 분석 제공자 식별 문자열 (예: `posthog`, `mixpanel`, `custom`)
+- `pulse_tracing_source` -- 트레이싱 제공자 식별 문자열 (예: `sentry`, `datadog`, `custom`)
+- `pulse_payments_source` -- 결제 제공자 식별 문자열 (예: `stripe`, `custom`). 사용하지 않으면 생략.
+- `pulse_db_enabled` -- `true` 또는 기본값 `false`. `true`인 경우 읽기 전용 DB 액세스가 펄스의 일부가 됨.
+- `pulse_metric_sources` -- 전략 문서의 지표별 소스 오버라이드를 제공하는 `metric=source` 쌍의 쉼표 구분 문자열 (예: `retention_d7=posthog,nps=delighted`). 나열되지 않은 지표는 `pulse_analytics_source`로 폴백하며, 암시적 라우팅이 보이도록 `(default source)` 마커와 함께 렌더링됩니다.
+- `pulse_pending_metrics` -- 계측 대기 중인 전략 문서 지표 이름의 쉼표 구분 문자열. 계측 전까지 각 펄스 보고서에 `no data`로 렌더링됨.
+- `pulse_excluded_metrics` -- 펄스 보고서에서 의도적으로 제외된 전략 문서 지표 이름의 쉼표 구분 문자열. 지표는 `STRATEGY.md`에 유지되지만 보고서에는 표시되지 않음.
 
-**Routing:**
+**라우팅:**
 
-- **`pulse_product_name` is unset (or config file missing)** -> First run. Go to Phase 1 (interview), then Phase 2.
-- **`pulse_product_name` is set** -> Skip to Phase 2.
+- **`pulse_product_name`이 미설정됨 (또는 설정 파일 없음)** -> 첫 실행. Phase 1(인터뷰) 진행 후 Phase 2로 이동.
+- **`pulse_product_name`이 설정됨** -> Phase 2로 점프.
 
-If the argument was `setup`, `reconfigure`, or `edit config`, go to Phase 1 regardless of config state.
+인자가 `setup`, `reconfigure`, 또는 `edit config`인 경우 설정 상태와 관계없이 Phase 1로 이동합니다.
 
-### Phase 1: First-Run Interview
+### Phase 1: 첫 실행 인터뷰
 
-#### 1.0 Seed from strategy (if available)
+#### 1.0 전략 문서에서 초기값 추출 (있는 경우)
 
-Before asking any questions, read `STRATEGY.md` using the native file-read tool. If the file exists, extract:
+질문을 던지기 전에 기본 파일 읽기 도구를 사용하여 `STRATEGY.md`를 읽습니다. 파일이 존재하면 다음을 추출합니다.
 
-- The product name from the `name` key in the YAML frontmatter, falling back to the H1 title (stripping the trailing ` Strategy` suffix, e.g., `# Spiral Strategy` -> `Spiral`) if frontmatter is missing
-- The list of key metrics from the `## Key metrics` section, one per line
+- YAML frontmatter의 `name` 키에서 제품 이름을 가져옵니다. frontmatter가 없으면 H1 제목에서 ` Strategy` 접미사를 제거하고 가져옵니다 (예: `# Spiral Strategy` -> `Spiral`).
+- `## Key metrics` 섹션에서 한 줄에 하나씩 나열된 주요 지표 목록을 가져옵니다.
 
-Open the interview by surfacing what was extracted: announce that a strategy doc was found, show the seeded product name and the list of key metrics that will be carried into event/data setup, and invite the user to correct any of it before continuing.
+추출된 내용을 보여주며 인터뷰를 시작합니다. 전략 문서를 찾았음을 알리고, 이벤트/데이터 설정으로 이어질 제품 이름과 주요 지표 목록을 보여준 후 사용자가 수정할 사항이 있는지 묻습니다.
 
-If `STRATEGY.md` does not exist, note that explicitly in chat: no strategy doc on file, running setup from scratch, and mention that `ce-strategy` can seed pulse later if run first.
+`STRATEGY.md`가 존재하지 않으면 채팅에 이를 명시합니다: 전략 문서가 없으므로 처음부터 설정을 진행하며, 나중에 `ce-strategy`를 먼저 실행하면 펄스에 초기값을 제공할 수 있다고 안내합니다.
 
-#### 1.1 Interview
+#### 1.1 인터뷰
 
-Read `references/interview.md`. This load is non-optional - the pushback rules, anti-pattern examples, and metric-to-source mapping logic live there.
+`references/interview.md`를 읽습니다. 이 파일의 로드는 필수입니다. 거절 규칙, 안티 패턴 사례 및 지표-소스 매핑 로직이 포함되어 있습니다.
 
-Run the interview in this order:
+인터뷰를 다음 순서로 진행합니다.
 
-1. Product name (confirm or edit the seeded value)
-2. Primary engagement event
-3. Value-realization event
-4. Completions or conversions (0-3)
-5. Quality scoring (opt-in, AI products only)
-6. Data sources - wire up connections for each agreed metric and event. Nudge toward MCP. Reject read-write database access. DB entirely optional.
-7. System performance - a short recommended setup for top errors and latency. Users rarely have strong opinions here; present defaults and accept.
-8. Default lookback window
+1. 제품 이름 (추출된 값 확인 또는 수정)
+2. 주요 참여 이벤트
+3. 가치 실현 이벤트
+4. 완료 또는 전환 (0~3개)
+5. 품질 스코어링 (AI 제품인 경우 선택 사항)
+6. 데이터 소스 - 합의된 각 지표와 이벤트에 대한 연결 구성. MCP 사용을 유도합니다. 읽기-쓰기 데이터베이스 액세스는 거부합니다. DB는 완전히 선택 사항입니다.
+7. 시스템 성능 - 상위 에러 및 대기 시간에 대해 권장되는 간단한 설정. 사용자는 보통 여기서 강한 의견이 없으므로 기본값을 제시하십시오.
 
-Apply the pushback rules in `references/interview.md` for each section. Treat every metric, event, and signal the user proposes against the **SMART bar** (specific, measurable, actionable, relevant, timely) spelled out in `references/interview.md` under "Overall Rules" - push back on anything vague, vanity, or unactionable.
+인터뷰가 완료되면 설정을 파일에 저장합니다.
 
-If the user offers read-write database access, refuse and offer the alternatives documented in `references/interview.md` section 6.
+#### 1.2 설정 저장
 
-Write the captured config to `<repo-root>/.compound-engineering/config.local.yaml` as flat `pulse_*` keys, using the schema in `references/interview.md` under "Config file shape". Resolve the repo root with `git rev-parse --show-toplevel`. To write: (1) if the file or directory does not exist, create `.compound-engineering/` and write the YAML file; (2) if the file exists, merge new keys into the existing YAML, preserving any non-pulse keys (e.g., `work_delegate_*`) untouched. If `.compound-engineering/config.local.yaml` is not already covered by the repo's `.gitignore`, offer to add the entry before writing. Show the resulting pulse block to the user in chat and offer one round of edits.
+인터뷰 결과를 `.compound-engineering/config.local.yaml`에 추가합니다. 파일이 없으면 생성합니다. 이 파일은 git에 의해 무시되어야 합니다.
 
-After the config is written, run the **scheduling recommendation** from `references/interview.md` section 9: offer to set up a recurring run so the user gets the pulse on a cadence instead of having to remember to run it. Accept yes/no/later. If yes, hand off to whichever scheduling primitive the current harness exposes — the in-plugin `schedule` skill if it is installed, otherwise note that scheduling is platform-specific (cron, GitHub Actions, the host's own automation) and emit a brief hint covering what would need to run. Do not schedule inline. Then proceed to Phase 2.
+```bash
+cat >> .compound-engineering/config.local.yaml <<EOF
+pulse_product_name: "Spiral"
+pulse_primary_event: "session_start"
+pulse_value_event: "content_generated"
+pulse_completion_events: "checkout_success,feedback_positive"
+pulse_quality_scoring: true
+pulse_quality_dimension: "helpfulness"
+pulse_analytics_source: "posthog"
+pulse_tracing_source: "sentry"
+pulse_metric_sources: "nps=delighted"
+pulse_excluded_metrics: "user_satisfaction"
+EOF
+```
 
-### Phase 2: Run the Pulse
+### Phase 2: 보고서 생성
 
-If Phase 1 ran (first run, or `setup`/`reconfigure` argument), re-read `.compound-engineering/config.local.yaml` from the repo root using the native file-read tool to pick up any edits accepted during the Phase 1 review step. Otherwise, use the `pulse_*` values already extracted in Phase 0. Apply hard defaults for any unset settings (see Phase 0 "Config keys").
+#### 2.1 데이터 소스 쿼리
 
-#### 2.1 Dispatch Queries
+Phase 0 또는 Phase 1에서 로드된 설정을 바탕으로 데이터 소스에 대해 필요한 모든 쿼리를 실행합니다.
 
-Run these in **parallel** (different tools, no shared load):
+윈도우 `[now - <lookback> - 15m, now - 15m]`를 사용합니다.
 
-- Product analytics query (primary event count, value-realization count, completions, conversion ratios) over the window
-- Application tracing query (error counts by category, latency distribution, top error signatures) over the window
-- Payments query, if configured (new customers, churn, revenue delta) over the window
+MCP 도구 및 기타 데이터 소스 커넥터를 호출합니다.
 
-Run these **serially**, after the parallel batch:
+#### 2.2 보고서 작성
 
-- Read-only database queries. One at a time. Tight, scoped queries only. Never full-table scans on large tables. If a DB query would be expensive, skip it and note "DB query skipped (estimated cost too high)".
+`docs/pulse-reports/YYYY-MM-DD-HHMMSS-pulse.md` 위치에 보고서를 작성합니다.
 
-#### 2.2 Optional: Sample Quality Scoring
+보고서 템플릿:
 
-If `pulse_quality_scoring` is `true` (AI products only), sample up to 10 sessions or conversations from the window and score each 1-5 on the dimension recorded in `pulse_quality_dimension`.
+```markdown
+# [Product Name] Pulse: [YYYY-MM-DD] ([Window])
 
-**Scoring discipline:** Default to 4 or 5 when the session looks normal. Reserve 1-3 for sessions with a clear failure mode (product gave wrong answer, user got stuck, error surfaced). If every session is scoring 3, the bar is too strict; if every session is scoring 5, the bar is too loose.
+## Engagement
+- [Primary Event]: [Count]
+- [Value Event]: [Count]
+- Conversion Rate: [Value Event / Primary Event %]
 
-**No PII in the score summary.** Capture a count distribution (e.g., "8x 5, 1x 4, 1x 2") and a short anonymized note on any session scored below 4. Do not include message content or user identifiers in the saved report.
+## Key Metrics (from STRATEGY.md)
+- [Metric 1]: [Value] ([Source])
+- [Metric 2]: [Value] ([Source])
+...
 
-#### 2.3 Assemble the Report
+## Success & Completions
+- [Completion Event 1]: [Count]
+- [Completion Event 2]: [Count]
 
-Read `references/report-template.md`. Fill in the template using the query results. Four sections, in order:
+## Quality (AI only)
+- [Quality Dimension]: [Avg Score] (1-5)
 
-1. **Headlines** - 2-3 lines summarizing the window
-2. **Usage** - primary engagement, value realization, completions, quality sample
-3. **System performance** - latency (p50/p95/p99) and top 5 errors by count with one-line explanation each
-4. **Followups** - 1-5 things worth investigating
+## System Performance
+- Top Errors: [List 1-3]
+- P95 Latency: [Value]
 
-Keep the total to 30-40 lines. If a section is thin, leave it thin; do not pad.
+## Observations & Signals
+- [Observation 1]
+- [Observation 2]
+```
 
-#### 2.4 Write the Report
+#### 2.3 요약 표시
 
-Save to `docs/pulse-reports/YYYY-MM-DD_HH-MM.md` using the local time of the run. Create `docs/pulse-reports/` if it does not exist.
+작성된 보고서의 요약 버전을 채팅에 표시합니다. 보고서의 전체 경로를 포함하여 사용자가 원본을 찾을 수 있게 합니다.
 
-Surface the Headlines and top Followup in chat. Provide the full file path so the user can open the saved report.
-
-### Phase 3: Routine Hook
-
-First-run setup already offered scheduling (see Phase 1.1 end). Phase 3 is a lighter re-surface for ad-hoc runs:
-
-- If the argument was a known schedule keyword (`daily`, `hourly`, `weekly`), note that this run is ad-hoc and suggest scheduling via the harness's available primitive (the in-plugin `schedule` skill where present; otherwise a platform-native option) for recurring runs.
-- If no schedule is on file and this is the third or later pulse run the user has done, mention once that scheduling is available. Don't nag on every run.
-
-Never schedule automatically. Any scheduling handoff requires explicit confirmation.
-
-## What This Skill Does Not Do
-
-- Does not report "what shipped." Shipped work lives in the issue tracker and commit history, not here. Pulse is strictly about user experience and system performance.
-- Does not set thresholds or alert the user. The reader interprets.
-- Does not persist PII in saved reports.
-- Does not mutate the database or any external system. All queries are read-only.
-- Does not replace tracing dashboards or analytics tools. It consolidates a single-page read; deep investigation still uses the native tools.
-
-## Learn More
-
-The "read like a founder" posture and the single-page constraint are deliberate. Dashboards with 40 metrics produce attention sprawl; one page with the right four sections forces the reader to notice what matters. The saved-reports folder is designed to be a team's working memory, not a data warehouse - past pulses are grepable, diffable, and disposable.
+보고서 작성이 완료되면 스킬을 종료합니다.

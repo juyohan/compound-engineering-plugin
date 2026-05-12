@@ -1,127 +1,127 @@
-# Handoff
+# 핸드오프 (Handoff)
 
-This content is loaded when Phase 4 begins — after the requirements document is written.
+요구사항 문서(requirements document) 작성이 완료된 후 Phase 4가 시작될 때 이 파일이 로드됩니다.
 
 ---
 
-#### 4.1 Present Next-Step Options
+#### 4.1 다음 단계 옵션 제시 (Present Next-Step Options)
 
-The Phase 4 menu's visible option count varies by state: no requirements doc hides the review and Proof options, unresolved `Resolve Before Planning` hides `Plan implementation` and `Build it now`, a failing direct-to-work gate hides `Build it now`. Count the visible options for the current state and choose the rendering mode accordingly:
+Phase 4 메뉴에 표시되는 옵션 수는 상태에 따라 달라집니다: 요구사항 문서가 없으면 리뷰 및 Proof 옵션이 숨겨지고, '기획 전 해결 사항(Resolve Before Planning)'이 남아 있으면 '구현 계획 수립(Plan implementation)' 및 '지금 바로 구축(Build it now)'이 숨겨지며, '작업 직행 게이트(direct-to-work gate)'를 통과하지 못하면 '지금 바로 구축'이 숨겨집니다. 현재 상태에서 표시되는 옵션 수를 계산하고 그에 맞는 렌더링 모드를 선택하십시오:
 
-- **4 or fewer visible:** use the platform's blocking question tool (`AskUserQuestion` in Claude Code — call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded; `request_user_input` in Codex; `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension)). This is the default.
-- **5 or more visible:** render as a numbered list in chat. This is the narrow option-overflow fallback; trimming would hide legitimate choices (plan, review, Proof, build, refine, pause are all distinct destinations). Include a hint that free-form input is accepted ("Pick a number or describe what you want.") so the numbered list retains the blocking tool's open-endedness.
+- **표시 옵션이 4개 이하인 경우:** 플랫폼의 차단형 질문 도구(Claude Code의 `AskUserQuestion` — 스키마가 로드되지 않은 경우 `ToolSearch`를 `select:AskUserQuestion`으로 먼저 호출; Codex의 `request_user_input`; Gemini의 `ask_user`; Pi의 `ask_user` (`pi-ask-user` 확장 프로그램 필요))를 사용하십시오. 이것이 기본값입니다.
+- **표시 옵션이 5개 이상인 경우:** 채팅창에 숫자가 매겨진 목록으로 렌더링하십시오. 이는 옵션이 너무 많을 때의 차선책입니다. 항목을 임의로 줄이면 정당한 선택지(계획, 리뷰, Proof, 구축, 정교화, 일시 중지 등은 모두 고유한 목적지임)를 가릴 수 있기 때문입니다. 숫자가 매겨진 목록 모드에서도 차단형 도구의 개방형 특성을 유지할 수 있도록, 자유 형식의 입력이 가능하다는 힌트("번호를 선택하거나 원하는 작업을 설명해 주세요.")를 포함하십시오.
 
-Never silently skip the question.
+질문을 임의로 생략하지 마십시오.
 
-If `Resolve Before Planning` contains any items:
-- Ask the blocking questions now, one at a time, by default
-- If the user explicitly wants to proceed anyway, first convert each remaining item into an explicit decision, assumption, or `Deferred to Planning` question
-- If the user chooses to pause instead, present the handoff as paused or blocked rather than complete
-- Do not offer the `Plan implementation` or `Build it now` options while `Resolve Before Planning` remains non-empty
+'기획 전 해결 사항(Resolve Before Planning)'에 항목이 남아 있는 경우:
+- 기본적으로 차단형 질문을 한 번에 하나씩 던지십시오.
+- 사용자가 그럼에도 진행하기를 명시적으로 원하는 경우, 남은 각 항목을 명시적인 결정 사항, 가정, 또는 '기획 단계로 이월(Deferred to Planning)' 질문으로 전환하십시오.
+- 사용자가 대신 일시 중지를 선택하는 경우, 핸드오프 상태를 '완료'가 아닌 '일시 중지' 또는 '차단됨'으로 제시하십시오.
+- '기획 전 해결 사항'이 비어 있지 않은 동안에는 '구현 계획 수립' 또는 '지금 바로 구축' 옵션을 제안하지 마십시오.
 
-In both preambles below, the "Pick a number or describe what you want." hint applies only in numbered-list mode. When using the blocking tool, omit that line and pass the remaining stem as the question.
+아래의 두 서문(preamble)에서 "번호를 선택하거나 원하는 작업을 설명해 주세요." 힌트는 숫자가 매겨진 목록 모드에서만 적용됩니다. 차단형 도구를 사용하는 경우에는 해당 줄을 생략하고 나머지 핵심 질문만 전달하십시오.
 
-**Path format:** Use absolute paths for chat-output file references — relative paths are not auto-linked as clickable in most terminals.
+**경로 형식:** 채팅 출력의 파일 참조에는 절대 경로를 사용하십시오 — 대부분의 터미널에서 상대 경로는 클릭 가능한 링크로 자동 변환되지 않습니다.
 
-**Preamble when no blocking questions remain:**
-
-```
-Brainstorm complete.
-
-Requirements doc: <absolute path to requirements doc>  # omit line if no doc was created
-
-What would you like to do next? (Pick a number or describe what you want.)
-```
-
-**Preamble when blocking questions remain and user wants to pause:**
+**남은 차단형 질문이 없을 때의 서문:**
 
 ```
-Brainstorm paused. Planning is blocked until the remaining questions are resolved.
+브레인스토밍이 완료되었습니다.
 
-Requirements doc: <absolute path to requirements doc>  # omit line if no doc was created
+요구사항 문서: <요구사항 문서의 절대 경로>  # 문서가 생성되지 않은 경우 생략
 
-What would you like to do next? (Pick a number or describe what you want.)
+다음에 무엇을 하시겠습니까? (번호를 선택하거나 원하는 작업을 설명해 주세요.)
 ```
 
-Present only the options that apply. Renumber so visible options stay contiguous starting at 1.
+**차단형 질문이 남아 있고 사용자가 일시 중지를 원하는 경우의 서문:**
 
-1. **Plan implementation with `ce-plan` (Recommended)** - Move to `ce-plan` for structured implementation planning. Shown only when `Resolve Before Planning` is empty.
-2. **Agent review of requirements doc with `ce-doc-review`** - Dispatch reviewer agents to check the doc for coherence, feasibility, scope, and other persona-specific issues; auto-apply safe fixes; route remaining findings interactively. Shown only when a requirements document exists.
-3. **Open in Proof — review and comment to iterate with the agent** - Open the doc in Every's Proof editor, iterate with the agent via comments, or copy a link to share with others. Shown only when a requirements document exists.
-4. **Build it now with `ce-work` (skip planning)** - Skip planning and move to `ce-work`; suited to lightweight, well-defined changes. Shown only when `Resolve Before Planning` is empty **and** scope is lightweight, success criteria are clear, scope boundaries are clear, and no meaningful technical or research questions remain (the "direct-to-work gate").
-5. **More clarifying questions to sharpen the doc** - Keep refining scope, edge cases, constraints, and preferences through further dialogue. Always shown.
-6. **Done for now** - Pause; the requirements doc is saved and can be resumed later. Always shown.
+```
+브레인스토밍이 일시 중지되었습니다. 남은 질문들이 해결될 때까지 계획 수립 단계가 차단됩니다.
 
-**Post-review nudge (subsequent rounds only):** If the user has already run `ce-doc-review` this session and residual P0/P1 findings remain unaddressed, add a one-line prose nudge adjacent to the menu (e.g., "Document review flagged 2 P1 findings you may want to address — pick \"Agent review of requirements doc\" to run another pass."). Reference the option by label, not number: the menu renumbers when `Resolve Before Planning` hides `Plan implementation` and `Build it now`, so a hardcoded option number can point users at the wrong action. Do not add a separate menu option; reuse the existing agent-review option.
+요구사항 문서: <요구사항 문서의 절대 경로>  # 문서가 생성되지 않은 경우 생략
 
-#### 4.2 Handle the Selected Option
+다음에 무엇을 하시겠습니까? (번호를 선택하거나 원하는 작업을 설명해 주세요.)
+```
 
-Selections may be the literal option label (when the user types the label or a close paraphrase) or the option number. Match numbers against the currently-rendered (post-trim) list. Free-form input that doesn't match an option or describe an alternative action should be treated as clarification — ask a follow-up rather than guessing.
+해당되는 옵션만 제시하십시오. 표시되는 옵션이 1번부터 연속되도록 번호를 다시 매기십시오.
 
-**If user selects "Plan implementation with `ce-plan` (Recommended)":**
+1. **`ce-plan`으로 구현 계획 수립 (권장)** - 구조화된 구현 계획 수립을 위해 `ce-plan`으로 이동합니다. '기획 전 해결 사항'이 비어 있을 때만 표시됩니다.
+2. **`ce-doc-review`로 요구사항 문서 검토** - 리뷰어 에이전트를 파견하여 문서의 일관성, 실현 가능성, 범위 및 페르소나별 이슈를 점검합니다. 안전한 수정사항은 자동 적용하고, 남은 발견 사항은 대화형으로 처리합니다. 요구사항 문서가 존재할 때만 표시됩니다.
+3. **Proof에서 열기 — 에이전트와 함께 리뷰 및 주석 달기** - Every의 Proof 에디터에서 문서를 열고 에이전트와 댓글로 소통하며 반복 작업하거나, 공유용 링크를 복사합니다. 요구사항 문서가 존재할 때만 표시됩니다.
+4. **`ce-work`로 지금 바로 구축 (계획 단계 건너뛰기)** - 계획 수립을 건너뛰고 바로 `ce-work`로 이동합니다. 가볍고 명확하게 정의된 변경 작업에 적합합니다. '기획 전 해결 사항'이 비어 있고, **동시에** 범위가 가볍고 성공 기준과 범위 경계가 명확하며 기술적 또는 연구적 의문이 남아 있지 않은 경우('작업 직행 게이트' 통과 시)에만 표시됩니다.
+5. **문서를 정교화하기 위한 추가 질문** - 대화를 통해 범위, 예외 상황, 제약 조건 및 선호 사항을 계속해서 다듬습니다. 항상 표시됩니다.
+6. **지금은 여기까지** - 작업을 일시 중지합니다. 요구사항 문서는 저장되며 나중에 다시 이어서 진행할 수 있습니다. 항상 표시됩니다.
 
-Immediately load the `ce-plan` skill in the current session. Pass the requirements document path when one exists; otherwise pass a concise summary of the finalized brainstorm decisions. Do not print the closing summary first.
+**리뷰 후 넛지 (2회차 이후 실행 시에만 해당):** 사용자가 이번 세션에서 이미 `ce-doc-review`를 실행했고 해결되지 않은 P0/P1 발견 사항이 남아 있는 경우, 메뉴 근처에 한 줄의 안내 문구를 추가하십시오 (예: "문서 리뷰에서 해결이 권장되는 P1 항목 2개가 발견되었습니다 — '요구사항 문서 검토'를 선택하여 다시 실행해 보세요."). 옵션을 번호가 아닌 이름으로 참조하십시오. '기획 전 해결 사항' 여부에 따라 메뉴 번호가 바뀔 수 있으므로, 하드코딩된 번호는 사용자를 잘못된 동작으로 안내할 수 있습니다. 별도의 메뉴 옵션을 추가하지 말고 기존의 에이전트 리뷰 옵션을 재사용하십시오.
 
-**If user selects "Agent review of requirements doc with `ce-doc-review`":**
+#### 4.2 선택된 옵션 처리 (Handle the Selected Option)
 
-Load the `ce-doc-review` skill, passing the requirements document path as the argument. When ce-doc-review returns "Review complete", return to the Phase 4 options and re-render the menu (the doc may have changed, so re-evaluate `Resolve Before Planning`, direct-to-work gate, and residual findings). If residual P0/P1 findings remain unaddressed, include the post-review nudge above the menu. Do not show the closing summary yet.
+선택 사항은 옵션 이름 그대로일 수도 있고(사용자가 타이핑하거나 비슷하게 표현한 경우), 옵션 번호일 수도 있습니다. 번호는 현재 렌더링된(필터링 후의) 목록과 대조하십시오. 옵션과 일치하지 않거나 다른 명확한 동작을 설명하지 않는 자유 형식 입력은 '설명 요청'으로 간주하고, 추측하기보다는 후속 질문을 던지십시오.
 
-**If user selects "Build it now with `ce-work` (skip planning)":**
+**사용자가 "`ce-plan`으로 구현 계획 수립 (권장)"을 선택한 경우:**
 
-Immediately load the `ce-work` skill in the current session using the finalized brainstorm output as context. If a compact requirements document exists, pass its path. Do not print the closing summary first.
+현재 세션에서 즉시 `ce-plan` 스킬을 로드하십시오. 요구사항 문서가 있으면 해당 경로를 전달하고, 없으면 확정된 브레인스토밍 결정 사항의 간결한 요약을 전달하십시오. 종료 요약(closing summary)을 먼저 출력하지 마십시오.
 
-**If user selects "More clarifying questions to sharpen the doc":** Return to Phase 1.3 (Collaborative Dialogue) and continue asking the user clarifying questions one at a time to further refine scope, edge cases, constraints, and preferences. Continue until the user is satisfied, then return to Phase 4. Do not show the closing summary yet.
+**사용자가 "`ce-doc-review`로 요구사항 문서 검토"를 선택한 경우:**
 
-**If user selects "Open in Proof — review and comment to iterate with the agent":**
+요구사항 문서 경로를 인자로 전달하여 `ce-doc-review` 스킬을 로드하십시오. `ce-doc-review`가 "리뷰 완료"를 반환하면 Phase 4 옵션으로 돌아와 메뉴를 다시 렌더링하십시오 (문서가 변경되었을 수 있으므로 '기획 전 해결 사항', 작업 직행 게이트, 잔여 발견 사항 등을 재평가해야 함). 해결되지 않은 P0/P1 발견 사항이 남아 있다면 메뉴 상단에 리뷰 후 넛지를 포함하십시오. 아직 종료 요약을 보여주지 마십시오.
 
-Load the `ce-proof` skill in HITL-review mode with:
+**사용자가 "`ce-work`로 지금 바로 구축 (계획 단계 건너뛰기)"를 선택한 경우:**
 
-- **source file:** `docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md`
-- **doc title:** `Requirements: <topic title>`
+확정된 브레인스토밍 결과물을 컨텍스트로 사용하여 현재 세션에서 즉시 `ce-work` 스킬을 로드하십시오. 요약된 요구사항 문서가 있다면 해당 경로를 전달하십시오. 종료 요약을 먼저 출력하지 마십시오.
+
+**사용자가 "문서를 정교화하기 위한 추가 질문"을 선택한 경우:** Phase 1.3 (협력적 대화)으로 돌아가 범위, 예외 상황, 제약 조건 및 선호 사항을 더 다듬기 위해 질문을 하나씩 계속 던지십시오. 사용자가 만족할 때까지 계속한 다음 Phase 4로 돌아오십시오. 아직 종료 요약을 보여주지 마십시오.
+
+**사용자가 "Proof에서 열기 — 에이전트와 함께 리뷰 및 주석 달기"를 선택한 경우:**
+
+다음과 같이 HITL-review 모드로 `ce-proof` 스킬을 로드하십시오:
+
+- **source file:** `docs/brainstorms/YYYY/MM/DD-<topic>-requirements.md`
+- **doc title:** `Requirements: <주제 제목>`
 - **identity:** `ai:compound-engineering` / `Compound Engineering`
-- **recommended next step:** `ce-plan` (shown in the ce-proof skill's final terminal output)
+- **추천 다음 단계:** `ce-plan` (`ce-proof` 스킬의 최종 터미널 출력에 표시됨)
 
-Follow `references/hitl-review.md` in the ce-proof skill. It uploads the doc, prompts the user for review in Proof's web UI, ingests each thread by reading it fresh and replying in-thread, applies agreed edits as tracked suggestions, and syncs the final markdown back to the source file atomically on proceed.
+`ce-proof` 스킬의 `references/hitl-review.md`를 따르십시오. 문서를 업로드하고, 사용자가 Proof 웹 UI에서 리뷰하도록 안내하며, 각 스레드를 읽고 답글을 달아 에이전트가 개입합니다. 합의된 편집 사항을 추적된 제안(tracked suggestions)으로 적용하고, 진행 시 최종 마크다운을 원본 파일에 원자적으로 동기화합니다.
 
-When the ce-proof skill returns control:
+`ce-proof` 스킬이 제어권을 반환할 때:
 
-- `status: proceeded` with `localSynced: true` → the requirements doc on disk now reflects the review. Return to the Phase 4 options and re-render the menu (the doc may have changed substantially during review, so option eligibility can shift — re-evaluate `Resolve Before Planning`, direct-to-work gate, and residual ce-doc-review findings against the updated doc).
-- `status: proceeded` with `localSynced: false` → the reviewed version lives in Proof at `docUrl` but the local copy is stale. Offer to pull the Proof doc to `localPath` using the ce-proof skill's Pull workflow. Re-render the Phase 4 menu after the pull completes (or is declined). If the pull was declined, include a one-line note above the menu that `<localPath>` is stale vs. Proof — otherwise `Plan implementation` / `Build it now` / `Agent review of requirements doc` will silently read the pre-review copy (ce-doc-review would analyze stale content, and planning or work would skip the user's Proof edits).
-- `status: done_for_now` → the doc on disk may be stale if the user edited in Proof before leaving. Offer to pull the Proof doc to `localPath` so the local requirements file stays in sync, then return to the Phase 4 options. If the pull was declined, include the stale-local note above the menu. `done_for_now` means the user stopped the HITL loop without syncing — it does not mean they ended the whole brainstorm; they may still want to plan implementation, run an agent review, or keep refining the doc.
-- `status: aborted` → fall back to the Phase 4 options without changes.
+- `status: proceeded` 및 `localSynced: true` → 디스크의 요구사항 문서가 리뷰 내용을 반영합니다. Phase 4 옵션으로 돌아가 메뉴를 다시 렌더링하십시오 (리뷰 중 문서가 크게 변했을 수 있으므로 '기획 전 해결 사항', 작업 직행 게이트, 잔여 `ce-doc-review` 발견 사항 등의 적격성을 업데이트된 문서 기준으로 다시 평가하십시오).
+- `status: proceeded` 및 `localSynced: false` → 리뷰된 버전이 Proof의 `docUrl`에 있지만 로컬 복사본은 최신이 아닙니다. `ce-proof` 스킬의 Pull 워크플로우를 사용하여 Proof 문서를 `localPath`로 가져올 것을 제안하십시오. Pull이 완료(또는 거절)된 후 Phase 4 메뉴를 다시 렌더링하십시오. Pull이 거부된 경우, 메뉴 상단에 `<localPath>`가 Proof 대비 최신이 아니라는 한 줄 노트를 포함하십시오. 그렇지 않으면 `구현 계획 수립` / `지금 바로 구축` / `요구사항 문서 검토` 시에 리뷰 전의 로컬 복사본을 자동으로 읽게 됩니다 (이 경우 `ce-doc-review`는 오래된 콘텐츠를 분석하고, 계획이나 구축 단계에서는 사용자의 Proof 편집 사항이 무시됩니다).
+- `status: done_for_now` → 사용자가 나가기 전에 Proof에서 편집했다면 디스크의 파일이 최신이 아닐 수 있습니다. 로컬 요구사항 파일을 동기화 상태로 유지하기 위해 Proof 문서를 `localPath`로 가져올 것을 제안하고 Phase 4 옵션으로 돌아오십시오. Pull이 거부된 경우 메뉴 상단에 stale-local 노트를 포함하십시오. `done_for_now`는 사용자가 동기화 없이 HITL 루프를 멈췄음을 의미하며, 전체 브레인스토밍이 끝났음을 의미하지는 않습니다. 사용자는 여전히 계획 수립, 에이전트 리뷰, 또는 문서 정교화를 원할 수 있습니다.
+- `status: aborted` → 변경 사항 없이 Phase 4 옵션으로 돌아갑니다.
 
-If the initial upload fails (network error, Proof API down), retry once after a short wait. If it still fails, tell the user the upload didn't succeed and briefly explain why, then return to the Phase 4 options — don't leave them wondering why the option did nothing.
+최초 업로드 실패 시 (네트워크 에러, Proof API 장애 등) 짧게 대기한 후 한 번 재시도하십시오. 여전히 실패하면 사용자에게 업로드 실패 사실과 이유를 간략히 설명한 후 Phase 4 옵션으로 돌아오십시오 — 사용자가 옵션이 작동하지 않는 이유를 의아해하게 두지 마십시오.
 
-**If user selects "Done for now":** Display the closing summary (see 4.3) and end the turn.
+**사용자가 "지금은 여기까지"를 선택한 경우:** 종료 요약(4.3 참조)을 표시하고 턴을 종료하십시오.
 
-#### 4.3 Closing Summary
+#### 4.3 종료 요약 (Closing Summary)
 
-Use the closing summary only when this run of the workflow is ending or handing off, not when returning to the Phase 4 options.
+종료 요약은 워크플로우의 이번 실행이 종료되거나 다른 스킬로 전달될 때만 사용하며, Phase 4 옵션으로 다시 돌아갈 때는 사용하지 마십시오.
 
-When complete and ready for planning, display:
+완료되어 계획 수립 단계로 넘어갈 준비가 되었을 때 표시 내용:
 
 ```text
-Brainstorm complete!
+브레인스토밍이 완료되었습니다!
 
-Requirements doc: docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md  # if one was created
+요구사항 문서: docs/brainstorms/YYYY/MM/DD-<topic>-requirements.md  # 생성된 경우 표시
 
-Key decisions:
-- [Decision 1]
-- [Decision 2]
+주요 결정 사항:
+- [결정 사항 1]
+- [결정 사항 2]
 
-Recommended next step: `ce-plan`
+추천 다음 단계: `ce-plan`
 ```
 
-If the user pauses with `Resolve Before Planning` still populated, display:
+사용자가 '기획 전 해결 사항'이 남아 있는 상태에서 일시 중지할 때 표시 내용:
 
 ```text
-Brainstorm paused.
+브레인스토밍이 일시 중지되었습니다.
 
-Requirements doc: docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md  # if one was created
+요구사항 문서: docs/brainstorms/YYYY/MM/DD-<topic>-requirements.md  # 생성된 경우 표시
 
-Planning is blocked by:
-- [Blocking question 1]
-- [Blocking question 2]
+다음 질문들이 해결되어야 계획 수립이 가능합니다:
+- [해결이 필요한 질문 1]
+- [해결이 필요한 질문 2]
 
-Resume with `ce-brainstorm` when ready to resolve these before planning.
+계획 수립 전 이 문제들을 해결할 준비가 되면 `ce-brainstorm`으로 다시 시작해 주세요.
 ```

@@ -1,436 +1,453 @@
 ---
 name: ce-agent-native-architecture
-description: Build applications where agents are first-class citizens. Use this skill when designing autonomous agents, creating MCP tools, implementing self-modifying systems, or building apps where features are outcomes achieved by agents operating in a loop.
+description: 에이전트를 일급 시민으로 하는 애플리케이션을 구축합니다. 자율 에이전트 설계, MCP 도구 생성, 자기 수정 시스템 구현 또는 기능을 에이전트가 루프 내에서 수행한 결과물로 정의하는 앱을 빌드할 때 이 스킬을 사용합니다.
+allowed-tools:
+  - gem
 ---
 
 <why_now>
-## Why Now
+## 도입 배경
 
-Software agents work reliably now. Claude Code demonstrated that an LLM with access to bash and file tools, operating in a loop until an objective is achieved, can accomplish complex multi-step tasks autonomously.
+## 다중 에이전트 협업 (Multi-Agent Collaboration)
 
-The surprising discovery: **a really good coding agent is actually a really good general-purpose agent.** The same architecture that lets Claude Code refactor a codebase can let an agent organize your files, manage your reading list, or automate your workflows.
+사용자의 입력(`$ARGUMENTS`) 내에 `--add <ai-이름>` 형태의 플래그가 포함되어 있는지 확인하십시오. 
+현재 지원되는 외부 AI 인터페이스는 `--add gemini` (또는 `--add gem`)입니다.
 
-The Claude Code SDK makes this accessible. You can build applications where features aren't code you write—they're outcomes you describe, achieved by an agent with tools, operating in a loop until the outcome is reached.
+만약 해당 플래그가 감지되면, 작업을 단독으로 확정하지 말고 다음 절차를 따르십시오:
+1. **의도 파악:** 플래그를 제외한 나머지 문자열을 실제 지시사항으로 간주합니다.
+2. **초안 작성:** 본인(주 에이전트)의 지식과 코드베이스 컨텍스트를 바탕으로 작업의 초기 뼈대나 접근법을 생각합니다.
+3. **MCP 협업 호출:** `gem` 도구를 호출하여 외부 Gemini 에이전트에게 조언이나 검토를 구합니다.
+   - 호출 시 전달할 메시지 예시: "나는 현재 이 작업에 대한 초안을 세우고 있어. 내 초안은 [초안 요약]이야. 이 접근 방식의 기술적 타당성을 검토하고 누락된 에지 케이스나 더 나은 패턴을 조언해줄 수 있어?"
+4. **결과 통합:** `gem` 도구가 반환한 피드백을 당신의 최종 결과물에 통합(Synthesis)합니다. 
+5. **명시적 표시:** 최종 산출물의 상단 또는 설명 부분에 "이 결과물은 Gemini와의 협업을 통해 검토 및 보완되었습니다."라는 문구를 추가하십시오.
 
-This opens up a new field: software that works the way Claude Code works, applied to categories far beyond coding.
+이 협업 절차를 염두에 두고 아래의 본래 스킬 워크플로우를 진행하십시오.
+
+
+이제 소프트웨어 에이전트는 안정적으로 작동합니다. Claude Code는 bash 및 파일 도구에 접근할 수 있는 LLM이 목표를 달성할 때까지 루프 내에서 작동하며 복잡한 다단계 작업을 자율적으로 완수할 수 있음을 증명했습니다.
+
+놀라운 발견은 **정말 훌륭한 코딩 에이전트가 사실상 정말 훌륭한 범용 에이전트라는 점**입니다. Claude Code가 코드베이스를 리팩토링할 수 있게 해주는 동일한 아키텍처를 통해 에이전트가 파일을 정리하고, 읽기 목록을 관리하거나, 워크플로우를 자동화하도록 할 수 있습니다.
+
+Claude Code SDK는 이를 가능하게 합니다. 여러분은 기능을 직접 코드로 작성하는 대신, 도구를 가진 에이전트가 목표에 도달할 때까지 루프를 돌며 달성할 결과물을 설명하기만 하면 되는 애플리케이션을 구축할 수 있습니다.
+
+이는 코딩의 범위를 훨씬 넘어서는 다양한 카테고리에 적용되는, Claude Code의 작동 방식을 따르는 새로운 소프트웨어 분야를 열어줍니다.
 </why_now>
 
 <core_principles>
-## Core Principles
+## 핵심 원칙
 
-### 1. Parity
+### 1. 패리티 (Parity)
 
-**Whatever the user can do through the UI, the agent should be able to achieve through tools.**
+**사용자가 UI를 통해 할 수 있는 모든 것은 에이전트도 도구를 통해 달성할 수 있어야 합니다.**
 
-This is the foundational principle. Without it, nothing else matters.
+이것은 근본적인 원칙입니다. 이 원칙 없이는 다른 어떤 것도 의미가 없습니다.
 
-Imagine you build a notes app with a beautiful interface for creating, organizing, and tagging notes. A user asks the agent: "Create a note summarizing my meeting and tag it as urgent."
+메모를 생성, 정리, 태그 지정할 수 있는 아름다운 인터페이스를 갖춘 메모 앱을 만든다고 가정해 봅시다. 사용자가 에이전트에게 "회의 내용을 요약한 메모를 만들고 '긴급' 태그를 달아줘"라고 요청합니다.
 
-If you built UI for creating notes but no agent capability to do the same, the agent is stuck. It might apologize or ask clarifying questions, but it can't help—even though the action is trivial for a human using the interface.
+만약 메모 생성을 위한 UI는 만들었지만 에이전트가 동일한 작업을 수행할 수 있는 기능을 구축하지 않았다면, 에이전트는 아무것도 할 수 없습니다. 사과하거나 추가 질문을 할 수는 있겠지만, 사용자가 인터페이스를 사용하면 사소한 작업임에도 불구하고 에이전트는 도움을 줄 수 없습니다.
 
-**The fix:** Ensure the agent has tools (or combinations of tools) that can accomplish anything the UI can do.
+**해결책:** 에이전트가 UI가 할 수 있는 모든 것을 완수할 수 있는 도구(또는 도구의 조합)를 갖추도록 하십시오.
 
-This isn't about creating a 1:1 mapping of UI buttons to tools. It's about ensuring the agent can **achieve the same outcomes**. Sometimes that's a single tool (`create_note`). Sometimes it's composing primitives (`write_file` to a notes directory with proper formatting).
+이는 UI 버튼과 도구를 1:1로 매핑하라는 의미가 아닙니다. 에이전트가 **동일한 결과물을 달성**할 수 있도록 보장하는 것입니다. 때로는 그것이 단일 도구(`create_note`)일 수도 있고, 때로는 원자적 프리미티브(적절한 형식을 갖춰 메모 디렉토리에 `write_file` 수행)를 조합하는 방식일 수도 있습니다.
 
-**The discipline:** When adding any UI capability, ask: can the agent achieve this outcome? If not, add the necessary tools or primitives.
+**규율:** UI 기능을 추가할 때마다 "에이전트가 이 결과물을 달성할 수 있는가?"라고 자문해 보십시오. 그렇지 않다면 필요한 도구나 프리미티브를 추가하십시오.
 
-A capability map helps:
+역량 맵(Capability map)이 도움이 됩니다:
 
-| User Action | How Agent Achieves It |
+| 사용자 작업 | 에이전트 달성 방법 |
 |-------------|----------------------|
-| Create a note | `write_file` to notes directory, or `create_note` tool |
-| Tag a note as urgent | `update_file` metadata, or `tag_note` tool |
-| Search notes | `search_files` or `search_notes` tool |
-| Delete a note | `delete_file` or `delete_note` tool |
+| 메모 생성 | 메모 디렉토리에 `write_file` 또는 `create_note` 도구 사용 |
+| 메모에 긴급 태그 지정 | 메타데이터 `update_file` 또는 `tag_note` 도구 사용 |
+| 메모 검색 | `search_files` 또는 `search_notes` 도구 사용 |
+| 메모 삭제 | `delete_file` 또는 `delete_note` 도구 사용 |
 
-**The test:** Pick any action a user can take in your UI. Describe it to the agent. Can it accomplish the outcome?
+**테스트:** UI에서 사용자가 취할 수 있는 아무 작업이나 선택하십시오. 에이전트에게 이를 설명해 보십시오. 에이전트가 결과물을 완수할 수 있습니까?
 
 ---
 
-### 2. Granularity
+### 2. 세분성 (Granularity)
 
-**Prefer atomic primitives. Features are outcomes achieved by an agent operating in a loop.**
+**원자적 프리미티브를 선호하십시오. 기능은 루프에서 작동하는 에이전트가 달성한 결과물입니다.**
 
-A tool is a primitive capability: read a file, write a file, run a bash command, store a record, send a notification.
+도구는 파일 읽기, 파일 쓰기, bash 명령 실행, 레코드 저장, 알림 전송과 같은 원자적인 역량입니다.
 
-A **feature** is not a function you write. It's an outcome you describe in a prompt, achieved by an agent that has tools and operates in a loop until the outcome is reached.
+**기능(Feature)**은 여러분이 작성하는 함수가 아닙니다. 그것은 프롬프트에서 설명하는 결과물이며, 도구를 가지고 결과에 도달할 때까지 루프에서 작동하는 에이전트에 의해 달성됩니다.
 
-**Less granular (limits the agent):**
+**덜 세분화된 경우 (에이전트를 제한함):**
 ```
 Tool: classify_and_organize_files(files)
-→ You wrote the decision logic
-→ Agent executes your code
-→ To change behavior, you refactor
+→ 여러분이 결정 로직을 작성함
+→ 에이전트는 단지 여러분의 코드를 실행함
+→ 동작을 변경하려면 코드를 리팩토링해야 함
 ```
 
-**More granular (empowers the agent):**
+**더 세분화된 경우 (에이전트에게 권한을 부여함):**
 ```
 Tools: read_file, write_file, move_file, list_directory, bash
-Prompt: "Organize the user's downloads folder. Analyze each file,
-        determine appropriate locations based on content and recency,
-        and move them there."
-Agent: Operates in a loop—reads files, makes judgments, moves things,
-       checks results—until the folder is organized.
-→ Agent makes the decisions
-→ To change behavior, you edit the prompt
+Prompt: "사용자의 다운로드 폴더를 정리해줘. 각 파일을 분석하고, 
+        내용과 최신성을 바탕으로 적절한 위치를 결정한 뒤, 
+        그곳으로 이동시켜줘."
+Agent: 파일을 읽고, 판단하고, 이동시키고, 결과를 확인하며 
+       폴더가 정리될 때까지 루프 내에서 작동함.
+→ 에이전트가 판단을 내림
+→ 동작을 변경하려면 프롬프트를 수정함
 ```
 
-**The key shift:** The agent is pursuing an outcome with judgment, not executing a choreographed sequence. It might encounter unexpected file types, adjust its approach, or ask clarifying questions. The loop continues until the outcome is achieved.
+**핵심적인 변화:** 에이전트는 정해진 순서를 실행하는 것이 아니라 판단력을 가지고 결과물을 추구합니다. 예상치 못한 파일 형식을 마주하면 접근 방식을 조정하거나 명확히 하기 위한 질문을 던질 수도 있습니다. 루프는 결과가 달성될 때까지 계속됩니다.
 
-The more atomic your tools, the more flexibly the agent can use them. If you bundle decision logic into tools, you've moved judgment back into code.
+도구가 원자적일수록 에이전트는 더 유연하게 도구를 사용할 수 있습니다. 결정 로직을 도구 안에 묶어버리면 판단의 주체가 다시 코드로 돌아가게 됩니다.
 
-**The test:** To change how a feature behaves, do you edit prose or refactor code?
+**테스트:** 기능의 동작 방식을 변경하기 위해 산문(프롬프트)을 수정합니까, 아니면 코드를 리팩토링합니까?
 
 ---
 
-### 3. Composability
+### 3. 조합성 (Composability)
 
-**With atomic tools and parity, you can create new features just by writing new prompts.**
+**원자적 도구와 패리티가 확보되면, 새로운 프롬프트를 작성하는 것만으로 새로운 기능을 만들 수 있습니다.**
 
-This is the payoff of the first two principles. When your tools are atomic and the agent can do anything users can do, new features are just new prompts.
+이는 앞선 두 원칙의 보상입니다. 도구가 원자적이고 에이전트가 사용자와 동일한 작업을 수행할 수 있을 때, 새로운 기능은 단지 새로운 프롬프트일 뿐입니다.
 
-Want a "weekly review" feature that summarizes activity and suggests priorities? That's a prompt:
+활동을 요약하고 우선순위를 제안하는 "주간 검토" 기능을 원하시나요? 그것은 다음과 같은 프롬프트가 됩니다.
 
 ```
-"Review files modified this week. Summarize key changes. Based on
-incomplete items and approaching deadlines, suggest three priorities
-for next week."
+"이번 주에 수정된 파일들을 검토해줘. 주요 변경 사항을 요약해줘. 
+완료되지 않은 항목과 다가오는 마감일을 기준으로 다음 주를 위한 
+세 가지 우선순위를 제안해줘."
 ```
 
-The agent uses `list_files`, `read_file`, and its judgment to accomplish this. You didn't write weekly-review code. You described an outcome, and the agent operates in a loop until it's achieved.
+에이전트는 `list_files`, `read_file` 그리고 자신의 판단력을 사용하여 이를 완수합니다. 여러분은 주간 검토 코드를 작성하지 않았습니다. 결과물을 설명했고, 에이전트는 결과가 달성될 때까지 루프 내에서 작동합니다.
 
-**This works for developers and users.** You can ship new features by adding prompts. Users can customize behavior by modifying prompts or creating their own. "When I say 'file this,' always move it to my Action folder and tag it urgent" becomes a user-level prompt that extends the application.
+**이는 개발자와 사용자 모두에게 유효합니다.** 개발자는 프롬프트를 추가함으로써 새로운 기능을 출시할 수 있습니다. 사용자는 프롬프트를 수정하거나 자신만의 프롬프트를 만들어 동작을 커스터마이징할 수 있습니다. "'이거 정리해'라고 말하면 항상 내 Action 폴더로 이동시키고 긴급 태그를 달아줘"라는 요청은 애플리케이션을 확장하는 사용자 수준의 프롬프트가 됩니다.
 
-**The constraint:** This only works if tools are atomic enough to be composed in ways you didn't anticipate, and if the agent has parity with users. If tools encode too much logic, or the agent can't access key capabilities, composition breaks down.
+**제약 사항:** 이는 도구가 예상치 못한 방식으로 조합될 수 있을 만큼 충분히 원자적이고, 에이전트가 사용자와 대등한 권한(패리티)을 가질 때만 작동합니다. 도구가 너무 많은 로직을 포함하거나 에이전트가 핵심 기능에 접근할 수 없다면 조합성은 깨집니다.
 
-**The test:** Can you add a new feature by writing a new prompt section, without adding new code?
+**테스트:** 새로운 코드를 추가하지 않고 새로운 프롬프트 섹션을 작성하는 것만으로 새로운 기능을 추가할 수 있습니까?
 
 ---
 
-### 4. Emergent Capability
+### 4. 창발적 역량 (Emergent Capability)
 
-**The agent can accomplish things you didn't explicitly design for.**
+**에이전트는 여러분이 명시적으로 설계하지 않은 일도 완수할 수 있습니다.**
 
-When tools are atomic, parity is maintained, and prompts are composable, users will ask the agent for things you never anticipated. And often, the agent can figure it out.
+도구가 원자적이고 패리티가 유지되며 프롬프트가 조합 가능할 때, 사용자는 여러분이 전혀 예상하지 못한 것을 에이전트에게 요청할 것입니다. 그리고 종종 에이전트는 이를 스스로 알아냅니다.
 
-*"Cross-reference my meeting notes with my task list and tell me what I've committed to but haven't scheduled."*
+*"내 회의록과 할 일 목록을 교차 참조해서, 내가 약속했지만 아직 일정을 잡지 않은 일이 무엇인지 알려줘."*
 
-You didn't build a "commitment tracker" feature. But if the agent can read notes, read tasks, and reason about them—operating in a loop until it has an answer—it can accomplish this.
+여러분은 "약속 추적기" 기능을 빌드하지 않았습니다. 하지만 에이전트가 메모를 읽고, 할 일을 읽고, 그것들에 대해 추론할 수 있다면(답을 얻을 때까지 루프 내에서 작동한다면) 이를 달성할 수 있습니다.
 
-**This reveals latent demand.** Instead of guessing what features users want, you observe what they're asking the agent to do. When patterns emerge, you can optimize them with domain-specific tools or dedicated prompts. But you didn't have to anticipate them—you discovered them.
+**이는 잠재적 수요를 드러냅니다.** 사용자가 어떤 기능을 원하는지 추측하는 대신, 그들이 에이전트에게 무엇을 요청하는지 관찰하십시오. 패턴이 나타나면 도메인별 도구나 전용 프롬프트로 이를 최적화할 수 있습니다. 하지만 여러분은 이를 미리 예상할 필요가 없었습니다. 발견한 것입니다.
 
-**The flywheel:**
-1. Build with atomic tools and parity
-2. Users ask for things you didn't anticipate
-3. Agent composes tools to accomplish them (or fails, revealing a gap)
-4. You observe patterns in what's being requested
-5. Add domain tools or prompts to make common patterns efficient
-6. Repeat
+**플라이휠(Flywheel):**
+1. 원자적 도구와 패리티를 바탕으로 구축
+2. 사용자가 예상치 못한 요청을 함
+3. 에이전트가 도구를 조합하여 완수함 (또는 실패하여 격차를 드러냄)
+4. 요청되는 내용의 패턴을 관찰함
+5. 공통 패턴을 효율적으로 만들기 위해 도메인 도구나 프롬프트를 추가함
+6. 반복
 
-This changes how you build products. You're not trying to imagine every feature upfront. You're creating a capable foundation and learning from what emerges.
+이는 제품을 만드는 방식을 바꿉니다. 모든 기능을 미리 상상하려고 노력하는 대신, 유능한 토대를 만들고 그 위에서 무엇이 나타나는지 배웁니다.
 
-**The test:** Give the agent an open-ended request relevant to your domain. Can it figure out a reasonable approach, operating in a loop until it succeeds? If it just says "I don't have a feature for that," your architecture is too constrained.
+**테스트:** 에이전트에게 해당 도메인과 관련된 개방형 요청을 해보십시오. 에이전트가 성공할 때까지 루프에서 작동하며 합리적인 접근 방식을 찾아낼 수 있습니까? 만약 단지 "그에 대한 기능이 없습니다"라고 말한다면, 여러분의 아키텍처는 너무 제약되어 있는 것입니다.
 
 ---
 
-### 5. Improvement Over Time
+### 5. 시간에 따른 개선
 
-**Agent-native applications get better through accumulated context and prompt refinement.**
+**에이전트 네이티브 애플리케이션은 축적된 컨텍스트와 프롬프트 개선을 통해 더 좋아집니다.**
 
-Unlike traditional software, agent-native applications can improve without shipping code:
+기존 소프트웨어와 달리, 에이전트 네이티브 애플리케이션은 코드를 출시하지 않고도 개선될 수 있습니다.
 
-**Accumulated context:** The agent can maintain state across sessions—what exists, what the user has done, what worked, what didn't. A `context.md` file the agent reads and updates is layer one. More sophisticated approaches involve structured memory and learned preferences.
+**축적된 컨텍스트:** 에이전트는 세션 전반에 걸쳐 상태(무엇이 존재하는지, 사용자가 무엇을 했는지, 무엇이 작동했고 무엇이 안 됐는지)를 유지할 수 있습니다. 에이전트가 읽고 업데이트하는 `context.md` 파일이 첫 번째 레이어입니다. 더 정교한 접근 방식은 구조화된 메모리와 학습된 선호도를 포함합니다.
 
-**Prompt refinement at multiple levels:**
-- **Developer level:** You ship updated prompts that change agent behavior for all users
-- **User level:** Users customize prompts for their workflow
-- **Agent level:** The agent modifies its own prompts based on feedback (advanced)
+**다양한 수준에서의 프롬프트 개선:**
+- **개발자 수준:** 모든 사용자를 위해 에이전트 동작을 변경하는 업데이트된 프롬프트를 출시합니다.
+- **사용자 수준:** 사용자가 자신의 워크플로우에 맞게 프롬프트를 커스터마이징합니다.
+- **에이전트 수준:** 에이전트가 피드백을 바탕으로 자신의 프롬프트를 수정합니다 (고급).
 
-**Self-modification (advanced):** Agents that can edit their own prompts or even their own code. For production use cases, consider adding safety rails—approval gates, automatic checkpoints for rollback, health checks. This is where things are heading.
+**자기 수정 (Advanced):** 자신의 프롬프트나 심지어 자신의 코드를 편집할 수 있는 에이전트입니다. 프로덕션 사용 사례의 경우 승인 게이트, 롤백을 위한 자동 체크포인트, 헬스 체크와 같은 안전장치를 추가하는 것을 고려하십시오. 이것이 미래의 방향입니다.
 
-The improvement mechanisms are still being discovered. Context and prompt refinement are proven. Self-modification is emerging. What's clear: the architecture supports getting better in ways traditional software doesn't.
+개선 메커니즘은 여전히 발견되고 있는 중입니다. 컨텍스트와 프롬프트 개선은 이미 입증되었습니다. 자기 수정은 이제 막 나타나고 있습니다. 분명한 것은 이 아키텍처가 기존 소프트웨어가 할 수 없는 방식으로 나아지는 것을 지원한다는 점입니다.
 
-**The test:** Does the application work better after a month of use than on day one, even without code changes?
+**테스트:** 코드 변경 없이도 한 달 사용 후의 애플리케이션이 첫날보다 더 잘 작동합니까?
 </core_principles>
 
 <intake>
-## What aspect of agent-native architecture do you need help with?
+## 에이전트 네이티브 아키텍처의 어떤 측면에 도움이 필요하십니까?
 
-1. **Design architecture** - Plan a new agent-native system from scratch
-2. **Files & workspace** - Use files as the universal interface, shared workspace patterns
-3. **Tool design** - Build primitive tools, dynamic capability discovery, CRUD completeness
-4. **Domain tools** - Know when to add domain tools vs stay with primitives
-5. **Execution patterns** - Completion signals, partial completion, context limits
-6. **System prompts** - Define agent behavior in prompts, judgment criteria
-7. **Context injection** - Inject runtime app state into agent prompts
-8. **Action parity** - Ensure agents can do everything users can do
-9. **Self-modification** - Enable agents to safely evolve themselves
-10. **Product design** - Progressive disclosure, latent demand, approval patterns
-11. **Mobile patterns** - iOS storage, background execution, checkpoint/resume
-12. **Testing** - Test agent-native apps for capability and parity
-13. **Refactoring** - Make existing code more agent-native
+1. **설계 아키텍처 (Design architecture)** - 새로운 에이전트 네이티브 시스템을 처음부터 계획
+2. **파일 및 워크스페이스 (Files & workspace)** - 범용 인터페이스로서의 파일 사용, 공유 워크스페이스 패턴
+3. **도구 설계 (Tool design)** - 프리미티브 도구 구축, 동적 역량 발견, CRUD 완결성
+4. **도메인 도구 (Domain tools)** - 도메인 도구를 추가할 시점과 프리미티브를 유지할 시점 판단
+5. **실행 패턴 (Execution patterns)** - 완료 신호, 부분 완료, 컨텍스트 제한
+6. **시스템 프롬프트 (System prompts)** - 프롬프트에서의 에이전트 행동 정의, 판단 기준
+7. **컨텍스트 주입 (Context injection)** - 런타임 앱 상태를 에이전트 프롬프트에 주입
+8. **작업 패리티 (Action parity)** - 에이전트가 사용자의 모든 작업을 수행할 수 있도록 보장
+9. **자기 수정 (Self-modification)** - 에이전트가 스스로 안전하게 진화할 수 있도록 허용
+10. **제품 설계 (Product design)** - 점진적 공개(Progressive disclosure), 잠재 수요, 승인 패턴
+11. **모바일 패턴 (Mobile patterns)** - iOS 저장소, 백그라운드 실행, 체크포인트/재개
+12. **테스트 (Testing)** - 에이전트 네이티브 앱의 역량 및 패리티 테스트
+13. **리팩토링 (Refactoring)** - 기존 코드를 더 에이전트 네이티브하게 개선
 
-**Wait for response before proceeding.**
+**진행하기 전에 답변을 기다리십시오.**
 </intake>
 
 <routing>
-| Response | Action |
+| 응답 | 작업 |
 |----------|--------|
-| 1, "design", "architecture", "plan" | Read `references/architecture-patterns.md`, then apply Architecture Checklist below |
-| 2, "files", "workspace", "filesystem" | Read `references/files-universal-interface.md` and `references/shared-workspace-architecture.md` |
-| 3, "tool", "mcp", "primitive", "crud" | Read `references/mcp-tool-design.md` |
-| 4, "domain tool", "when to add" | Read `references/from-primitives-to-domain-tools.md` |
-| 5, "execution", "completion", "loop" | Read `references/agent-execution-patterns.md` |
-| 6, "prompt", "system prompt", "behavior" | Read `references/system-prompt-design.md` |
-| 7, "context", "inject", "runtime", "dynamic" | Read `references/dynamic-context-injection.md` |
-| 8, "parity", "ui action", "capability map" | Read `references/action-parity-discipline.md` |
-| 9, "self-modify", "evolve", "git" | Read `references/self-modification.md` |
-| 10, "product", "progressive", "approval", "latent demand" | Read `references/product-implications.md` |
-| 11, "mobile", "ios", "android", "background", "checkpoint" | Read `references/mobile-patterns.md` |
-| 12, "test", "testing", "verify", "validate" | Read `references/agent-native-testing.md` |
-| 13, "review", "refactor", "existing" | Read `references/refactoring-to-prompt-native.md` |
+| 1, "설계", "아키텍처", "계획" | `references/architecture-patterns.md`를 읽고 아래의 아키텍처 체크리스트 적용 |
+| 2, "파일", "워크스페이스", "파일시스템" | `references/files-universal-interface.md` 및 `references/shared-workspace-architecture.md` 읽기 |
+| 3, "도구", "mcp", "프리미티브", "crud" | `references/mcp-tool-design.md` 읽기 |
+| 4, "도메인 도구", "추가 시점" | `references/from-primitives-to-domain-tools.md` 읽기 |
+| 5, "실행", "완료", "루프" | `references/agent-execution-patterns.md` 읽기 |
+| 6, "프롬프트", "시스템 프롬프트", "행동" | `references/system-prompt-design.md` 읽기 |
+| 7, "컨텍스트", "주입", "런타임", "동적" | `references/dynamic-context-injection.md` 읽기 |
+| 8, "패리티", "ui 작업", "역량 맵" | `references/action-parity-discipline.md` 읽기 |
+| 9, "자기 수정", "진화", "git" | `references/self-modification.md` 읽기 |
+| 10, "제품", "점진적", "승인", "잠재 수요" | `references/product-implications.md` 읽기 |
+| 11, "모바일", "ios", "안드로이드", "백그라운", "체크포인트" | `references/mobile-patterns.md` 읽기 |
+| 12, "테스트", "테스팅", "검증", "확인" | `references/agent-native-testing.md` 읽기 |
+| 13, "검토", "리팩토링", "기존" | `references/refactoring-to-prompt-native.md` 읽기 |
 
-**After reading the reference, apply those patterns to the user's specific context.**
+**참조 문서를 읽은 후, 해당 패턴을 사용자의 구체적인 컨텍스트에 적용하십시오.**
 </routing>
 
 <architecture_checklist>
-## Architecture Review Checklist
+## 아키텍처 리뷰 체크리스트
 
-When designing an agent-native system, verify these **before implementation**:
+에이전트 네이티브 시스템을 설계할 때, **구현 전에** 다음 사항을 확인하십시오.
 
-### Core Principles
-- [ ] **Parity:** Every UI action has a corresponding agent capability
-- [ ] **Granularity:** Tools are primitives; features are prompt-defined outcomes
-- [ ] **Composability:** New features can be added via prompts alone
-- [ ] **Emergent Capability:** Agent can handle open-ended requests in your domain
+### 핵심 원칙
+- [ ] **패리티 (Parity):** 모든 UI 작업에 대응하는 에이전트 역량이 있음
+- [ ] **세분성 (Granularity):** 도구는 프리미티브이며, 기능은 프롬프트로 정의된 결과물임
+- [ ] **조합성 (Composability):** 프롬프트만으로 새로운 기능을 추가할 수 있음
+- [ ] **창발적 역량 (Emergent Capability):** 에이전트가 해당 도메인의 개방형 요청을 처리할 수 있음
 
-### Tool Design
-- [ ] **Dynamic vs Static:** For external APIs where agent should have full access, use Dynamic Capability Discovery
-- [ ] **CRUD Completeness:** Every entity has create, read, update, AND delete
-- [ ] **Primitives not Workflows:** Tools enable capability, don't encode business logic
-- [ ] **API as Validator:** Use `z.string()` inputs when the API validates, not `z.enum()`
+### 도구 설계
+- [ ] **동적 vs 정적:** 에이전트가 전체 접근 권한을 가져야 하는 외부 API의 경우, 동적 역량 발견(Dynamic Capability Discovery)을 사용함
+- [ ] **CRUD 완결성:** 모든 엔티티에 대해 생성(Create), 읽기(Read), 업데이트(Update), 삭제(Delete) 기능이 있음
+- [ ] **워크플로우가 아닌 프리미티브:** 도구는 역량을 제공할 뿐 비즈니스 로직을 포함하지 않음
+- [ ] **검증자로서의 API:** API가 검증하는 경우 `z.enum()` 대신 `z.string()` 입력을 사용함
 
-### Files & Workspace
-- [ ] **Shared Workspace:** Agent and user work in same data space
-- [ ] **context.md Pattern:** Agent reads/updates context file for accumulated knowledge
-- [ ] **File Organization:** Entity-scoped directories with consistent naming
+### 파일 및 워크스페이스
+- [ ] **공유 워크스페이스:** 에이전트와 사용자가 동일한 데이터 공간에서 작업함
+- [ ] **context.md 패턴:** 축적된 지식을 위해 에이전트가 컨텍스트 파일을 읽고 업데이트함
+- [ ] **파일 구성:** 일관된 명명 규칙을 가진 엔티티 범위의 디렉토리 구성
 
-### Agent Execution
-- [ ] **Completion Signals:** Agent has explicit `complete_task` tool (not heuristic detection)
-- [ ] **Partial Completion:** Multi-step tasks track progress for resume
-- [ ] **Context Limits:** Designed for bounded context from the start
+### 에이전트 실행
+- [ ] **완료 신호:** 에이전트가 명시적인 `complete_task` 도구를 가짐 (휴리스틱 감지 지양)
+- [ ] **부분 완료:** 다단계 작업의 재개를 위해 진행 상황을 추적함
+- [ ] **컨텍스트 제한:** 처음부터 제한된 컨텍스트를 고려하여 설계됨
 
-### Context Injection
-- [ ] **Available Resources:** System prompt includes what exists (files, data, types)
-- [ ] **Available Capabilities:** System prompt documents tools with user vocabulary
-- [ ] **Dynamic Context:** Context refreshes for long sessions (or provide `refresh_context` tool)
+### 컨텍스트 주입
+- [ ] **가용 자원:** 시스템 프롬프트에 무엇이 존재하는지(파일, 데이터, 타입) 포함함
+- [ ] **가용 역량:** 시스템 프롬프트에 도구를 사용자 어휘로 문서화함
+- [ ] **동적 컨텍스트:** 긴 세션의 경우 컨텍스트를 새로고침함 (또는 `refresh_context` 도구 제공)
 
-### UI Integration
-- [ ] **Agent → UI:** Agent changes reflect in UI (shared service, file watching, or event bus)
-- [ ] **No Silent Actions:** Agent writes trigger UI updates immediately
-- [ ] **Capability Discovery:** Users can learn what agent can do
+### UI 통합
+- [ ] **에이전트 → UI:** 에이전트의 변경 사항이 UI에 반영됨 (공유 서비스, 파일 감시 또는 이벤트 버스)
+- [ ] **침묵하는 작업 금지:** 에이전트의 쓰기 작업이 즉시 UI 업데이트를 트리거함
+- [ ] **역량 발견:** 사용자가 에이전트가 할 수 있는 일을 학습할 수 있음
 
-### Mobile (if applicable)
-- [ ] **Checkpoint/Resume:** Handle iOS app suspension gracefully
-- [ ] **iCloud Storage:** iCloud-first with local fallback for multi-device sync
-- [ ] **Cost Awareness:** Model tier selection (Haiku/Sonnet/Opus)
+### 모바일 (해당되는 경우)
+- [ ] **체크포인트/재개:** iOS 앱 일시 중단을 우아하게 처리함
+- [ ] **iCloud 저장소:** 다중 장치 동기화를 위해 로컬 폴백이 있는 iCloud 우선 방식 사용
+- [ ] **비용 인식:** 모델 티어 선택 (Haiku/Sonnet/Opus)
 
-**When designing architecture, explicitly address each checkbox in your plan.**
+**아키텍처 설계 시, 계획서에서 각 체크박스를 명시적으로 다루십시오.**
 </architecture_checklist>
 
 <quick_start>
-## Quick Start: Build an Agent-Native Feature
+## 퀵 스타트: 에이전트 네이티브 기능 구축하기
 
-**Step 1: Define atomic tools**
+**단계 1: 원자적 도구 정의**
 ```typescript
 const tools = [
-  tool("read_file", "Read any file", { path: z.string() }, ...),
-  tool("write_file", "Write any file", { path: z.string(), content: z.string() }, ...),
-  tool("list_files", "List directory", { path: z.string() }, ...),
-  tool("complete_task", "Signal task completion", { summary: z.string() }, ...),
+  tool("read_file", "모든 파일 읽기", { path: z.string() }, ...),
+  tool("write_file", "모든 파일 쓰기", { path: z.string(), content: z.string() }, ...),
+  tool("list_files", "디렉토리 목록 조회", { path: z.string() }, ...),
+  tool("complete_task", "작업 완료 신호 전송", { summary: z.string() }, ...),
 ];
 ```
 
-**Step 2: Write behavior in the system prompt**
+**단계 2: 시스템 프롬프트에 행동 정의**
 ```markdown
-## Your Responsibilities
-When asked to organize content, you should:
-1. Read existing files to understand the structure
-2. Analyze what organization makes sense
-3. Create/move files using your tools
-4. Use your judgment about layout and formatting
-5. Call complete_task when you're done
+## 당신의 책임
+콘텐츠 정리를 요청받으면 다음과 같이 해야 합니다:
+1. 기존 파일을 읽어 구조를 파악합니다.
+2. 어떤 구성이 합리적인지 분석합니다.
+3. 도구를 사용하여 파일을 생성/이동합니다.
+4. 레이아웃과 형식에 대해 자신의 판단력을 사용합니다.
+5. 완료되면 complete_task를 호출합니다.
 
-You decide the structure. Make it good.
+구조는 당신이 결정합니다. 훌륭하게 만들어 주세요.
 ```
 
-**Step 3: Let the agent work in a loop**
+**단계 3: 에이전트가 루프 내에서 작동하게 함**
 ```typescript
 const result = await agent.run({
   prompt: userMessage,
   tools: tools,
   systemPrompt: systemPrompt,
-  // Agent loops until it calls complete_task
+  // 에이전트는 complete_task를 호출할 때까지 루프를 돕니다.
 });
 ```
 </quick_start>
 
 <reference_index>
-## Reference Files
+## 참조 파일
 
-All references in `references/`:
+`references/`에 있는 모든 참조 문서:
 
-**Core Patterns:**
-- `references/architecture-patterns.md` - Event-driven, unified orchestrator, agent-to-UI
-- `references/files-universal-interface.md` - Why files, organization patterns, context.md
-- `references/mcp-tool-design.md` - Tool design, dynamic capability discovery, CRUD
-- `references/from-primitives-to-domain-tools.md` - When to add domain tools, graduating to code
-- `references/agent-execution-patterns.md` - Completion signals, partial completion, context limits
-- `references/system-prompt-design.md` - Features as prompts, judgment criteria
+**핵심 패턴:**
+- `references/architecture-patterns.md` - 이벤트 기반, 통합 오케스트레이터, 에이전트-UI
+- `references/files-universal-interface.md` - 왜 파일인가, 구성 패턴, context.md
+- `references/mcp-tool-design.md` - 도구 설계, 동적 역량 발견, CRUD
+- `references/from-primitives-to-domain-tools.md` - 도메인 도구 추가 시점, 코드로의 전환
+- `references/agent-execution-patterns.md` - 완료 신호, 부분 완료, 컨텍스트 제한
+- `references/system-prompt-design.md` - 프롬프트로서의 기능, 판단 기준
 
-**Agent-Native Disciplines:**
-- `references/dynamic-context-injection.md` - Runtime context, what to inject
-- `references/action-parity-discipline.md` - Capability mapping, parity workflow
-- `references/shared-workspace-architecture.md` - Shared data space, UI integration
-- `references/product-implications.md` - Progressive disclosure, latent demand, approval
-- `references/agent-native-testing.md` - Testing outcomes, parity tests
+**에이전트 네이티브 규율:**
+- `references/dynamic-context-injection.md` - 런타임 컨텍스트, 주입할 내용
+- `references/action-parity-discipline.md` - 역량 매핑, 패리티 워크플로우
+- `references/shared-workspace-architecture.md` - 공유 데이터 공간, UI 통합
+- `references/product-implications.md` - 점진적 공개, 잠재 수요, 승인
+- `references/agent-native-testing.md` - 결과 테스트, 패리티 테스트
 
-**Platform-Specific:**
-- `references/mobile-patterns.md` - iOS storage, checkpoint/resume, cost awareness
-- `references/self-modification.md` - Git-based evolution, guardrails
-- `references/refactoring-to-prompt-native.md` - Migrating existing code
+**플랫폼 특화:**
+- `references/mobile-patterns.md` - iOS 저장소, 체크포인트/재개, 비용 인식
+- `references/self-modification.md` - Git 기반 진화, 가드레일
+- `references/refactoring-to-prompt-native.md` - 기존 코드 마이그레이션
 </reference_index>
 
 <anti_patterns>
-## Anti-Patterns
+## 안티 패턴
 
-### Common Approaches That Aren't Fully Agent-Native
+### 완전히 에이전트 네이티브하지 않은 일반적인 접근 방식
 
-These aren't necessarily wrong—they may be appropriate for your use case. But they're worth recognizing as different from the architecture this document describes.
+이 방식들이 반드시 틀린 것은 아닙니다. 사용 사례에 따라 적절할 수도 있습니다. 하지만 이 문서에서 설명하는 아키텍처와는 다르다는 점을 인식할 가치가 있습니다.
 
-**Agent as router** — The agent figures out what the user wants, then calls the right function. The agent's intelligence is used to route, not to act. This can work, but you're using a fraction of what agents can do.
+**라우터로서의 에이전트 (Agent as router)** — 에이전트가 사용자가 원하는 것을 파악한 다음 적절한 함수를 호출합니다. 에이전트의 지능은 실행이 아닌 라우팅에 사용됩니다. 작동은 할 수 있지만, 에이전트 역량의 극히 일부만 사용하는 것입니다.
 
-**Build the app, then add agent** — You build features the traditional way (as code), then expose them to an agent. The agent can only do what your features already do. You won't get emergent capability.
+**앱 빌드 후 에이전트 추가** — 기능을 기존 방식(코드)으로 빌드한 다음 에이전트에게 노출합니다. 에이전트는 이미 구현된 기능만 수행할 수 있습니다. 창발적 역량을 얻을 수 없습니다.
 
-**Request/response thinking** — Agent gets input, does one thing, returns output. This misses the loop: agent gets an outcome to achieve, operates until it's done, handles unexpected situations along the way.
+**요청/응답 사고 (Request/response thinking)** — 에이전트가 입력을 받고, 한 가지 일을 하고, 출력을 반환합니다. 이는 루프를 놓치는 것입니다. 에이전트는 달성할 결과물을 받고, 완료될 때까지 작동하며, 과정 중 예상치 못한 상황을 처리해야 합니다.
 
-**Defensive tool design** — You over-constrain tool inputs because you're used to defensive programming. Strict enums, validation at every layer. This is safe, but it prevents the agent from doing things you didn't anticipate.
+**방어적 도구 설계** — 방어적 프로그래밍에 익숙하여 도구 입력을 과도하게 제한합니다. 엄격한 enum, 모든 레이어에서의 검증 등입니다. 안전하긴 하지만 에이전트가 예상치 못한 일을 하는 것을 방해합니다.
 
-**Happy path in code, agent just executes** — Traditional software handles edge cases in code—you write the logic for what happens when X goes wrong. Agent-native lets the agent handle edge cases with judgment. If your code handles all the edge cases, the agent is just a caller.
+**코드로 작성된 해피 패스, 에이전트는 실행만 함** — 기존 소프트웨어는 코드에서 예외 상황을 처리합니다. X가 잘못되었을 때 어떤 일이 일어날지에 대한 로직을 작성합니다. 에이전트 네이티브는 에이전트가 판단력을 가지고 예외 상황을 처리하게 합니다. 코드가 모든 예외를 처리한다면 에이전트는 단순한 호출자에 불과합니다.
 
 ---
 
-### Specific Anti-Patterns
+### 구체적인 안티 패턴
 
-**THE CARDINAL SIN: Agent executes your code instead of figuring things out**
+**치명적인 실수: 에이전트가 스스로 판단하는 대신 여러분의 코드를 실행함**
 
 ```typescript
-// WRONG - You wrote the workflow, agent just executes it
+// 잘못됨 - 여러분이 워크플로우를 작성했고, 에이전트는 실행만 함
 tool("process_feedback", async ({ message }) => {
-  const category = categorize(message);      // Your code decides
-  const priority = calculatePriority(message); // Your code decides
-  await store(message, category, priority);   // Your code orchestrates
-  if (priority > 3) await notify();           // Your code decides
+  const category = categorize(message);      // 여러분의 코드가 결정함
+  const priority = calculatePriority(message); // 여러분의 코드가 결정함
+  await store(message, category, priority);   // 여러분의 코드가 오케스트레이션함
+  if (priority > 3) await notify();           // 여러분의 코드가 결정함
 });
 
-// RIGHT - Agent figures out how to process feedback
-tools: store_item, send_message  // Primitives
-prompt: "Rate importance 1-5 based on actionability, store feedback, notify if >= 4"
+// 올바름 - 에이전트가 피드백 처리 방법을 스스로 판단함
+tools: store_item, send_message  // 프리미티브
+prompt: "실행 가능성을 바탕으로 중요도를 1-5로 평가하고, 피드백을 저장하고, 4 이상이면 알림을 보내줘"
 ```
 
-**Workflow-shaped tools** — `analyze_and_organize` bundles judgment into the tool. Break it into primitives and let the agent compose them.
+**워크플로우 형태의 도구** — `analyze_and_organize`는 판단을 도구 안에 묶어버립니다. 이를 프리미티브로 분해하고 에이전트가 조합하게 하십시오.
 
-**Context starvation** — Agent doesn't know what resources exist in the app.
+**컨텍스트 굶주림 (Context starvation)** — 에이전트가 앱에 어떤 자원이 있는지 모릅니다.
 ```
-User: "Write something about Catherine the Great in my feed"
-Agent: "What feed? I don't understand what system you're referring to."
+사용자: "내 피드에 예카테리나 대제에 대해 써줘"
+에이전트: "어떤 피드요? 어떤 시스템을 말씀하시는지 모르겠습니다."
 ```
-Fix: Inject available resources, capabilities, and vocabulary into system prompt.
+해결책: 가용 자원, 역량, 어휘를 시스템 프롬프트에 주입하십시오.
 
-**Orphan UI actions** — User can do something through the UI that the agent can't achieve. Fix: maintain parity.
+**고립된 UI 작업 (Orphan UI actions)** — 사용자가 UI를 통해 할 수 있는 일을 에이전트는 달성할 수 없습니다. 해결책: 패리티를 유지하십시오.
 
-**Silent actions** — Agent changes state but UI doesn't update. Fix: Use shared data stores with reactive binding, or file system observation.
+**침묵하는 작업 (Silent actions)** — 에이전트가 상태를 변경하지만 UI가 업데이트되지 않습니다. 해결책: 반응형 바인딩이 있는 공유 데이터 저장소나 파일 시스템 감시를 사용하십시오.
 
-**Heuristic completion detection** — Detecting agent completion through heuristics (consecutive iterations without tool calls, checking for expected output files). This is fragile. Fix: Require agents to explicitly signal completion through a `complete_task` tool.
+**휴리스틱 완료 감지** — 휴리스틱(도구 호출 없는 연속 반복, 예상 출력 파일 확인 등)을 통해 에이전트 완료를 감지합니다. 이는 취약합니다. 해결책: 에이전트가 `complete_task` 도구를 통해 명시적으로 완료 신호를 보내도록 요구하십시오.
 
-**Static tool mapping for dynamic APIs** — Building 50 tools for 50 API endpoints when a `discover` + `access` pattern would give more flexibility.
+**동적 API를 위한 정적 도구 매핑** — `discover` + `access` 패턴이 더 많은 유연성을 제공할 수 있음에도 불구하고 50개의 API 엔드포인트를 위해 50개의 도구를 만듭니다.
 ```typescript
-// WRONG - Every API type needs a hardcoded tool
+// 잘못됨 - 모든 API 타입에 하드코딩된 도구가 필요함
 tool("read_steps", ...)
 tool("read_heart_rate", ...)
 tool("read_sleep", ...)
-// When glucose tracking is added... code change required
+// 포도당 추적이 추가되면... 코드 변경이 필요함
 
-// RIGHT - Dynamic capability discovery
-tool("list_available_types", ...)  // Discover what's available
-tool("read_health_data", { dataType: z.string() }, ...)  // Access any type
+// 올바름 - 동적 역량 발견
+tool("list_available_types", ...)  // 무엇이 가능한지 발견
+tool("read_health_data", { dataType: z.string() }, ...)  // 어떤 타입이든 접근
 ```
 
-**Incomplete CRUD** — Agent can create but not update or delete.
+**불완전한 CRUD** — 에이전트가 생성은 할 수 있지만 업데이트나 삭제는 할 수 없습니다.
 ```typescript
-// User: "Delete that journal entry"
-// Agent: "I don't have a tool for that"
-tool("create_journal_entry", ...)  // Missing: update, delete
+// 사용자: "그 일기 항목 삭제해줘"
+// 에이전트: "그 작업을 위한 도구가 없습니다"
+tool("create_journal_entry", ...)  // 누락됨: update, delete
 ```
-Fix: Every entity needs full CRUD.
+해결책: 모든 엔티티에 완전한 CRUD가 필요합니다.
 
-**Sandbox isolation** — Agent works in separate data space from user.
+**샌드박스 격리** — 에이전트가 사용자와 별도의 데이터 공간에서 작업합니다.
 ```
 Documents/
-├── user_files/        ← User's space
-└── agent_output/      ← Agent's space (isolated)
+├── user_files/        ← 사용자의 공간
+└── agent_output/      ← 에이전트의 공간 (격리됨)
 ```
-Fix: Use shared workspace where both operate on same files.
+해결책: 둘 다 동일한 파일에서 작업하는 공유 워크스페이스를 사용하십시오.
 
-**Gates without reason** — Domain tool is the only way to do something, and you didn't intend to restrict access. The default is open. Keep primitives available unless there's a specific reason to gate.
+**이유 없는 제한 (Gates without reason)** — 도메인 도구가 무언가를 할 수 있는 유일한 방법이며, 접근을 제한할 의도가 없었습니다. 기본은 개방형입니다. 특정 제한 이유가 없다면 프리미티브를 가용 상태로 유지하십시오.
 
-**Artificial capability limits** — Restricting what the agent can do out of vague safety concerns rather than specific risks. Be thoughtful about restricting capabilities. The agent should generally be able to do what users can do.
+**인위적인 역량 제한** — 구체적인 위험보다는 막연한 안전 우려 때문에 에이전트가 할 수 있는 일을 제한합니다. 역량을 제한하는 것에 대해 신중을 기하십시오. 에이전트는 일반적으로 사용자가 할 수 있는 일을 할 수 있어야 합니다.
 </anti_patterns>
 
 <success_criteria>
-## Success Criteria
+## 성공 기준
 
-You've built an agent-native application when:
+다음과 같은 경우 에이전트 네이티브 애플리케이션을 구축한 것입니다:
 
-### Architecture
-- [ ] The agent can achieve anything users can achieve through the UI (parity)
-- [ ] Tools are atomic primitives; domain tools are shortcuts, not gates (granularity)
-- [ ] New features can be added by writing new prompts (composability)
-- [ ] The agent can accomplish tasks you didn't explicitly design for (emergent capability)
-- [ ] Changing behavior means editing prompts, not refactoring code
+### 아키텍처
+- [ ] 에이전트가 사용자가 UI를 통해 할 수 있는 모든 것을 달성할 수 있음 (패리티)
+- [ ] 도구는 원자적 프리미티브이며, 도메인 도구는 게이트가 아닌 지름길임 (세분성)
+- [ ] 새로운 프롬프트를 작성하여 새로운 기능을 추가할 수 있음 (조합성)
+- [ ] 에이전트가 명시적으로 설계하지 않은 작업을 완수할 수 있음 (창발적 역량)
+- [ ] 행동을 바꾸는 것이 코드를 리팩토링하는 것이 아니라 프롬프트를 수정하는 것을 의미함
 
-### Implementation
-- [ ] System prompt includes dynamic context about app state
-- [ ] Every UI action has a corresponding agent tool (action parity)
-- [ ] Agent tools are documented in system prompt with user vocabulary
-- [ ] Agent and user work in the same data space (shared workspace)
-- [ ] Agent actions are immediately reflected in the UI
-- [ ] Every entity has full CRUD (Create, Read, Update, Delete)
-- [ ] Agents explicitly signal completion (no heuristic detection)
-- [ ] context.md or equivalent for accumulated knowledge
+### 구현
+- [ ] 시스템 프롬프트에 앱 상태에 대한 동적 컨텍스트가 포함됨
+- [ ] 모든 UI 작업에 대응하는 에이전트 도구가 있음 (작업 패리티)
+- [ ] 에이전트 도구가 사용자 어휘를 사용하여 시스템 프롬프트에 문서화됨
+- [ ] 에이전트와 사용자가 동일한 데이터 공간에서 작업함 (공유 워크스페이스)
+- [ ] 에이전트 작업이 즉시 UI에 반영됨
+- [ ] 모든 엔티티에 완전한 CRUD(생성, 읽기, 업데이트, 삭제)가 있음
+- [ ] 에이전트가 명시적으로 완료 신호를 보냄 (휴리스틱 감지 없음)
+- [ ] 축적된 지식을 위한 context.md 또는 그에 준하는 것
 
-### Product
-- [ ] Simple requests work immediately with no learning curve
-- [ ] Power users can push the system in unexpected directions
-- [ ] You're learning what users want by observing what they ask the agent to do
-- [ ] Approval requirements match stakes and reversibility
+### 제품
+- [ ] 간단한 요청은 학습 곡선 없이 즉시 작동함
+- [ ] 파워 유저가 시스템을 예상치 못한 방향으로 활용할 수 있음
+- [ ] 사용자가 에이전트에게 요청하는 것을 관찰하여 그들이 무엇을 원하는지 배우고 있음
+- [ ] 승인 요구 사항이 위험도 및 가역성과 일치함
 
-### Mobile (if applicable)
-- [ ] Checkpoint/resume handles app interruption
-- [ ] iCloud-first storage with local fallback
-- [ ] Background execution uses available time wisely
-- [ ] Model tier matched to task complexity
+### 모바일 (해당되는 경우)
+- [ ] 체크포인트/재개가 앱 중단을 처리함
+- [ ] 로컬 폴백이 있는 iCloud 우선 저장소
+- [ ] 백그라운드 실행이 가용 시간을 현명하게 사용함
+- [ ] 작업 복잡도에 맞는 모델 티어 매칭
 
 ---
 
-### The Ultimate Test
+### 궁극의 테스트
 
-**Describe an outcome to the agent that's within your application's domain but that you didn't build a specific feature for.**
+**애플리케이션의 도메인 내에 있지만 특정 기능을 빌드하지 않은 결과물을 에이전트에게 설명해 보십시오.**
 
-Can it figure out how to accomplish it, operating in a loop until it succeeds?
+에이전트가 성공할 때까지 루프 내에서 작동하며 어떻게 완수할지 스스로 알아낼 수 있습니까?
 
-If yes, you've built something agent-native.
+만약 그렇다면, 여러분은 에이전트 네이티브한 무언가를 만든 것입니다.
 
-If it says "I don't have a feature for that"—your architecture is still too constrained.
+만약 "그에 대한 기능이 없습니다"라고 말한다면, 여러분의 아키텍처는 여전히 너무 제약되어 있는 것입니다.
 </success_criteria>
-

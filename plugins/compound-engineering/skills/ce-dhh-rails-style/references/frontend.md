@@ -1,69 +1,69 @@
-# Frontend - DHH Rails Style
+# 프론트엔드 (Frontend) - DHH Rails 스타일
 
 <turbo_patterns>
-## Turbo Patterns
+## Turbo 패턴
 
-**Turbo Streams** for partial updates:
+**Turbo Streams**를 이용한 부분 업데이트:
 ```erb
 <%# app/views/cards/closures/create.turbo_stream.erb %>
 <%= turbo_stream.replace @card %>
 ```
 
-**Morphing** for complex updates:
+**Morphing**을 이용한 복잡한 업데이트:
 ```ruby
 render turbo_stream: turbo_stream.morph(@card)
 ```
 
-**Global morphing** - enable in layout:
+**Global morphing** - 레이아웃에서 활성화:
 ```ruby
 turbo_refreshes_with method: :morph, scroll: :preserve
 ```
 
-**Fragment caching** with `cached: true`:
+`cached: true`를 이용한 **조각 캐싱(Fragment caching)**:
 ```erb
 <%= render partial: "card", collection: @cards, cached: true %>
 ```
 
-**No ViewComponents** - standard partials work fine.
+**ViewComponents 미사용** - 표준 partial만으로 충분합니다.
 </turbo_patterns>
 
 <turbo_morphing>
-## Turbo Morphing Best Practices
+## Turbo Morphing 베스트 프랙티스
 
-**Listen for morph events** to restore client state:
+클라이언트 상태 복원을 위해 **morph 이벤트 리스닝**:
 ```javascript
 document.addEventListener("turbo:morph-element", (event) => {
-  // Restore any client-side state after morph
+  // morph 후 클라이언트 측 상태 복원
 })
 ```
 
-**Permanent elements** - skip morphing with data attribute:
+**영구 요소(Permanent elements)** - data 속성으로 morphing 건너뛰기:
 ```erb
 <div data-turbo-permanent id="notification-count">
   <%= @count %>
 </div>
 ```
 
-**Frame morphing** - add refresh attribute:
+**프레임 morphing** - refresh 속성 추가:
 ```erb
 <%= turbo_frame_tag :assignment, src: path, refresh: :morph %>
 ```
 
-**Common issues and solutions:**
+**일반적인 문제와 해결책:**
 
-| Problem | Solution |
+| 문제 | 해결책 |
 |---------|----------|
-| Timers not updating | Clear/restart in morph event listener |
-| Forms resetting | Wrap form sections in turbo frames |
-| Pagination breaking | Use turbo frames with `refresh: :morph` |
-| Flickering on replace | Switch to morph instead of replace |
-| localStorage loss | Listen to `turbo:morph-element`, restore state |
+| 타이머가 업데이트되지 않음 | morph 이벤트 리스너에서 초기화/재시작 |
+| 폼이 리셋됨 | 폼 섹션을 turbo frame으로 감싸기 |
+| 페이지네이션이 깨짐 | `refresh: :morph`가 설정된 turbo frame 사용 |
+| 교체 시 깜빡임 | replace 대신 morph로 전환 |
+| localStorage 손실 | `turbo:morph-element` 리스닝 후 상태 복원 |
 </turbo_morphing>
 
 <turbo_frames>
 ## Turbo Frames
 
-**Lazy loading** with spinner:
+스피너를 포함한 **지연 로딩(Lazy loading)**:
 ```erb
 <%= turbo_frame_tag "menu",
       src: menu_path,
@@ -72,7 +72,7 @@ document.addEventListener("turbo:morph-element", (event) => {
 <% end %>
 ```
 
-**Inline editing** with edit/view toggle:
+edit/view 토글을 이용한 **인라인 편집**:
 ```erb
 <%= turbo_frame_tag dom_id(card, :edit) do %>
   <%= link_to "Edit", edit_card_path(card),
@@ -80,12 +80,12 @@ document.addEventListener("turbo:morph-element", (event) => {
 <% end %>
 ```
 
-**Target parent frame** without hardcoding:
+하드코딩 없이 **부모 프레임 타겟팅**:
 ```erb
 <%= form_with model: @card, data: { turbo_frame: "_parent" } do |f| %>
 ```
 
-**Real-time subscriptions:**
+**실시간 구독(Real-time subscriptions):**
 ```erb
 <%= turbo_stream_from @card %>
 <%= turbo_stream_from @card, :activity %>
@@ -93,21 +93,21 @@ document.addEventListener("turbo:morph-element", (event) => {
 </turbo_frames>
 
 <stimulus_controllers>
-## Stimulus Controllers
+## Stimulus 컨트롤러
 
-52 controllers in Fizzy, split 62% reusable, 38% domain-specific.
+Fizzy 앱에는 52개의 컨트롤러가 있으며, 62%는 재사용 가능하고 38%는 도메인 특화되어 있습니다.
 
-**Characteristics:**
-- Single responsibility per controller
-- Configuration via values/classes
-- Events for communication
-- Private methods with #
-- Most under 50 lines
+**특징:**
+- 컨트롤러당 단일 책임
+- values/classes를 통한 설정
+- 통신을 위한 이벤트 사용
+- #를 사용한 프라이빗 메서드
+- 대부분 50라인 미만
 
-**Examples:**
+**예시:**
 
 ```javascript
-// copy-to-clipboard (25 lines)
+// copy-to-clipboard (25라인)
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
@@ -126,7 +126,7 @@ export default class extends Controller {
 ```
 
 ```javascript
-// auto-click (7 lines)
+// auto-click (7라인)
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
@@ -137,7 +137,7 @@ export default class extends Controller {
 ```
 
 ```javascript
-// toggle-class (31 lines)
+// toggle-class (31라인)
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
@@ -155,7 +155,7 @@ export default class extends Controller {
 ```
 
 ```javascript
-// auto-submit (28 lines) - debounced form submission
+// auto-submit (28라인) - 디바운스된 폼 제출
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
@@ -179,7 +179,7 @@ export default class extends Controller {
 ```
 
 ```javascript
-// dialog (45 lines) - native HTML dialog management
+// dialog (45라인) - 네이티브 HTML 다이얼로그 관리
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
@@ -199,7 +199,7 @@ export default class extends Controller {
 ```
 
 ```javascript
-// local-time (40 lines) - relative time display
+// local-time (40라인) - 상대 시간 표시
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
@@ -227,18 +227,18 @@ export default class extends Controller {
 </stimulus_controllers>
 
 <stimulus_best_practices>
-## Stimulus Best Practices
+## Stimulus 베스트 프랙티스
 
-**Values API** over getAttribute:
+getAttribute 대신 **Values API** 사용:
 ```javascript
-// Good
+// 권장
 static values = { delay: { type: Number, default: 300 } }
 
-// Avoid
+// 지양
 this.element.getAttribute("data-delay")
 ```
 
-**Cleanup in disconnect:**
+**disconnect에서 정리(Cleanup):**
 ```javascript
 disconnect() {
   clearTimeout(this.timeout)
@@ -247,12 +247,12 @@ disconnect() {
 }
 ```
 
-**Action filters** - `:self` prevents bubbling:
+**액션 필터** - `:self`는 버블링을 방지합니다:
 ```erb
 <div data-action="click->menu#toggle:self">
 ```
 
-**Helper extraction** - shared utilities in separate modules:
+**헬퍼 추출** - 별도 모듈의 공통 유틸리티:
 ```javascript
 // app/javascript/helpers/timing.js
 export function debounce(fn, delay) {
@@ -264,16 +264,16 @@ export function debounce(fn, delay) {
 }
 ```
 
-**Event dispatching** for loose coupling:
+느슨한 결합(loose coupling)을 위한 **이벤트 디스패칭**:
 ```javascript
 this.dispatch("selected", { detail: { id: this.idValue } })
 ```
 </stimulus_best_practices>
 
 <view_helpers>
-## View Helpers (Stimulus-Integrated)
+## 뷰 헬퍼 (Stimulus 통합)
 
-**Dialog helper:**
+**다이얼로그 헬퍼:**
 ```ruby
 def dialog_tag(id, &block)
   tag.dialog(
@@ -287,7 +287,7 @@ def dialog_tag(id, &block)
 end
 ```
 
-**Auto-submit form helper:**
+**자동 제출 폼 헬퍼:**
 ```ruby
 def auto_submit_form_with(model:, delay: 300, **options, &block)
   form_with(
@@ -303,7 +303,7 @@ def auto_submit_form_with(model:, delay: 300, **options, &block)
 end
 ```
 
-**Copy button helper:**
+**복사 버튼 헬퍼:**
 ```ruby
 def copy_button(content:, label: "Copy")
   tag.button(
@@ -319,11 +319,11 @@ end
 </view_helpers>
 
 <css_architecture>
-## CSS Architecture
+## CSS 아키텍처
 
-Vanilla CSS with modern features, no preprocessors.
+전처리기 없이 현대적 기능을 갖춘 Vanilla CSS를 사용합니다.
 
-**CSS @layer** for cascade control:
+캐스케이드 제어를 위한 **CSS @layer**:
 ```css
 @layer reset, base, components, modules, utilities;
 
@@ -336,11 +336,11 @@ Vanilla CSS with modern features, no preprocessors.
 }
 
 @layer components {
-  .btn { /* button styles */ }
+  .btn { /* 버튼 스타일 */ }
 }
 
 @layer modules {
-  .card { /* card module styles */ }
+  .card { /* 카드 모듈 스타일 */ }
 }
 
 @layer utilities {
@@ -348,7 +348,7 @@ Vanilla CSS with modern features, no preprocessors.
 }
 ```
 
-**OKLCH color system** for perceptual uniformity:
+지각적 균일성을 위한 **OKLCH 컬러 시스템**:
 ```css
 :root {
   --color-primary: oklch(60% 0.15 250);
@@ -358,7 +358,7 @@ Vanilla CSS with modern features, no preprocessors.
 }
 ```
 
-**Dark mode** via CSS variables:
+CSS 변수를 통한 **다크 모드**:
 ```css
 :root {
   --bg: oklch(98% 0 0);
@@ -373,7 +373,7 @@ Vanilla CSS with modern features, no preprocessors.
 }
 ```
 
-**Native CSS nesting:**
+**네이티브 CSS 중첩 (Nesting):**
 ```css
 .card {
   padding: var(--space-4);
@@ -388,20 +388,20 @@ Vanilla CSS with modern features, no preprocessors.
 }
 ```
 
-**~60 minimal utilities** vs Tailwind's hundreds.
+Tailwind의 수백 개 유틸리티 대신 **약 60개의 최소 유틸리티**만 사용합니다.
 
-**Modern features used:**
-- `@starting-style` for enter animations
-- `color-mix()` for color manipulation
-- `:has()` for parent selection
-- Logical properties (`margin-inline`, `padding-block`)
-- Container queries
+**사용된 현대적 기능:**
+- 진입 애니메이션을 위한 `@starting-style`
+- 색상 조작을 위한 `color-mix()`
+- 부모 선택을 위한 `:has()`
+- 논리적 속성 (Logical properties) (`margin-inline`, `padding-block`)
+- 컨테이너 쿼리 (Container queries)
 </css_architecture>
 
 <view_patterns>
-## View Patterns
+## 뷰 패턴
 
-**Standard partials** - no ViewComponents:
+**표준 partial** - ViewComponents 미사용:
 ```erb
 <%# app/views/cards/_card.html.erb %>
 <article id="<%= dom_id(card) %>" class="card">
@@ -411,19 +411,19 @@ Vanilla CSS with modern features, no preprocessors.
 </article>
 ```
 
-**Fragment caching:**
+**조각 캐싱(Fragment caching):**
 ```erb
 <% cache card do %>
   <%= render "cards/card", card: card %>
 <% end %>
 ```
 
-**Collection caching:**
+**컬렉션 캐싱(Collection caching):**
 ```erb
 <%= render partial: "card", collection: @cards, cached: true %>
 ```
 
-**Simple component naming** - no strict BEM:
+**단순한 컴포넌트 명명** - 엄격한 BEM 지양:
 ```css
 .card { }
 .card .title { }
@@ -434,12 +434,12 @@ Vanilla CSS with modern features, no preprocessors.
 </view_patterns>
 
 <caching_with_personalization>
-## User-Specific Content in Caches
+## 캐시 내 사용자별 콘텐츠
 
-Move personalization to client-side JavaScript to preserve caching:
+캐시 유지를 위해 개인화 요소를 클라이언트 측 JavaScript로 이동하십시오:
 
 ```erb
-<%# Cacheable fragment %>
+<%# 캐시 가능한 조각 %>
 <% cache card do %>
   <article class="card"
            data-creator-id="<%= card.creator_id %>"
@@ -451,7 +451,7 @@ Move personalization to client-side JavaScript to preserve caching:
 ```
 
 ```javascript
-// Reveal user-specific elements after cache hit
+// 캐시 히트 후 사용자별 요소 노출
 export default class extends Controller {
   static values = { currentUser: Number }
   static targets = ["ownerOnly"]
@@ -465,7 +465,7 @@ export default class extends Controller {
 }
 ```
 
-**Extract dynamic content** to separate frames:
+**동적 콘텐츠를 별도 프레임으로 분리:**
 ```erb
 <% cache [card, board] do %>
   <article class="card">
@@ -476,13 +476,13 @@ export default class extends Controller {
 <% end %>
 ```
 
-Assignment dropdown updates independently without invalidating parent cache.
+할당 드롭다운은 부모 캐시를 무효화하지 않고 독립적으로 업데이트됩니다.
 </caching_with_personalization>
 
 <broadcasting>
-## Broadcasting with Turbo Streams
+## Turbo Streams를 이용한 브로드캐스팅
 
-**Model callbacks** for real-time updates:
+실시간 업데이트를 위한 **모델 콜백**:
 ```ruby
 class Card < ApplicationRecord
   include Broadcastable
@@ -506,5 +506,5 @@ class Card < ApplicationRecord
 end
 ```
 
-**Scope by tenant** using `[Current.account, resource]` pattern.
+`[Current.account, resource]` 패턴을 사용하여 **테넌트별 범위 지정**.
 </broadcasting>

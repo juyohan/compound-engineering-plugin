@@ -1,51 +1,69 @@
 ---
 name: ce-commit-push-pr
-description: Commit, push, and open a PR with an adaptive, value-first description. Use when the user says "commit and PR", "push and open a PR", "ship this", "create a PR", "open a pull request", "commit push PR", or wants to go from working changes to an open pull request in one step. Also use when the user says "update the PR description", "refresh the PR description", "freshen the PR", "rewrite the PR body", "write a PR description", "draft a PR description", or "describe this PR" — the skill will produce a description without committing or pushing if that is all the user wants. Produces PR descriptions that scale in depth with the complexity of the change, avoiding cookie-cutter templates.
+description: 변경 사항을 커밋, 푸시하고 가치 중심의 PR 설명을 작성하여 PR을 생성합니다. 사용자가 "커밋하고 PR 생성해줘", "푸시하고 PR 열어줘", "ship this", "PR 생성", "풀 리퀘스트 열어줘", "커밋 푸시 PR"이라고 말하거나, 작업 중인 변경 사항을 한 번에 PR까지 진행하고 싶을 때 사용합니다. 또한 사용자가 "PR 설명 업데이트해줘", "PR 설명 새로고침해줘", "PR 다듬어줘", "PR 본문 다시 써줘", "PR 설명 작성해줘", "PR 초안 작성해줘", "이 PR 설명해줘"라고 말할 때도 사용합니다. 이 경우 커밋이나 푸시 없이 설명만 생성할 수도 있습니다. 변경 사항의 복잡도에 따라 깊이가 조절되는 PR 설명을 생성하며, 뻔한 템플릿 사용을 지양합니다.
+allowed-tools:
+  - gem
 ---
 
-# Git Commit, Push, and PR
+# Git 커밋, 푸시 및 PR
 
-Go from working changes to an open pull request, rewrite an existing PR description, or generate a description without touching git state.
+## 다중 에이전트 협업 (Multi-Agent Collaboration)
 
-**Asking the user:** When this skill says "ask the user", use the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to presenting the question in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question.
+사용자의 입력(`$ARGUMENTS`) 내에 `--add <ai-이름>` 형태의 플래그가 포함되어 있는지 확인하십시오. 
+현재 지원되는 외부 AI 인터페이스는 `--add gemini` (또는 `--add gem`)입니다.
 
-## Mode detection
+만약 해당 플래그가 감지되면, 작업을 단독으로 확정하지 말고 다음 절차를 따르십시오:
+1. **의도 파악:** 플래그를 제외한 나머지 문자열을 실제 지시사항으로 간주합니다.
+2. **초안 작성:** 본인(주 에이전트)의 지식과 코드베이스 컨텍스트를 바탕으로 작업의 초기 뼈대나 접근법을 생각합니다.
+3. **MCP 협업 호출:** `gem` 도구를 호출하여 외부 Gemini 에이전트에게 조언이나 검토를 구합니다.
+   - 호출 시 전달할 메시지 예시: "나는 현재 이 작업에 대한 초안을 세우고 있어. 내 초안은 [초안 요약]이야. 이 접근 방식의 기술적 타당성을 검토하고 누락된 에지 케이스나 더 나은 패턴을 조언해줄 수 있어?"
+4. **결과 통합:** `gem` 도구가 반환한 피드백을 당신의 최종 결과물에 통합(Synthesis)합니다. 
+5. **명시적 표시:** 최종 산출물의 상단 또는 설명 부분에 "이 결과물은 Gemini와의 협업을 통해 검토 및 보완되었습니다."라는 문구를 추가하십시오.
 
-Three flavors of intent. Pick one and follow the matching path; otherwise default to the full workflow.
+이 협업 절차를 염두에 두고 아래의 본래 스킬 워크플로우를 진행하십시오.
 
-- **Description-only generation.** If the user asked for *just* a PR description with no commit or push intent (e.g., "write a PR description", "draft a PR description for this branch", "describe this PR", or pasted a PR URL/number alone), skip Steps 4–5 AND Step 1's decision tree (its stop gates are full-workflow only and would terminate common cases like "feature branch, all pushed, open PR → stop"). Use the data from the Context section above instead. Then go to Step 6 to compose. If the user pasted a PR URL/number, pass it to Step 6 as the PR ref so Pre-A resolves the right commit range (otherwise Pre-A defaults to current-branch mode). Print the result back to the user; apply via `gh pr edit`/`gh pr create` only if the user asks.
-- **Description update on existing PR.** If the user is asking to update, refresh, or rewrite an existing PR description (with no mention of committing or pushing), follow the Description Update workflow below. The user may also provide a focus (e.g., "update the PR description and add the benchmarking results"). Note any focus for DU-3.
-- **Full workflow.** Otherwise, follow the Full workflow below.
 
-## Context
+작업 중인 변경 사항을 풀 리퀘스트 생성까지 진행하거나, 기존 PR 설명을 다시 쓰거나, Git 상태를 건드리지 않고 설명만 생성합니다.
 
-**On platforms other than Claude Code**, skip to the "Context fallback" section below and run the command there to gather context.
+**사용자에게 확인:** 이 스킬에서 "사용자에게 물어보기"가 필요한 경우, 플랫폼의 질문 도구를 사용하십시오: Claude Code의 `AskUserQuestion` (스키마가 로드되지 않은 경우 `ToolSearch`로 `select:AskUserQuestion` 먼저 호출), Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user` (`pi-ask-user` 확장 필요). 도구가 없거나 오류가 발생하는 경우에만 채팅 창에 질문을 제시하십시오. 질문을 소리 없이 건너뛰지 마십시오.
 
-**In Claude Code**, the six labeled sections below contain pre-populated data. Use them directly -- do not re-run these commands.
+## 모드 감지 (Mode detection)
 
-**Git status:**
+사용자 의도에 따른 세 가지 모드입니다. 하나를 선택하여 해당 경로를 따르십시오. 그 외의 경우는 전체 워크플로우를 따릅니다.
+
+- **설명 생성만 수행.** 사용자가 커밋이나 푸시 의도 없이 PR 설명만 요청한 경우(예: "PR 설명 써줘", "이 브랜치에 대한 PR 초안 작성해줘", "이 PR 설명해줘" 또는 PR URL/번호만 붙여넣은 경우), 단계 4~5와 단계 1의 의사결정 트리를 건너뜁니다. 대신 위의 컨텍스트(Context) 섹션 데이터를 사용하고 단계 6으로 이동하여 작성을 시작하십시오. 사용자가 PR URL/번호를 붙여넣은 경우, 이를 단계 6의 PR 참조값으로 전달하여 Pre-A 단계에서 올바른 커밋 범위를 확인하도록 하십시오(그렇지 않으면 Pre-A는 현재 브랜치 모드로 기본 설정됨). 결과를 사용자에게 출력하고, 사용자가 요청한 경우에만 `gh pr edit`/`gh pr create`를 통해 적용하십시오.
+- **기존 PR 설명 업데이트.** 사용자가 (커밋이나 푸시 언급 없이) 기존 PR 설명을 업데이트, 새로고침 또는 다시 쓰기를 요청하는 경우, 아래의 'PR 설명 업데이트 워크플로우'를 따르십시오. 사용자가 중점 사항을 제공했을 수 있습니다(예: "PR 설명 업데이트하고 벤치마킹 결과 추가해줘"). DU-3 단계를 위해 해당 중점 사항을 기록해 두십시오.
+- **전체 워크플로우.** 그 외의 경우, 아래의 '전체 워크플로우'를 따르십시오.
+
+## 컨텍스트 (Context)
+
+**Claude Code 이외의 플랫폼**에서는 아래의 "컨텍스트 폴백(Context fallback)" 섹션으로 넘어가서 해당 명령어를 실행하여 컨텍스트를 수집하십시오.
+
+**Claude Code**에서는 아래의 6개 섹션에 데이터가 미리 채워져 있습니다. 이를 직접 사용하십시오. 명령어를 다시 실행하지 마십시오.
+
+**Git 상태 (Git status):**
 !`git status`
 
-**Working tree diff:**
+**작업 트리 차이 (Working tree diff):**
 !`git diff HEAD`
 
-**Current branch:**
+**현재 브랜치 (Current branch):**
 !`git branch --show-current`
 
-**Recent commits:**
+**최근 커밋 (Recent commits):**
 !`git log --oneline -10`
 
-**Remote default branch:**
+**원격 기본 브랜치 (Remote default branch):**
 !`git rev-parse --abbrev-ref origin/HEAD 2>/dev/null || echo 'DEFAULT_BRANCH_UNRESOLVED'`
 
-**Existing PR check:**
+**기존 PR 확인 (Existing PR check):**
 !`gh pr view --json url,title,state 2>/dev/null || echo 'NO_OPEN_PR'`
 
-### Context fallback
+### 컨텍스트 폴백 (Context fallback)
 
-**In Claude Code, skip this section — the data above is already available.**
+**Claude Code에서는 이 섹션을 건너뛰십시오. 위의 데이터를 이미 사용할 수 있습니다.**
 
-Run this single command to gather all context:
+다음 단일 명령어를 실행하여 모든 컨텍스트를 수집하십시오:
 
 ```bash
 printf '=== STATUS ===\n'; git status; printf '\n=== DIFF ===\n'; git diff HEAD; printf '\n=== BRANCH ===\n'; git branch --show-current; printf '\n=== LOG ===\n'; git log --oneline -10; printf '\n=== DEFAULT_BRANCH ===\n'; git rev-parse --abbrev-ref origin/HEAD 2>/dev/null || echo 'DEFAULT_BRANCH_UNRESOLVED'; printf '\n=== PR_CHECK ===\n'; gh pr view --json url,title,state 2>/dev/null || echo 'NO_OPEN_PR'
@@ -53,172 +71,172 @@ printf '=== STATUS ===\n'; git status; printf '\n=== DIFF ===\n'; git diff HEAD;
 
 ---
 
-## Description Update workflow
+## PR 설명 업데이트 워크플로우 (Description Update workflow)
 
-### DU-1: Confirm intent
+### DU-1: 의도 확인
 
-Ask the user: "Update the PR description for this branch?" If declined, stop.
+사용자에게 확인: "이 브랜치의 PR 설명을 업데이트할까요?" 거절하면 중단합니다.
 
-### DU-2: Find the PR
+### DU-2: PR 찾기
 
-Use the current branch and existing PR check from context. If the current branch is empty (detached HEAD), report no branch and stop. If the PR check returned `state: OPEN`, note the PR `url` and proceed to DU-3. Otherwise, report no open PR and stop.
+컨텍스트의 현재 브랜치와 기존 PR 확인 결과를 사용합니다. 현재 브랜치가 비어 있다면 (detached HEAD) 브랜치가 없음을 보고하고 중단합니다. PR 확인 결과가 `state: OPEN`이면 PR `url`을 기록하고 DU-3으로 진행합니다. 그렇지 않으면 열려 있는 PR이 없음을 보고하고 중단합니다.
 
-### DU-3: Write and apply the updated description
+### DU-3: 업데이트된 설명 작성 및 적용
 
-**Read `references/pr-description-writing.md` once now** — DU-3 walks through Pre-A then Steps A through H without re-reading. Run Pre-A in PR mode using the existing PR's URL from DU-2 (it resolves the commit range, diff, and current body). Then continue with Steps A through H from the already-loaded reference to compose the title and body. If the user provided focus (e.g., "include the benchmarking results"), apply it as steering — do not let it override the writing principles or fabricate content the diff does not support.
+**지금 바로 `references/pr-description-writing.md`를 한 번 읽으십시오.** DU-3은 다시 읽지 않고 Pre-A에서 단계 H까지 진행합니다. DU-2에서 얻은 기존 PR URL을 사용하여 PR 모드에서 Pre-A를 실행합니다 (커밋 범위, diff, 현재 본문을 확인합니다). 로드된 참조 문서의 단계 A부터 H까지 진행하여 제목과 본문을 구성합니다. 사용자가 중점 사항을 제공했다면 (예: "벤치마킹 결과 포함") 이를 반영하십시오. 다만, 글쓰기 원칙을 어기거나 diff가 지원하지 않는 내용을 지어내서는 안 됩니다.
 
-**Evidence decision:** the writing reference preserves any existing `## Demo` or `## Screenshots` block from the current body by default. If the user's focus asks to refresh or remove evidence, honor that. If no evidence block exists and one would benefit the reader, invoke `ce-demo-reel` separately to capture, then re-compose with the captured URL/path spliced in.
+**증거 결정 (Evidence decision):** 글쓰기 참조 문서는 기본적으로 현재 본문의 `## Demo` 또는 `## Screenshots` 블록을 유지합니다. 사용자가 증거를 새로고침하거나 제거하기를 원한다면 그에 따르십시오. 증거 블록이 없지만 독자에게 도움이 될 것 같다면, 별도로 `ce-demo-reel`을 호출하여 캡처한 뒤, 캡처된 URL/경로를 포함하여 다시 작성하십시오.
 
-**Compare and confirm.** Briefly explain what the new description covers differently from the old one. Ask the user to confirm before applying. If the user provided focus, confirm it was addressed.
+**비교 및 확인.** 새 설명이 이전 설명과 어떻게 다른지 간략히 설명합니다. 적용하기 전에 사용자에게 확인을 요청하십시오. 사용자가 중점 사항을 제공했다면 그것이 반영되었는지 확인하십시오.
 
-If confirmed, apply with `gh pr edit`. Substitute `<TITLE>` verbatim; if it contains `"`, `` ` ``, `$`, or `\`, escape them or switch to single quotes.
+확인되면 `gh pr edit`으로 적용합니다. `<TITLE>`을 그대로 사용하되, `"`, `` ` ``, `$`, `\`가 포함되어 있다면 이스케이프하거나 작은따옴표를 사용하십시오.
 
-The body **must** be written to a temp file and passed via `--body-file <path>`. Never use `--body-file -`, stdin pipes, heredoc-to-stdin, or `--body "$(cat ...)"` — wrappers and stdin handling can silently produce an empty PR body while `gh` still exits 0 and returns a URL.
+본문은 반드시 임시 파일에 기록한 뒤 `--body-file <path>`를 통해 전달해야 합니다. `--body-file -`, stdin 파이프, heredoc, `--body "$(cat ...)"` 방식은 사용하지 마십시오. 래퍼나 stdin 처리 과정에서 PR 본문이 비어버릴 수 있으며, `gh`는 성공(exit 0)으로 종료되어 URL을 반환할 수 있기 때문입니다.
 
 ```bash
 BODY_FILE=$(mktemp "${TMPDIR:-/tmp}/ce-pr-body.XXXXXX") && cat > "$BODY_FILE" <<'__CE_PR_BODY_END__'
-<the composed body markdown goes here, verbatim>
+<작성된 본문 마크다운이 그대로 들어갑니다>
 __CE_PR_BODY_END__
 ```
 
-The quoted sentinel keeps `$VAR`, backticks, and any literal `EOF` inside the body from being expanded.
+따옴표가 붙은 구분 기호(`'__CE_PR_BODY_END__'`)를 사용하면 본문 내부의 `$VAR`, 백틱, `EOF` 등이 확장되지 않고 그대로 유지됩니다.
 
 ```bash
 gh pr edit --title "<TITLE>" --body-file "$BODY_FILE"
 ```
 
-Report the PR URL.
+PR URL을 보고합니다.
 
 ---
 
-## Full workflow
+## 전체 워크플로우 (Full workflow)
 
-### Step 1: Gather context
+### 단계 1: 컨텍스트 수집
 
-Use the context above. All data needed for this step and Step 3 is already available -- do not re-run those commands.
+위의 컨텍스트를 사용합니다. 이 단계와 단계 3에 필요한 모든 데이터는 이미 준비되어 있으므로 명령어를 다시 실행하지 마십시오.
 
-The remote default branch value returns something like `origin/main`. Strip the `origin/` prefix. If it returned `DEFAULT_BRANCH_UNRESOLVED` or a bare `HEAD`, try:
+원격 기본 브랜치 값은 `origin/main`과 같은 형식으로 반환됩니다. `origin/` 접두사를 제거하십시오. 만약 `DEFAULT_BRANCH_UNRESOLVED`가 반환되거나 `HEAD`만 있다면 다음을 시도하십시오:
 
 ```bash
 gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
 ```
 
-If both fail, fall back to `main`.
+둘 다 실패하면 `main`을 기본값으로 사용합니다.
 
-If the current branch is empty (detached HEAD), explain that a branch is required. Ask whether to create a feature branch now.
-- If yes, derive a branch name from the change content, create with `git checkout -b <branch-name>`, and use that for the rest of the workflow.
-- If no, stop.
+현재 브랜치가 비어 있다면 (detached HEAD) 브랜치가 필요함을 설명하십시오. 지금 기능 브랜치(feature branch)를 만들지 물어봅니다.
+- 승인하면 변경 내용에서 브랜치 이름을 유도하고 `git checkout -b <branch-name>`으로 생성한 뒤 워크플로우를 계속합니다.
+- 거절하면 중단합니다.
 
-If the working tree is clean (no staged, modified, or untracked files), determine the next action:
+작업 트리가 깨끗하다면 (staged, modified, untracked 파일이 없음), 다음 작업을 결정합니다:
 
-1. Run `git rev-parse --abbrev-ref --symbolic-full-name @{u}` to check upstream.
-2. If upstream exists, run `git log <upstream>..HEAD --oneline` for unpushed commits.
+1. `git rev-parse --abbrev-ref --symbolic-full-name @{u}`를 실행하여 업스트림을 확인합니다.
+2. 업스트림이 있다면 `git log <upstream>..HEAD --oneline`을 실행하여 푸시되지 않은 커밋을 확인합니다.
 
-Decision tree:
+의사결정 트리:
 
-- **On default branch, unpushed commits or no upstream** -- ask whether to create a feature branch (pushing default directly is not supported). If yes, create and continue from Step 5. If no, stop.
-- **On default branch, all pushed, no open PR** -- report no feature branch work. Stop.
-- **Feature branch, no upstream** -- skip Step 4, continue from Step 5.
-- **Feature branch, unpushed commits** -- skip Step 4, continue from Step 5.
-- **Feature branch, all pushed, no open PR** -- skip Steps 4-5, continue from Step 6.
-- **Feature branch, all pushed, open PR** -- report up to date. Stop.
+- **기본 브랜치에 있고, 푸시되지 않은 커밋이 있거나 업스트림이 없음** -- 기능 브랜치를 만들지 물어봅니다 (기본 브랜치에 직접 푸시하는 것은 지원되지 않음). 승인하면 브랜치를 생성하고 단계 5부터 계속합니다. 거절하면 중단합니다.
+- **기본 브랜치에 있고, 모든 사항이 푸시됨, 열린 PR 없음** -- 기능 브랜치 작업이 없음을 보고하고 중단합니다.
+- **기능 브랜치에 있고, 업스트림 없음** -- 단계 4를 건너뛰고 단계 5부터 계속합니다.
+- **기능 브랜치에 있고, 푸시되지 않은 커밋 있음** -- 단계 4를 건너뛰고 단계 5부터 계속합니다.
+- **기능 브랜치에 있고, 모든 사항이 푸시됨, 열린 PR 없음** -- 단계 4~5를 건너뛰고 단계 6부터 계속합니다.
+- **기능 브랜치에 있고, 모든 사항이 푸시됨, 열린 PR 있음** -- 최신 상태임을 보고하고 중단합니다.
 
-### Step 2: Determine conventions
+### 단계 2: 컨벤션 결정
 
-Priority order for commit messages and PR titles:
+커밋 메시지 및 PR 제목의 우선순위:
 
-1. **Repo conventions in context** -- follow project instructions if they specify conventions. Do not re-read; they load at session start.
-2. **Recent commit history** -- match the pattern in the last 10 commits.
-3. **Default** -- `type(scope): description` (conventional commits).
+1. **컨텍스트 내의 저장소 컨벤션** -- 프로젝트 지침에 컨벤션이 명시되어 있다면 그에 따릅니다. 세션 시작 시 로드되므로 다시 읽지 마십시오.
+2. **최근 커밋 히스토리** -- 마지막 10개 커밋의 패턴에 맞춥니다.
+3. **기본값** -- `type(scope): description` (Conventional Commits).
 
-When using conventional commits, choose the type that most precisely describes the change. Where `fix:` and `feat:` both seem to fit, default to `fix:`: a change that remedies broken or missing behavior is `fix:` even when implemented by adding code. Reserve `feat:` for capabilities the user could not previously accomplish. Other types (`chore:`, `refactor:`, `docs:`, `perf:`, `test:`, `ci:`, `build:`, `style:`) remain primary when they fit better. The user may override for a specific change.
+Conventional Commits를 사용할 때는 변경 사항을 가장 정확하게 설명하는 타입을 선택하십시오. `fix:`와 `feat:`가 모두 적절해 보인다면 `fix:`를 기본으로 합니다. 깨지거나 누락된 동작을 바로잡는 변경은 코드를 추가하여 구현하더라도 `fix:`입니다. `feat:`는 사용자가 이전에는 할 수 없었던 새로운 역량을 위해 아껴두십시오. 다른 타입들(`chore:`, `refactor:`, `docs:`, `perf:`, `test:`, `ci:`, `build:`, `style:`)이 더 적절하다면 그것을 우선적으로 사용하십시오. 사용자가 특정 변경에 대해 오버라이드할 수 있습니다.
 
-### Step 3: Check for existing PR
+### 단계 3: 기존 PR 확인
 
-Use the current branch and existing PR check from context. If the branch is empty, report detached HEAD and stop.
+컨텍스트의 현재 브랜치와 기존 PR 확인 결과를 사용합니다. 브랜치가 비어 있다면 detached HEAD를 보고하고 중단합니다.
 
-If the PR check returned `state: OPEN`, note the URL -- this is the existing-PR flow. Continue to Step 4 and 5 (commit any pending work and push), then go to Step 7 to ask whether to rewrite the description. Only run Step 6 if the user confirms the rewrite. Otherwise (no open PR), continue through Steps 6, 7, and 8 in order.
+PR 확인 결과가 `state: OPEN`이면 URL을 기록합니다. 이는 기존 PR 흐름입니다. 단계 4와 5로 진행하여 보류 중인 작업을 커밋하고 푸시한 뒤, 단계 7로 이동하여 설명을 다시 쓸지 물어봅니다. 사용자가 승인한 경우에만 단계 6을 실행하십시오. 그렇지 않으면 (열린 PR 없음) 단계 6, 7, 8을 순서대로 진행합니다.
 
-### Step 4: Branch, stage, and commit
+### 단계 4: 브랜치 생성, 스테이징 및 커밋
 
-1. If on the default branch, branch creation needs to handle three conditional cases: stale local `<base>`, unpushed commits on local `<base>` (intent unclear without asking), and uncommitted changes that collide with the fresh remote base. Read `references/branch-creation.md` and follow its decision flow, then continue to step 2 below.
-2. Scan changed files for naturally distinct concerns. If files clearly group into separate logical changes, create separate commits (2-3 max). Group at the file level only (no `git add -p`). When ambiguous, one commit is fine.
-3. Stage and commit each group in a single call. Avoid `git add -A` or `git add .`. Follow conventions from Step 2:
+1. 기본 브랜치에 있는 경우, 브랜치 생성 시 세 가지 상황을 처리해야 합니다: 오래된 로컬 `<base>`, 로컬 `<base>`의 푸시되지 않은 커밋 (의도가 불분명하므로 확인 필요), 그리고 새로운 원격 베이스와 충돌하는 커밋되지 않은 변경 사항입니다. `references/branch-creation.md`를 읽고 의사결정 흐름을 따른 뒤 단계 2로 계속 진행하십시오.
+2. 변경된 파일들에서 서로 다른 관심사를 스캔합니다. 파일들이 논리적으로 명확히 분리된다면 별도의 커밋을 생성합니다 (최대 2~3개). 파일 수준에서만 그룹화하십시오 (`git add -p` 사용 금지). 모호하다면 하나의 커밋으로도 충분합니다.
+3. 각 그룹을 스테이징하고 한 번의 호출로 커밋합니다. `git add -A`나 `git add .`는 피하십시오. 단계 2의 컨벤션을 따릅니다:
    ```bash
    git add file1 file2 file3 && git commit -m "$(cat <<'EOF'
-   commit message here
+   여기에 커밋 메시지 작성
    EOF
    )"
    ```
 
-### Step 5: Push
+### 단계 5: 푸시 (Push)
 
 ```bash
 git push -u origin HEAD
 ```
 
-### Step 6: Generate the PR title and body
+### 단계 6: PR 제목 및 본문 생성
 
-The working-tree diff from Step 1 only shows uncommitted changes at invocation time. The PR description must cover **all commits** in the PR.
+단계 1의 작업 트리 diff는 실행 시점의 커밋되지 않은 변경 사항만 보여줍니다. PR 설명은 PR의 **모든 커밋**을 다루어야 합니다.
 
-**Read `references/pr-description-writing.md` once now** — Step 6 walks through it in order (Pre-A through H) with one interruption (the evidence decision below). Do not re-read the file later; refer to it by step letter.
+**지금 바로 `references/pr-description-writing.md`를 한 번 읽으십시오.** 단계 6은 한 번의 중단(아래의 증거 결정)을 제외하고는 해당 문서를 순서대로(Pre-A부터 H까지) 진행합니다. 나중에 문서를 다시 읽지 말고 단계 기호(Step letter)로 참조하십시오.
 
-**Resolve the commit range and diff.** Run Step Pre-A from the reference (current-branch mode by default; PR mode if a PR ref was passed in from description-only mode). Pre-A handles base detection, in-repo SHA fetching with the `refs/pull/N/head` fallback, and the API-only fallback for fork-PRs and any local-git failure. Use Pre-A's commit list and diff (not Step 1's working-tree diff or `git log -10`) for both the evidence decision below and the rest of the reference.
+**커밋 범위 및 diff 확인.** 참조 문서의 Pre-A 단계를 실행합니다 (기본적으로 현재 브랜치 모드, 설명 전용 모드에서 PR 참조가 전달된 경우 PR 모드). Pre-A는 베이스 감지, `refs/pull/N/head` 폴백을 이용한 저장소 내 SHA 가져오기, 포크 PR이나 로컬 git 실패 시를 대비한 API 전용 폴백을 처리합니다. 아래의 증거 결정과 참조 문서의 나머지 단계에서는 단계 1의 작업 트리 diff나 `git log -10`이 아닌, Pre-A의 커밋 목록과 diff를 사용하십시오.
 
-**Evidence decision (before composition).** Before running the full decision, two short-circuits:
+**증거 결정 (Evidence decision - 작성 전).** 전체 결정을 내리기 전에 두 가지 예외 상황을 확인합니다:
 
-1. **User explicitly asked for evidence.** If the user's invocation requested it ("ship with a demo", "include a screenshot"), proceed directly to capture. If capture turns out to be not possible (no runnable surface, missing credentials, docs-only diff) or clearly not useful, note that briefly and proceed without evidence — do not force capture for its own sake.
+1. **사용자가 명시적으로 증거를 요청함.** 사용자가 "데모를 포함해서 ship해줘" 또는 "스크린샷 포함해줘"라고 요청했다면 바로 캡처를 진행합니다. 캡처가 불가능하거나 (실행 가능한 화면 없음, 자격 증명 누락, 문서 전용 diff 등) 유용하지 않은 경우에는 짧게 메모하고 증거 없이 진행하십시오. 억지로 캡처할 필요는 없습니다.
 
-2. **Agent judgment on authored changes.** If you authored the commits in this session and know the change is clearly non-observable (internal plumbing, backend refactor without user-facing effect, type-level changes, etc.), skip the prompt without asking. The categorical skip list below is not exhaustive — trust judgment about the change you just wrote.
+2. **작성된 변경 사항에 대한 에이전트의 판단.** 이번 세션에서 커밋을 직접 작성했고 변경 사항이 사용자에게 보이지 않는 명확한 비시각적 변경(내부 구조 변경, 사용자 대면 효과가 없는 백엔드 리팩토링, 타입 수준의 변경 등)임을 알고 있다면 묻지 않고 건너뜁니다. 아래의 생략 목록이 전부는 아니며, 방금 작성한 변경 사항에 대한 여러분의 판단을 믿으십시오.
 
-Otherwise, run the full decision: if the branch diff changes observable behavior (UI, CLI output, API behavior with runnable code, generated artifacts, workflow output) and evidence is not otherwise blocked (unavailable credentials, paid services, deploy-only infrastructure, hardware), ask: "This PR has observable behavior. Capture evidence for the PR description?"
+그 외의 경우 전체 결정을 내립니다: 브랜치 diff가 관찰 가능한 동작(UI, CLI 출력, 실행 가능한 코드가 포함된 API 동작, 생성된 산출물, 워크플로우 출력)을 변경하고 증거 확보가 차단되지 않은 경우(자격 증명 부재, 유료 서비스, 배포 전용 인프라, 하드웨어 등), "이 PR은 관찰 가능한 동작 변경을 포함합니다. PR 설명에 넣을 증거를 캡처할까요?"라고 물어봅니다.
 
-- **Capture now** -- load the `ce-demo-reel` skill with a target description inferred from the branch diff. ce-demo-reel returns `Tier`, `Description`, `URL`, and `Path`. Exactly one of `URL` or `Path` contains a real value; the other is `"none"`. If capture returns a public URL, splice it into the body as a `## Demo` section. If capture returns a local `Path` instead (user chose local save), note in the body that a demo was recorded but is not embedded because the user chose local save. If capture returns `Tier: skipped` or both `URL` and `Path` are `"none"`, proceed with no evidence.
-- **Use existing evidence** -- ask for the URL or markdown embed, then splice it in as a `## Demo` section.
-- **Skip** -- proceed with no evidence section.
+- **지금 캡처** -- 브랜치 diff에서 유도된 대상 설명을 가지고 `ce-demo-reel` 스킬을 로드합니다. ce-demo-reel은 `Tier`, `Description`, `URL`, `Path`를 반환합니다. `URL` 또는 `Path` 중 하나만 실제 값을 가지며, 나머지는 `"none"`입니다. 캡처 결과가 공개 URL이면 본문에 `## Demo` 섹션으로 삽입합니다. 캡처 결과가 로컬 `Path`인 경우 (사용자가 로컬 저장을 선택), 데모가 기록되었지만 로컬 저장을 선택하여 임베드되지 않았음을 본문에 기재합니다. 캡처 결과가 `Tier: skipped`이거나 `URL`, `Path` 모두 `"none"`이면 증거 없이 진행합니다.
+- **기존 증거 사용** -- URL이나 마크다운 임베드 코드를 물어본 뒤, `## Demo` 섹션으로 삽입합니다.
+- **건너뛰기** -- 증거 섹션 없이 진행합니다.
 
-When evidence is not possible (docs-only, markdown-only, changelog-only, release metadata, CI/config-only, test-only, or pure internal refactors), skip without asking.
+증거 확보가 불가능한 경우 (문서 전용, 마크다운 전용, 변경 로그 전용, 릴리스 메타데이터, CI/설정 전용, 테스트 전용 또는 순수 내부 리팩토링), 묻지 않고 건너뜁니다.
 
-**Compose the title and body.** Continue with Steps A through H from the already-loaded reference (commit classification, evidence handling, narrative framing, sizing, writing voice and principles, visual communication, title format, body assembly, the Compound Engineering badge, and the compression pass). For an existing PR, the current body was already read in Pre-A.
+**제목 및 본문 작성.** 이미 로드된 참조 문서의 단계 A부터 H까지(커밋 분류, 증거 처리, 내러티브 프레이밍, 규모 산정, 문체 및 원칙, 시각적 커뮤니케이션, 제목 형식, 본문 조립, Compound Engineering 배지, 압축 단계) 계속 진행합니다. 기존 PR의 경우 현재 본문은 이미 Pre-A에서 읽혀진 상태입니다.
 
-### Step 7: Create or update the PR
+### 단계 7: PR 생성 또는 업데이트
 
-Apply via `gh pr create` (new PR) or `gh pr edit` (existing PR). Substitute `<TITLE>` verbatim; if it contains `"`, `` ` ``, `$`, or `\`, escape them or switch to single quotes.
+`gh pr create` (새 PR) 또는 `gh pr edit` (기존 PR)를 통해 적용합니다. `<TITLE>`을 그대로 사용하되, `"`, `` ` ``, `$`, `\`가 포함되어 있다면 이스케이프하거나 작은따옴표를 사용하십시오.
 
-The body **must** be written to a temp file and passed via `--body-file <path>`. Never use `--body-file -`, stdin pipes, heredoc-to-stdin, or `--body "$(cat ...)"` — wrappers and stdin handling can silently produce an empty PR body while `gh` still exits 0 and returns a URL.
+본문은 반드시 임시 파일에 기록한 뒤 `--body-file <path>`를 통해 전달해야 합니다. `--body-file -`, stdin 파이프, heredoc, `--body "$(cat ...)"` 방식은 사용하지 마십시오. 래퍼나 stdin 처리 과정에서 PR 본문이 비어버릴 수 있으며, `gh`는 성공(exit 0)으로 종료되어 URL을 반환할 수 있기 때문입니다.
 
 ```bash
 BODY_FILE=$(mktemp "${TMPDIR:-/tmp}/ce-pr-body.XXXXXX") && cat > "$BODY_FILE" <<'__CE_PR_BODY_END__'
-<the composed body markdown goes here, verbatim>
+<작성된 본문 마크다운이 그대로 들어갑니다>
 __CE_PR_BODY_END__
 ```
 
-The quoted sentinel keeps `$VAR`, backticks, and any literal `EOF` inside the body from being expanded.
+따옴표가 붙은 구분 기호(`'__CE_PR_BODY_END__'`)를 사용하면 본문 내부의 `$VAR`, 백틱, `EOF` 등이 확장되지 않고 그대로 유지됩니다.
 
-#### New PR (no existing PR from Step 3)
+#### 새 PR (단계 3에서 기존 PR이 발견되지 않은 경우)
 
 ```bash
 gh pr create --title "<TITLE>" --body-file "$BODY_FILE"
 ```
 
-Keep the title under 72 characters; the writing reference already emits a conventional-commit title in that range.
+제목은 72자 이내로 유지하십시오. 글쓰기 참조 문서는 이미 해당 범위 내의 Conventional Commit 제목을 생성합니다.
 
-#### Existing PR (found in Step 3)
+#### 기존 PR (단계 3에서 발견된 경우)
 
-The new commits are already on the PR from Step 5. Report the PR URL, then ask whether to rewrite the description.
+새로운 커밋들은 이미 단계 5에서 PR에 반영되었습니다. PR URL을 보고한 다음, 설명을 다시 쓸지 물어봅니다.
 
-- If **no** -- skip Step 6 entirely and finish. Do not run composition or evidence capture when the user declined the rewrite.
-- If **yes**, perform these three actions in order. They are separate steps with a hand-off boundary between them -- do not stop between actions.
-  1. Run Step 6 to compose the new title and body.
-  2. **Preview and confirm.** Read the first two sentences of the Summary, plus the total line count. Ask the user (per the "Asking the user" convention at the top of this skill): "New title: `<title>` (`<N>` chars). Summary leads with: `<first two sentences>`. Total body: `<L>` lines. Apply?" The first two sentences of the Summary carry most of the reviewer's attention. If the user declines, they may pass focus text back for a regenerate; do not apply.
-  3. If confirmed, apply with `gh pr edit`:
+- **아니오**라고 답하면 -- 단계 6을 완전히 건너뛰고 종료합니다. 사용자가 다시 쓰기를 거절했다면 본문 작성이나 증거 캡처를 실행하지 마십시오.
+- **예**라고 답하면 -- 다음 세 가지 작업을 순서대로 수행합니다. 이들은 작업 간 핸드오프 경계가 있는 별도의 단계이며, 작업 중간에 멈추지 마십시오.
+  1. 단계 6을 실행하여 새 제목과 본문을 작성합니다.
+  2. **미리보기 및 확인.** 요약(Summary)의 처음 두 문장과 전체 줄 수를 읽어줍니다. 사용자에게 (상단의 "사용자에게 확인" 컨벤션에 따라) 다음과 같이 묻습니다: "새 제목: `<title>` (`<N>`자). 요약 시작: `<처음 두 문장>`. 전체 본문: `<L>`줄. 적용할까요?" 요약의 처음 두 문장은 리뷰어의 관심을 가장 많이 끄는 부분입니다. 사용자가 거부하면 다시 생성을 위한 피드백을 받을 수 있습니다. 적용하지 마십시오.
+  3. 확인되면 `gh pr edit`으로 적용합니다:
 
      ```bash
      gh pr edit --title "<TITLE>" --body-file "$BODY_FILE"
      ```
 
-  Then report the PR URL (Step 8).
+  그 후 PR URL을 보고합니다 (단계 8).
 
-### Step 8: Report
+### 단계 8: 보고
 
-Output the PR URL.
+PR URL을 출력합니다.

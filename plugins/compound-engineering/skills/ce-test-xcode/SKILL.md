@@ -1,32 +1,50 @@
 ---
 name: ce-test-xcode
-description: "Build and test iOS apps on simulator using XcodeBuildMCP. Use after making iOS code changes, before creating a PR, or when verifying app behavior and checking for crashes on simulator."
-argument-hint: "[scheme name or 'current' to use default]"
+description: "XcodeBuildMCP를 사용하여 시뮬레이터에서 iOS 앱을 빌드하고 테스트합니다. iOS 코드 변경 후, PR 생성 전, 또는 시뮬레이터에서 앱 동작 확인 및 크래시 점검 시 사용합니다."
+argument-hint: "[스킴 이름 또는 기본값 사용 시 'current']"
 disable-model-invocation: true
+allowed-tools:
+  - gem
 ---
 
-# Xcode Test Skill
+# Xcode 테스트 스킬
 
-Build, install, and test iOS apps on the simulator using XcodeBuildMCP. Captures screenshots, logs, and verifies app behavior.
+## 다중 에이전트 협업 (Multi-Agent Collaboration)
 
-## Prerequisites
+사용자의 입력(`$ARGUMENTS`) 내에 `--add <ai-이름>` 형태의 플래그가 포함되어 있는지 확인하십시오. 
+현재 지원되는 외부 AI 인터페이스는 `--add gemini` (또는 `--add gem`)입니다.
 
-- Xcode installed with command-line tools
-- XcodeBuildMCP MCP server connected
-- Valid Xcode project or workspace
-- At least one iOS Simulator available
+만약 해당 플래그가 감지되면, 작업을 단독으로 확정하지 말고 다음 절차를 따르십시오:
+1. **의도 파악:** 플래그를 제외한 나머지 문자열을 실제 지시사항으로 간주합니다.
+2. **초안 작성:** 본인(주 에이전트)의 지식과 코드베이스 컨텍스트를 바탕으로 작업의 초기 뼈대나 접근법을 생각합니다.
+3. **MCP 협업 호출:** `gem` 도구를 호출하여 외부 Gemini 에이전트에게 조언이나 검토를 구합니다.
+   - 호출 시 전달할 메시지 예시: "나는 현재 이 작업에 대한 초안을 세우고 있어. 내 초안은 [초안 요약]이야. 이 접근 방식의 기술적 타당성을 검토하고 누락된 에지 케이스나 더 나은 패턴을 조언해줄 수 있어?"
+4. **결과 통합:** `gem` 도구가 반환한 피드백을 당신의 최종 결과물에 통합(Synthesis)합니다. 
+5. **명시적 표시:** 최종 산출물의 상단 또는 설명 부분에 "이 결과물은 Gemini와의 협업을 통해 검토 및 보완되었습니다."라는 문구를 추가하십시오.
 
-## Workflow
+이 협업 절차를 염두에 두고 아래의 본래 스킬 워크플로우를 진행하십시오.
 
-### 0. Verify XcodeBuildMCP is Available
 
-Check that the XcodeBuildMCP MCP server is connected by calling its `list_simulators` tool.
+XcodeBuildMCP를 사용하여 시뮬레이터에서 iOS 앱을 빌드, 설치 및 테스트합니다. 스크린샷과 로그를 캡처하고 앱 동작을 확인합니다.
 
-MCP tool names vary by platform:
+## 사전 요구 사항
+
+- 커맨드 라인 도구가 설치된 Xcode
+- XcodeBuildMCP MCP 서버 연결
+- 유효한 Xcode 프로젝트 또는 워크스페이스
+- 하나 이상의 iOS 시뮬레이터 사용 가능
+
+## 워크플로우
+
+### 0. XcodeBuildMCP 사용 가능 여부 확인
+
+XcodeBuildMCP MCP 서버의 `list_simulators` 도구를 호출하여 연결 상태를 확인합니다.
+
+MCP 도구 이름은 플랫폼에 따라 다릅니다:
 - Claude Code: `mcp__xcodebuildmcp__list_simulators`
-- Other platforms: use the equivalent MCP tool call for the `XcodeBuildMCP` server's `list_simulators` method
+- 기타 플랫폼: `XcodeBuildMCP` 서버의 `list_simulators` 메서드에 해당하는 MCP 도구 호출 사용
 
-If the tool is not found or errors, inform the user they need to add the XcodeBuildMCP MCP server:
+도구를 찾을 수 없거나 오류가 발생하면, 사용자에게 XcodeBuildMCP MCP 서버를 추가해야 함을 알립니다:
 
 ```
 XcodeBuildMCP not installed
@@ -41,168 +59,168 @@ Then add "XcodeBuildMCP" as an MCP server in your agent configuration
 and restart your agent.
 ```
 
-Do NOT proceed until XcodeBuildMCP is confirmed working.
+XcodeBuildMCP가 정상 작동하는 것을 확인하기 전까지는 진행하지 마세요.
 
-### 1. Discover Project and Scheme
+### 1. 프로젝트 및 스킴 검색
 
-Call XcodeBuildMCP's `discover_projs` tool to find available projects, then `list_schemes` with the project path to get available schemes.
+XcodeBuildMCP의 `discover_projs` 도구를 호출하여 사용 가능한 프로젝트를 찾은 다음, 프로젝트 경로와 함께 `list_schemes`를 호출하여 사용 가능한 스킴을 가져옵니다.
 
-If an argument was provided, use that scheme name. If "current", use the default/last-used scheme.
+인자가 제공된 경우 해당 스킴 이름을 사용합니다. "current"인 경우 기본값 또는 최근에 사용된 스킴을 사용합니다.
 
-### 2. Boot Simulator
+### 2. 시뮬레이터 부팅
 
-Call `list_simulators` to find available simulators. Boot the preferred simulator (iPhone 15 Pro recommended) using `boot_simulator` with the simulator's UUID.
+`list_simulators`를 호출하여 사용 가능한 시뮬레이터를 찾습니다. 시뮬레이터의 UUID와 함께 `boot_simulator`를 사용하여 선호하는 시뮬레이터(iPhone 15 Pro 권장)를 부팅합니다.
 
-Wait for the simulator to be ready before proceeding.
+시뮬레이터가 준비될 때까지 기다린 후 진행합니다.
 
-### 3. Build the App
+### 3. 앱 빌드
 
-Call `build_ios_sim_app` with the project path and scheme name.
+프로젝트 경로와 스킴 이름을 사용하여 `build_ios_sim_app`을 호출합니다.
 
-**On failure:**
-- Capture build errors
-- Report to user with specific error details
+**실패 시:**
+- 빌드 오류를 캡처합니다.
+- 구체적인 오류 세부 정보와 함께 사용자에게 보고합니다.
 
-**On success:**
-- Note the built app path for installation
-- Proceed to step 4
+**성공 시:**
+- 설치를 위해 빌드된 앱 경로를 기록합니다.
+- 4단계로 진행합니다.
 
-### 4. Install and Launch
+### 4. 설치 및 실행
 
-1. Call `install_app_on_simulator` with the built app path and simulator UUID
-2. Call `launch_app_on_simulator` with the bundle ID and simulator UUID
-3. Call `capture_sim_logs` with the simulator UUID and bundle ID to start log capture
+1. 빌드된 앱 경로와 시뮬레이터 UUID를 사용하여 `install_app_on_simulator`를 호출합니다.
+2. 번들 ID와 시뮬레이터 UUID를 사용하여 `launch_app_on_simulator`를 호출합니다.
+3. 로그 캡처를 시작하기 위해 시뮬레이터 UUID 및 번들 ID와 함께 `capture_sim_logs`를 호출합니다.
 
-### 5. Test Key Screens
+### 5. 주요 화면 테스트
 
-For each key screen in the app:
+앱의 각 주요 화면에 대해:
 
-**Take screenshot:**
-Call `take_screenshot` with the simulator UUID and a descriptive filename (e.g., `screen-home.png`).
+**스크린샷 찍기:**
+시뮬레이터 UUID와 설명적인 파일 이름(예: `screen-home.png`)을 사용하여 `take_screenshot`을 호출합니다.
 
-**Review screenshot for:**
-- UI elements rendered correctly
-- No error messages visible
-- Expected content displayed
-- Layout looks correct
+**스크린샷 검토 항목:**
+- UI 요소가 올바르게 렌더링되었는지
+- 오류 메시지가 표시되지 않는지
+- 예상되는 콘텐츠가 표시되는지
+- 레이아웃이 올바른지
 
-**Check logs for errors:**
-Call `get_sim_logs` with the simulator UUID. Look for:
-- Crashes
-- Exceptions
-- Error-level log messages
-- Failed network requests
+**로그에서 오류 확인:**
+시뮬레이터 UUID와 함께 `get_sim_logs`를 호출합니다. 다음 사항을 확인합니다:
+- 크래시 (Crashes)
+- 예외 (Exceptions)
+- 오류 레벨 로그 메시지
+- 실패한 네트워크 요청
 
-**Known automation limitation — SwiftUI Text links:**
-Simulated taps (via XcodeBuildMCP or any simulator automation tool) do not trigger gesture recognizers on SwiftUI `Text` views with inline `AttributedString` links. Taps report success but have no effect. This is a platform limitation — inline links are not exposed as separate elements in the accessibility tree. When a tap on a Text link has no visible effect, prompt the user to tap manually in the simulator. If the target URL is known, `xcrun simctl openurl <device> <URL>` can open it directly as a fallback.
+**알려진 자동화 제한 사항 — SwiftUI Text 링크:**
+시뮬레이션된 탭(XcodeBuildMCP 또는 기타 시뮬레이터 자동화 도구 사용)은 인라인 `AttributedString` 링크가 있는 SwiftUI `Text` 뷰에서 제스처 인식기를 트리거하지 않습니다. 탭은 성공을 보고하지만 아무런 효과가 없습니다. 이는 플랫폼 제한 사항으로, 인라인 링크는 접근성 트리에서 별도의 요소로 노출되지 않습니다. Text 링크 탭이 효과가 없는 경우, 사용자에게 시뮬레이터에서 수동으로 탭하도록 요청하세요. 대상 URL을 알고 있는 경우 `xcrun simctl openurl <device> <URL>`을 사용하여 직접 여는 방법이 있습니다.
 
-### 6. Human Verification (When Required)
+### 6. 수동 확인 (필요한 경우)
 
-Pause for human input when testing touches flows that require device interaction.
+기기 상호 작용이 필요한 테스트 흐름에서는 사용자 입력을 위해 일시 중지합니다.
 
-| Flow Type | What to Ask |
+| 흐름 유형 | 질문 내용 |
 |-----------|-------------|
-| Sign in with Apple | "Please complete Sign in with Apple on the simulator" |
-| Push notifications | "Send a test push and confirm it appears" |
-| In-app purchases | "Complete a sandbox purchase" |
-| Camera/Photos | "Grant permissions and verify camera works" |
-| Location | "Allow location access and verify map updates" |
-| SwiftUI Text links | "Please tap on [element description] manually — automated taps cannot trigger inline text links" |
+| Apple로 로그인 | "시뮬레이터에서 Apple로 로그인을 완료해 주세요" |
+| 푸시 알림 | "테스트 푸시를 보내고 나타나는지 확인해 주세요" |
+| 인앱 결제 | "샌드박스 결제를 완료해 주세요" |
+| 카메라/사진 | "권한을 허용하고 카메라가 작동하는지 확인해 주세요" |
+| 위치 | "위치 접근을 허용하고 지도가 업데이트되는지 확인해 주세요" |
+| SwiftUI Text 링크 | "[요소 설명]을 수동으로 탭해 주세요 — 자동화된 탭은 인라인 텍스트 링크를 트리거할 수 없습니다" |
 
-Ask the user using the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to numbered options in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question:
+플랫폼의 차단 질문 도구를 사용하여 사용자에게 요청합니다: Claude Code의 `AskUserQuestion` (스키마가 로드되지 않은 경우 먼저 `select:AskUserQuestion`으로 `ToolSearch` 호출), Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user` (`pi-ask-user` 확장 필요). 도구가 존재하지 않거나 호출 오류(예: Codex 편집 모드)가 발생하는 경우에만 채팅에서 번호가 매겨진 옵션으로 대체하세요. 질문을 자동으로 건너뛰지 마세요:
 
 ```
-Human Verification Needed
+수동 확인 필요
 
-This test requires [flow type]. Please:
-1. [Action to take on simulator]
-2. [What to verify]
+이 테스트는 [흐름 유형]이 필요합니다. 다음을 수행해 주세요:
+1. [시뮬레이터에서 수행할 작업]
+2. [확인할 사항]
 
-Did it work correctly?
-1. Yes - continue testing
-2. No - describe the issue
+올바르게 작동했나요?
+1. 예 - 테스트 계속
+2. 아니요 - 문제 설명
 ```
 
-### 7. Handle Failures
+### 7. 실패 처리
 
-When a test fails:
+테스트 실패 시:
 
-1. **Document the failure:**
-   - Take screenshot of error state
-   - Capture console logs
-   - Note reproduction steps
+1. **실패 문서화:**
+   - 오류 상태의 스크린샷 캡처
+   - 콘솔 로그 캡처
+   - 재현 단계 기록
 
-2. **Ask the user how to proceed:**
+2. **진행 방식 확인:**
 
    ```
-   Test Failed: [screen/feature]
+   테스트 실패: [화면/기능]
 
-   Issue: [description]
-   Logs: [relevant error messages]
+   문제: [설명]
+   로그: [관련 오류 메시지]
 
-   How to proceed?
-   1. Fix now - debug, propose a fix, rebuild and retest
-   2. Skip - continue testing other screens
+   어떻게 진행할까요?
+   1. 지금 수정 - 디버깅, 수정 제안, 다시 빌드 및 테스트
+   2. 건너뛰기 - 다른 화면 테스트 계속
    ```
 
-3. **If "Fix now":** investigate, propose a fix, rebuild and retest
-4. **If "Skip":** log as skipped, continue
+3. **"지금 수정"의 경우:** 조사하고 수정을 제안한 후 다시 빌드하고 테스트합니다.
+4. **"건너뛰기"의 경우:** 건너뜀으로 기록하고 계속 진행합니다.
 
-### 8. Test Summary
+### 8. 테스트 요약
 
-After all tests complete, present a summary:
+모든 테스트가 완료되면 요약을 제시합니다:
 
 ```markdown
-## Xcode Test Results
+## Xcode 테스트 결과
 
-**Project:** [project name]
-**Scheme:** [scheme name]
-**Simulator:** [simulator name]
+**프로젝트:** [프로젝트 이름]
+**스킴:** [스킴 이름]
+**시뮬레이터:** [시뮬레이터 이름]
 
-### Build: Success / Failed
+### 빌드: 성공 / 실패
 
-### Screens Tested: [count]
+### 테스트된 화면 수: [개수]
 
-| Screen | Status | Notes |
+| 화면 | 상태 | 메모 |
 |--------|--------|-------|
-| Launch | Pass | |
-| Home | Pass | |
-| Settings | Fail | Crash on tap |
-| Profile | Skip | Requires login |
+| 실행 | 통과 | |
+| 홈 | 통과 | |
+| 설정 | 실패 | 탭 시 크래시 |
+| 프로필 | 건너뜀 | 로그인 필요 |
 
-### Console Errors: [count]
-- [List any errors found]
+### 콘솔 오류: [개수]
+- [발견된 오류 목록]
 
-### Human Verifications: [count]
-- Sign in with Apple: Confirmed
-- Push notifications: Confirmed
+### 수동 확인: [개수]
+- Apple로 로그인: 확인됨
+- 푸시 알림: 확인됨
 
-### Failures: [count]
-- Settings screen - crash on navigation
+### 실패: [개수]
+- 설정 화면 - 네비게이션 시 크래시
 
-### Result: [PASS / FAIL / PARTIAL]
+### 결과: [통과 / 실패 / 부분 통과]
 ```
 
-### 9. Cleanup
+### 9. 정리
 
-After testing:
+테스트 후:
 
-1. Call `stop_log_capture` with the simulator UUID
-2. Optionally call `shutdown_simulator` with the simulator UUID
+1. 시뮬레이터 UUID와 함께 `stop_log_capture`를 호출합니다.
+2. (선택 사항) 시뮬레이터 UUID와 함께 `shutdown_simulator`를 호출합니다.
 
-## Quick Usage Examples
+## 빠른 사용 예시
 
 ```bash
-# Test with default scheme
+# 기본 스킴으로 테스트
 /ce-test-xcode
 
-# Test specific scheme
+# 특정 스킴으로 테스트
 /ce-test-xcode MyApp-Debug
 
-# Test after making changes
+# 변경 사항 적용 후 테스트
 /ce-test-xcode current
 ```
 
-## Integration with ce-code-review
+## ce-code-review와의 통합
 
-When reviewing PRs that touch iOS code, the `ce-code-review` workflow can spawn an agent to run this skill, build on the simulator, test key screens, and check for crashes.
+iOS 코드를 수정하는 PR을 검토할 때, `ce-code-review` 워크플로우는 에이전트를 생성하여 이 스킬을 실행하고, 시뮬레이터에서 빌드하고, 주요 화면을 테스트하며, 크래시를 확인할 수 있습니다.

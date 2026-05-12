@@ -1,27 +1,27 @@
-# Setup: Add Riffrec to a project
+# 설정: 프로젝트에 Riffrec 추가하기 (Setup: Add Riffrec to a project)
 
-Use this path when the user has no recording yet and wants to start capturing product feedback with [Riffrec](https://github.com/kieranklaassen/riffrec).
+사용자가 아직 녹화본이 없으며 [Riffrec](https://github.com/kieranklaassen/riffrec)을 사용하여 제품 피드백 수집을 시작하고 싶을 때 이 경로를 사용하십시오.
 
-Riffrec is a browser-based capture tool that records the screen, microphone audio, console output, network requests, and DOM events into a single `riffrec-*.zip` bundle. The bundle is what this skill consumes downstream.
+Riffrec은 화면, 마이크 오디오, 콘솔 출력, 네트워크 요청 및 DOM 이벤트를 단일 `riffrec-*.zip` 번들로 기록하는 브라우저 기반 캡처 도구입니다. 이 번들이 바로 이 스킬이 하류 단계에서 소비하는 대상입니다.
 
-## What to tell the user
+## 사용자에게 안내할 내용
 
-1. Riffrec lives at <https://github.com/kieranklaassen/riffrec>. Refer them to the README for the current install command — it is the source of truth and may change.
-2. The general shape of integration:
-   - Add the Riffrec capture script or package to the project's web app.
-   - Wire a "Record feedback" affordance somewhere accessible during real use (a bug report button, a dev-only floating recorder, or a keyboard shortcut).
-   - Confirm a sample session ends with a downloadable `riffrec-*.zip`.
-3. Once a zip exists, the user runs this skill again with the zip path. The skill will pick the **quick bug report** or **extensive analysis** path automatically based on length and content.
+1. Riffrec은 <https://github.com/kieranklaassen/riffrec>에 위치해 있습니다. 현재 설치 명령은 변경될 수 있으므로 해당 저장소의 README를 정보원으로 안내하십시오.
+2. 일반적인 통합 형태:
+   - 프로젝트의 웹 앱에 Riffrec 캡처 스크립트 또는 패키지를 추가합니다.
+   - 실제 사용 중에 접근 가능한 위치(버그 보고 버튼, 개발자 전용 플로팅 녹화기 또는 키보드 단축키)에 "피드백 녹화" 기능을 연결합니다.
+   - 샘플 세션이 다운로드 가능한 `riffrec-*.zip`으로 끝나는지 확인합니다.
+3. zip 파일이 생성되면 사용자는 zip 경로와 함께 이 스킬을 다시 실행합니다. 스킬은 녹화본의 길이와 내용에 따라 **빠른 버그 보고(quick bug report)** 또는 **심층 분석(extensive analysis)** 경로를 자동으로 선택합니다.
 
-## Recommended capture habits
+## 권장 캡처 습관
 
-Surface these to the user during setup so the recordings they share later are easy to analyze:
+사용자가 나중에 공유할 녹화본이 분석하기 쉽도록 설치 중에 다음 내용을 안내하십시오:
 
-- Speak the issue out loud while reproducing it. The transcript is the single highest-signal artifact.
-- Click the affected UI even when it does nothing — failed clicks are the strongest signal in event extraction.
-- Keep recordings focused. Many short clips beat one long one when issues are unrelated.
-- Note when a step is intentional vs. accidental ("oops, that wasn't what I meant"). The analyzer cannot infer intent.
+- 문제를 재현하는 동안 이슈를 말로 표현하십시오. 트랜스크립트는 가장 신호가 강한 단일 아티팩트입니다.
+- 반응이 없는 경우에도 해당 UI를 클릭하십시오. 실패한 클릭은 이벤트 추출에서 가장 강력한 신호입니다.
+- 녹화는 집중해서 수행하십시오. 이슈들이 서로 관련이 없는 경우, 하나의 긴 영상보다는 여러 개의 짧은 클립이 낫습니다.
+- 의도적인 단계와 실수인 단계를 구분하여 언급하십시오 ("아, 이건 제가 의도한 게 아니었어요"). 분석기는 사용자의 의도를 추론할 수 없습니다.
 
-## After install
+## 설치 후
 
-When the user returns with their first zip, route to `references/quick-bug-report.md` or `references/extensive-analysis.md` per the SKILL.md routing rules. Do not run the analyzer in the setup path — there is nothing to analyze yet.
+사용자가 첫 번째 zip 파일을 가지고 돌아오면, SKILL.md 라우팅 규칙에 따라 `references/quick-bug-report.md` 또는 `references/extensive-analysis.md`로 라우팅하십시오. 설치 경로에서는 분석할 대상이 없으므로 분석기를 실행하지 마십시오.

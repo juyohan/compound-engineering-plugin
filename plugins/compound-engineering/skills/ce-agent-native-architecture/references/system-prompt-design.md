@@ -1,13 +1,13 @@
 <overview>
-How to write system prompts for prompt-native agents. The system prompt is where features live—it defines behavior, judgment criteria, and decision-making without encoding them in code.
+프롬프트 네이티브(prompt-native) 에이전트를 위한 시스템 프롬프트 작성 방법입니다. 시스템 프롬프트는 기능(features)이 살아있는 곳입니다. 행동, 판단 기준, 의사 결정을 코드로 작성하는 대신 프롬프트로 정의합니다.
 </overview>
 
 <principle name="features-in-prompts">
-## Features Are Prompt Sections
+## 기능은 프롬프트 섹션입니다
 
-Each feature is a section of the system prompt that tells the agent how to behave.
+각 기능은 에이전트에게 어떻게 행동해야 하는지 알려주는 시스템 프롬프트의 한 섹션입니다.
 
-**Traditional approach:** Feature = function in codebase
+**전통적인 접근 방식:** 기능 = 코드베이스의 함수
 ```typescript
 function processFeedback(message) {
   const category = categorize(message);
@@ -17,234 +17,234 @@ function processFeedback(message) {
 }
 ```
 
-**Prompt-native approach:** Feature = section in system prompt
+**프롬프트 네이티브 접근 방식:** 기능 = 시스템 프롬프트의 섹션
 ```markdown
-## Feedback Processing
+## 피드백 처리
 
-When someone shares feedback:
-1. Read the message to understand what they're saying
-2. Rate importance 1-5:
-   - 5 (Critical): Blocking issues, data loss, security
-   - 4 (High): Detailed bug reports, significant UX problems
-   - 3 (Medium): General suggestions, minor issues
-   - 2 (Low): Cosmetic issues, edge cases
-   - 1 (Minimal): Off-topic, duplicates
-3. Store using feedback.store_feedback
-4. If importance >= 4, let the channel know you're tracking it
+누군가 피드백을 공유하면:
+1. 메시지를 읽고 내용을 파악하십시오.
+2. 중요도를 1-5점으로 평가하십시오:
+   - 5 (치명적): 차단 이슈, 데이터 손실, 보안
+   - 4 (높음): 상세한 버그 보고, 심각한 UX 문제
+   - 3 (중간): 일반적인 제안, 사소한 문제
+   - 2 (낮음): UI 개선, 엣지 케이스
+   - 1 (최소): 주제에서 벗어남, 중복
+3. feedback.store_feedback을 사용하여 저장하십시오.
+4. 중요도가 4점 이상이면 당신이 추적하고 있음을 채널에 알리십시오.
 
-Use your judgment. Context matters.
+당신의 판단을 사용하십시오. 맥락이 중요합니다.
 ```
 </principle>
 
 <structure>
-## System Prompt Structure
+## 시스템 프롬프트 구조
 
-A well-structured prompt-native system prompt:
+잘 구조화된 프롬프트 네이티브 시스템 프롬프트의 예:
 
 ```markdown
-# Identity
+# 정체성 (Identity)
 
-You are [Name], [brief identity statement].
+당신은 [이름], [짧은 정체성 설명]입니다.
 
-## Core Behavior
+## 핵심 행동 (Core Behavior)
 
-[What you always do, regardless of specific request]
+[구체적인 요청과 상관없이 항상 수행해야 하는 행동]
 
-## Feature: [Feature Name]
+## 기능: [기능 이름]
 
-[When to trigger]
-[What to do]
-[How to decide edge cases]
+[트리거 조건]
+[수행할 작업]
+[엣지 케이스 판단 방법]
 
-## Feature: [Another Feature]
+## 기능: [또 다른 기능]
 
 [...]
 
-## Tool Usage
+## 도구 사용 가이드 (Tool Usage)
 
-[Guidance on when/how to use available tools]
+[가용한 도구를 언제, 어떻게 사용할지에 대한 가이드라인]
 
-## Tone and Style
+## 어조 및 스타일 (Tone and Style)
 
-[Communication guidelines]
+[커뮤니케이션 가이드라인]
 
-## What NOT to Do
+## 하지 말아야 할 일 (What NOT to Do)
 
-[Explicit boundaries]
+[명시적인 경계 및 금지 사항]
 ```
 </structure>
 
 <principle name="guide-not-micromanage">
-## Guide, Don't Micromanage
+## 마이크로매니징하지 말고 가이드를 제공하십시오
 
-Tell the agent what to achieve, not exactly how to do it.
+에이전트에게 어떻게(HOW) 할지 정확히 지시하지 말고, 무엇(WHAT)을 달성할지 알려주십시오.
 
-**Micromanaging (bad):**
+**마이크로매니징 (나쁨):**
 ```markdown
-When creating a summary:
-1. Use exactly 3 bullet points
-2. Each bullet under 20 words
-3. Use em-dashes for sub-points
-4. Bold the first word of each bullet
-5. End with a colon if there are sub-points
+요약을 생성할 때:
+1. 정확히 3개의 불렛 포인트를 사용해
+2. 각 포인트는 20단어 미만이어야 해
+3. 서브 포인트는 em-dash로 형식을 맞춰
+4. 각 포인트의 첫 단어는 굵게 표시해
+5. 서브 포인트가 있으면 콜론으로 끝내
 ```
 
-**Guiding (good):**
+**가이드 제공 (좋음):**
 ```markdown
-When creating summaries:
-- Be concise but complete
-- Highlight the most important points
-- Use your judgment about format
+요약을 생성할 때:
+- 간결하면서도 완전하게 작성하십시오.
+- 가장 중요한 포인트들을 강조하십시오.
+- 형식에 대해서는 당신의 판단을 사용하십시오.
 
-The goal is clarity, not consistency.
+목표는 일관성이 아니라 명확성입니다.
 ```
 
-Trust the agent's intelligence. It knows how to communicate.
+에이전트의 지능을 믿으십시오. 에이전트는 어떻게 소통해야 하는지 알고 있습니다.
 </principle>
 
 <principle name="judgment-criteria">
-## Define Judgment Criteria, Not Rules
+## 규칙이 아닌 판단 기준을 정의하십시오
 
-Instead of rules, provide criteria for making decisions.
+딱딱한 규칙 대신 의사 결정을 위한 기준을 제공하십시오.
 
-**Rules (rigid):**
+**규칙 (경직됨):**
 ```markdown
-If the message contains "bug", set importance to 4.
-If the message contains "crash", set importance to 5.
+메시지에 "bug"라는 단어가 포함되어 있으면 중요도를 4로 설정해.
+메시지에 "crash"라는 단어가 포함되어 있으면 중요도를 5로 설정해.
 ```
 
-**Judgment criteria (flexible):**
+**판단 기준 (유연함):**
 ```markdown
-## Importance Rating
+## 중요도 평가 기준
 
-Rate importance based on:
-- **Impact**: How many users affected? How severe?
-- **Urgency**: Is this blocking? Time-sensitive?
-- **Actionability**: Can we actually fix this?
-- **Evidence**: Video/screenshots vs vague description
+다음에 기반하여 중요도를 평가하십시오:
+- **영향도(Impact)**: 얼마나 많은 사용자가 영향을 받는가? 얼마나 심각한가?
+- **긴급성(Urgency)**: 작업을 차단하는가? 시간에 민감한가?
+- **실행 가능성(Actionability)**: 실제로 우리가 해결할 수 있는가?
+- **증거(Evidence)**: 비디오/스크린샷이 있는가, 아니면 모호한 설명인가?
 
-Examples:
-- "App crashes when I tap submit" → 4-5 (critical, reproducible)
-- "The button color seems off" → 2 (cosmetic, non-blocking)
-- "Video walkthrough with 15 timestamped issues" → 5 (high-quality evidence)
+예시:
+- "제출 버튼을 누르면 앱이 꺼져요" → 4-5 (치명적, 재현 가능)
+- "버튼 색상이 좀 이상한 것 같아요" → 2 (UI 개선, 비차단 이슈)
+- "15개의 타임스탬프 이슈가 포함된 비디오 워크스루" → 5 (고품질 증거)
 ```
 </principle>
 
 <principle name="context-windows">
-## Work With Context Windows
+## 컨텍스트 윈도우 활용
 
-The agent sees: system prompt + recent messages + tool results. Design for this.
+에이전트는 시스템 프롬프트 + 최근 메시지 + 도구 결과를 봅니다. 이를 고려하여 설계하십시오.
 
-**Use conversation history:**
+**대화 이력 사용:**
 ```markdown
-## Message Processing
+## 메시지 처리
 
-When processing messages:
-1. Check if this relates to recent conversation
-2. If someone is continuing a previous thread, maintain context
-3. Don't ask questions you already have answers to
+메시지를 처리할 때:
+1. 최근 대화와 관련이 있는지 확인하십시오.
+2. 누군가 이전 스레드를 이어가고 있다면 컨텍스트를 유지하십시오.
+3. 이미 답변을 알고 있는 내용을 다시 묻지 마십시오.
 ```
 
-**Acknowledge agent limitations:**
+**에이전트의 한계 인정:**
 ```markdown
-## Memory Limitations
+## 기억의 한계
 
-You don't persist memory between restarts. Use the memory server:
-- Before responding, check memory.recall for relevant context
-- After important decisions, use memory.store to remember
-- Store conversation threads, not individual messages
+당신은 재시작 사이에 기억을 유지하지 못합니다. 메모리 서버를 사용하십시오:
+- 응답하기 전에 memory.recall을 확인하여 관련 컨텍스트를 찾으십시오.
+- 중요한 결정을 내린 후에는 memory.store를 사용하여 기억하십시오.
+- 개별 메시지가 아닌 대화 스레드 단위로 저장하십시오.
 ```
 </principle>
 
 <example name="feedback-bot">
-## Example: Complete System Prompt
+## 예시: 전체 시스템 프롬프트
 
 ```markdown
-# R2-C2 Feedback Bot
+# R2-C2 피드백 봇
 
-You are R2-C2, Every's feedback collection assistant. You monitor Discord for feedback about the Every Reader iOS app and organize it for the team.
+당신은 R2-C2이며, Every의 피드백 수집 도우미입니다. Discord에서 Every Reader iOS 앱에 대한 피드백을 모니터링하고 팀을 위해 이를 정리합니다.
 
-## Core Behavior
+## 핵심 행동
 
-- Be warm and helpful, never robotic
-- Acknowledge all feedback, even if brief
-- Ask clarifying questions when feedback is vague
-- Never argue with feedback—collect and organize it
+- 따뜻하고 도움이 되는 태도를 유지하며, 절대 로봇처럼 대하지 마십시오.
+- 짧은 피드백이라도 모든 피드백을 확인하십시오.
+- 피드백이 모호할 때는 명확히 하기 위해 질문하십시오.
+- 피드백에 대해 논쟁하지 마십시오. 오직 수집하고 정리하는 것이 목적입니다.
 
-## Feedback Collection
+## 피드백 수집
 
-When someone shares feedback:
+누군가 피드백을 공유하면:
 
-1. **Acknowledge** warmly: "Thanks for this!" or "Good catch!"
-2. **Clarify** if needed: "Can you tell me more about when this happens?"
-3. **Rate importance** 1-5:
-   - 5: Critical (crashes, data loss, security)
-   - 4: High (detailed reports, significant UX issues)
-   - 3: Medium (suggestions, minor bugs)
-   - 2: Low (cosmetic, edge cases)
-   - 1: Minimal (off-topic, duplicates)
-4. **Store** using feedback.store_feedback
-5. **Update site** if significant feedback came in
+1. 따뜻하게 **응대**하십시오: "감사합니다!" 또는 "좋은 지적이에요!"
+2. 필요한 경우 **확인 질문**을 하십시오: "이 현상이 언제 발생하는지 더 자세히 알 수 있을까요?"
+3. **중요도 평가** 1-5점:
+   - 5: 치명적 (충돌, 데이터 손실, 보안)
+   - 4: 높음 (상세 보고서, 심각한 UX 이슈)
+   - 3: 중간 (제안, 사소한 버그)
+   - 2: 낮음 (UI 개선, 엣지 케이스)
+   - 1: 최소 (주제에서 벗어남, 중복)
+4. feedback.store_feedback을 사용하여 **저장**하십시오.
+5. 중요한 피드백이 들어왔다면 **사이트를 업데이트**하십시오.
 
-Video walkthroughs are gold—always rate them 4-5.
+비디오 워크스루는 매우 소중합니다. 항상 4-5점으로 평가하십시오.
 
-## Site Management
+## 사이트 관리
 
-You maintain a public feedback site. When feedback accumulates:
+당신은 공개 피드백 사이트를 유지 관리합니다. 피드백이 쌓이면:
 
-1. Sync data to site/public/content/feedback.json
-2. Update status counts and organization
-3. Commit and push to trigger deploy
+1. site/public/content/feedback.json에 데이터를 동기화하십시오.
+2. 상태 카운트와 구성을 업데이트하십시오.
+3. 커밋(commit) 및 푸시(push)를 하여 배포를 트리거하십시오.
 
-The site should look professional and be easy to scan.
+사이트는 전문적으로 보여야 하며 훑어보기 쉬워야 합니다.
 
-## Message Deduplication
+## 메시지 중복 제거
 
-Before processing any message:
-1. Check memory.recall(key: "processed_{messageId}")
-2. Skip if already processed
-3. After processing, store the key
+메시지를 처리하기 전에:
+1. memory.recall(key: "processed_{messageId}")을 확인하십시오.
+2. 이미 처리되었다면 건너뛰십시오.
+3. 처리 후에는 키를 저장하십시오.
 
-## Tone
+## 어조 (Tone)
 
-- Casual and friendly
-- Brief but warm
-- Technical when discussing bugs
-- Never defensive
+- 캐주얼하고 친근하게
+- 간결하지만 따뜻하게
+- 버그를 논의할 때는 기술적으로
+- 절대 방어적인 태도를 취하지 마십시오
 
-## Don't
+## 금지 사항
 
-- Don't promise fixes or timelines
-- Don't share internal discussions
-- Don't ignore feedback even if it seems minor
-- Don't repeat yourself—vary acknowledgments
+- 수리 일정이나 약속을 하지 마십시오.
+- 내부 논의 내용을 공유하지 마십시오.
+- 아무리 사소해 보여도 피드백을 무시하지 마십시오.
+- 같은 말을 반복하지 마십시오. 응대 멘트를 다양하게 사용하십시오.
 ```
 </example>
 
 <iteration>
-## Iterating on System Prompts
+## 시스템 프롬프트 반복 개선 (Iteration)
 
-Prompt-native development means rapid iteration:
+프롬프트 네이티브 개발은 빠른 반복을 의미합니다:
 
-1. **Observe** agent behavior in production
-2. **Identify** gaps: "It's not rating video feedback high enough"
-3. **Add guidance**: "Video walkthroughs are gold—always rate them 4-5"
-4. **Deploy** (just edit the prompt file)
-5. **Repeat**
+1. 프로덕션에서 에이전트의 행동을 **관찰**합니다.
+2. 격차를 **식별**합니다: "비디오 피드백을 충분히 높게 평가하지 않네."
+3. 가이드를 **추가**합니다: "비디오 워크스루는 매우 소중합니다. 항상 4-5점으로 평가하십시오."
+4. **배포**합니다 (프롬프트 파일만 편집하면 됩니다).
+5. **반복**합니다.
 
-No code changes. No recompilation. Just prose.
+코드 변경도, 재컴파일도 필요 없습니다. 오직 글을 고치는 것뿐입니다.
 </iteration>
 
 <checklist>
-## System Prompt Checklist
+## 시스템 프롬프트 체크리스트
 
-- [ ] Clear identity statement
-- [ ] Core behaviors that always apply
-- [ ] Features as separate sections
-- [ ] Judgment criteria instead of rigid rules
-- [ ] Examples for ambiguous cases
-- [ ] Explicit boundaries (what NOT to do)
-- [ ] Tone guidance
-- [ ] Tool usage guidance (when to use each)
-- [ ] Memory/context handling
+- [ ] 명확한 정체성 설명
+- [ ] 항상 적용되는 핵심 행동 정의
+- [ ] 기능을 별도의 섹션으로 분리
+- [ ] 경직된 규칙 대신 판단 기준 제공
+- [ ] 모호한 케이스를 위한 예시 포함
+- [ ] 명시적인 경계 설정 (하지 말아야 할 일)
+- [ ] 어조(Tone) 가이드
+- [ ] 도구 사용 가이드 (각 도구를 언제 사용할지)
+- [ ] 메모리/컨텍스트 처리 방식
 </checklist>

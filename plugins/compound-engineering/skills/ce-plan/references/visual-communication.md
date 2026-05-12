@@ -1,31 +1,31 @@
-# Visual Communication in Plan Documents
+# 플랜 문서의 시각적 커뮤니케이션 (Visual Communication in Plan Documents)
 
-Section 3.4 covers diagrams about the *solution being planned* (pseudo-code, mermaid sequences, state diagrams). The existing Section 4.3 mermaid rule encourages those solution-design diagrams within Technical Design and per-unit fields. This guidance covers a different concern: visual aids that help readers *navigate and comprehend the plan document itself* -- dependency graphs, interaction diagrams, and comparison tables that make plan structure scannable.
+섹션 3.4는 *계획 중인 솔루션*에 대한 다이어그램(의사 코드, mermaid 시퀀스, 상태 다이어그램)을 다룹니다. 기존 섹션 4.3의 mermaid 규칙은 Technical Design 및 단위별 필드 내에서 이러한 솔루션 설계 다이어그램을 작성하도록 권장합니다. 본 가이드는 다른 문제를 다룹니다: 독자가 *플랜 문서 자체를 탐색하고 이해하는 것*을 돕는 시각적 보조 자료 — 플랜 구조를 한눈에 파악할 수 있게 해주는 의존성 그래프, 상호작용 다이어그램 및 비교표 등입니다.
 
-Visual aids are conditional on content patterns, not on plan depth classification -- a Lightweight plan about a complex multi-unit workflow may warrant a dependency graph; a Deep plan about a straightforward feature may not.
+시각적 보조 자료는 플랜 깊이(depth) 분류가 아니라 콘텐츠 패턴에 따라 조건부로 포함됩니다. 복잡한 다중 단위 워크플로우에 대한 Lightweight 플랜은 의존성 그래프를 포함할 수 있고, 간단한 기능에 대한 Deep 플랜은 포함하지 않을 수 있습니다.
 
-**When to include:**
+**포함 시점:**
 
-| Plan describes... | Visual aid | Placement |
+| 플랜 내용... | 시각적 보조 자료 | 배치 위치 |
 |---|---|---|
-| 4+ implementation units with non-linear dependencies (parallelism, diamonds, fan-in/fan-out) | Mermaid dependency graph | Before or after the Implementation Units heading |
-| System-Wide Impact naming 3+ interacting surfaces or cross-layer effects | Mermaid interaction or component diagram | Within the System-Wide Impact section |
-| Summary or Problem Frame involving 3+ behavioral modes, states, or variants | Markdown comparison table | Within Summary or Problem Frame (legacy plans may still use `Overview`) |
-| Key Technical Decisions with 3+ interacting decisions, or Alternative Approaches with 3+ alternatives | Markdown comparison table | Within the relevant section |
+| 비선형적 의존성(병렬, 다이아몬드, 팬인/팬아웃)을 가진 4개 이상의 구현 단위 | Mermaid 의존성 그래프 | Implementation Units 헤더 앞 또는 뒤 |
+| 3개 이상의 상호작용 표면 또는 레이어 간 영향을 명시하는 System-Wide Impact | Mermaid 상호작용 또는 컴포넌트 다이어그램 | System-Wide Impact 섹션 내부 |
+| 3개 이상의 동작 모드, 상태 또는 변형을 포함하는 Summary 또는 Problem Frame | 마크다운 비교표 | Summary 또는 Problem Frame 내부 (레거시 플랜은 `Overview` 사용 가능) |
+| 3개 이상의 상호작용하는 결정을 포함하는 Key Technical Decisions, 또는 3개 이상의 대안을 포함하는 Alternative Approaches | 마크다운 비교표 | 해당 섹션 내부 |
 
-**When to skip:**
-- The plan has 3 or fewer units in a straight dependency chain -- the Dependencies field on each unit is sufficient
-- Prose already communicates the relationships clearly
-- The visual would duplicate what the High-Level Technical Design section already shows
-- The visual describes code-level detail (specific method names, SQL columns, API field lists)
+**건너뛰는 시점:**
+- 플랜이 직선형 의존성 체인을 가진 3개 이하의 단위로 구성된 경우 — 각 단위의 Dependencies 필드만으로 충분합니다.
+- 산문(prose)만으로도 관계가 명확하게 전달되는 경우.
+- 시각적 자료가 High-Level Technical Design 섹션에서 이미 보여주는 내용을 중복하는 경우.
+- 시각적 자료가 코드 수준의 세부 사항(특정 메서드 이름, SQL 컬럼, API 필드 목록)을 기술하는 경우.
 
-**Format selection:**
-- **Mermaid** (default) for dependency graphs and interaction diagrams -- 5-15 nodes, no in-box annotations, standard flowchart shapes. Use `TB` (top-to-bottom) direction so diagrams stay narrow in both rendered and source form. Source should be readable as fallback in diff views and terminals.
-- **ASCII/box-drawing diagrams** for annotated flows that need rich in-box content -- file path layouts, decision logic branches, multi-column spatial arrangements. More expressive than mermaid when the diagram's value comes from annotations within nodes. Follow 80-column max for code blocks, use vertical stacking.
-- **Markdown tables** for mode/variant comparisons and decision/approach comparisons.
-- Keep diagrams proportionate to the plan. A 6-unit linear chain gets a simple 6-node graph. A complex dependency graph with fan-out and fan-in may need 10-15 nodes -- that is fine if every node earns its place.
-- Place inline at the point of relevance, not in a separate section.
-- Plan-structure level only -- unit dependencies, component interactions, mode comparisons, impact surfaces. Not implementation architecture, data schemas, or code structure (those belong in Section 3.4).
-- Prose is authoritative: when a visual aid and its surrounding prose disagree, the prose governs.
+**형식 선택:**
+- **Mermaid** (기본값): 의존성 그래프 및 상호작용 다이어그램에 사용 — 5-15개의 노드, 박스 내 주석 없음, 표준 플로우차트 모양. 다이어그램이 렌더링된 형태와 소스 형태 모두에서 좁게 유지되도록 `TB` (top-to-bottom) 방향을 사용하십시오. 소스는 diff 뷰나 터미널에서도 읽을 수 있어야 합니다.
+- **ASCII/box-drawing diagrams**: 풍부한 박스 내 콘텐츠가 필요한 주석 처리된 흐름에 사용 — 파일 경로 레이아웃, 결정 로직 분기, 다중 컬럼 공간 배치 등. 노드 내의 주석이 다이어그램의 가치를 만드는 경우 mermaid보다 더 표현력이 좋습니다. 코드 블록의 경우 최대 80자 제한을 따르고 수직 쌓기를 사용하십시오.
+- **마크다운 표**: 모드/변형 비교 및 결정/접근 방식 비교에 사용합니다.
+- 다이어그램을 플랜에 비례하게 유지하십시오. 6개 단위의 선형 체인은 간단한 6개 노드 그래프로 충분합니다. 팬아웃과 팬인이 있는 복잡한 의존성 그래프는 10-15개의 노드가 필요할 수 있으며, 각 노드가 제 역할을 한다면 괜찮습니다.
+- 별도의 섹션이 아닌 관련이 있는 위치에 인라인으로 배치하십시오.
+- 플랜 구조 수준만 다룹니다 — 단위 의존성, 컴포넌트 상호작용, 모드 비교, 영향 표면. 구현 아키텍처, 데이터 스키마 또는 코드 구조(이들은 섹션 3.4에 속함)는 다루지 않습니다.
+- 산문(prose)이 권위를 가집니다: 시각적 보조 자료와 주변 산문이 일치하지 않는 경우 산문이 우선합니다.
 
-After generating a visual aid, verify it accurately represents the plan sections it illustrates -- correct dependency edges, no missing surfaces, no merged units.
+시각적 보조 자료를 생성한 후에는 해당 자료가 설명하는 플랜 섹션을 정확하게 표현하는지 확인하십시오 — 올바른 의존성 엣지, 누락된 표면 없음, 병합된 단위 없음 등.

@@ -1,350 +1,280 @@
-# Plugin Instructions
+# 플러그인 지침 (Plugin Instructions)
 
-These instructions apply when working under `plugins/compound-engineering/`.
-They supplement the repo-root `AGENTS.md`.
+이 지침은 `plugins/compound-engineering/` 하위에서 작업할 때 적용됩니다.
+저장소 루트의 `AGENTS.md`를 보완하는 역할을 합니다.
 
-# Compounding Engineering Plugin Development
+# 컴파운딩 엔지니어링 플러그인 개발 (Compounding Engineering Plugin Development)
 
-## Runtime vs Authoring Context
+## 런타임 컨텍스트 vs 작성 컨텍스트 (Runtime vs Authoring Context)
 
-**This plugin's `AGENTS.md` and `CLAUDE.md` files are authoring context — they do not ship with the installed plugin.** Skills are packaged and installed into end-user environments (their own repos, or folders that may not even be git repos), where they run against *the user's* `AGENTS.md`/`CLAUDE.md`, not this repo's.
+**이 플러그인의 `AGENTS.md` 및 `CLAUDE.md` 파일은 작성(Authoring) 컨텍스트이며, 설치된 플러그인과 함께 배포되지 않습니다.** 스킬은 패키징되어 최종 사용자의 환경(사용자의 저장소 또는 git 저장소가 아닐 수도 있는 폴더)에 설치됩니다. 그곳에서 스킬은 이 저장소의 파일이 아닌 *사용자의* `AGENTS.md`/`CLAUDE.md`를 기반으로 실행됩니다.
 
-Consequences:
+이에 따른 결과:
 
-- Behavioral rules that govern skill *runtime* behavior must live inside the skill itself — in `SKILL.md` or files under its `references/`. Guidance placed in this file is invisible at runtime.
-- When two or more skills share a behavioral principle, duplicate the guidance into each skill (inline for short rules, `references/` for longer ones). There is no cross-skill shared-file mechanism (see "File References in Skills" below).
-- Do not propose that runtime guidance for ce-ideate, ce-brainstorm, ce-plan, or any other skill live in this AGENTS.md or in the repo-root AGENTS.md. Those files only shape how contributors edit the plugin.
+- 스킬의 *런타임(Runtime)* 동작을 규정하는 행동 규칙은 스킬 자체 내부(`SKILL.md` 또는 `references/` 하위 파일)에 있어야 합니다. 이 파일(`AGENTS.md`)에 있는 안내는 런타임에는 보이지 않습니다.
+- 두 개 이상의 스킬이 행동 원칙을 공유하는 경우, 각 스킬에 해당 안내를 중복해서 작성하세요 (짧은 규칙은 인라인으로, 긴 규칙은 `references/` 사용). 스킬 간 공유 파일 메커니즘은 존재하지 않습니다 (아래 "스킬 내 파일 참조" 섹션 참고).
+- `ce-ideate`, `ce-brainstorm`, `ce-plan` 또는 기타 스킬에 대한 런타임 안내를 이 `AGENTS.md`나 저장소 루트의 `AGENTS.md`에 두는 것을 제안하지 마세요. 이 파일들은 기여자가 플러그인을 편집하는 방식만을 규정합니다.
 
-This is easy to miss because authoring feels like using: you edit the plugin while running inside this repo, and the repo's AGENTS.md is loaded — but that load does not follow the installed skill into a user's environment.
+작성은 이 저장소 안에서 실행하면서 플러그인을 편집하는 것이고 저장소의 `AGENTS.md`가 로드되기 때문에 이를 혼동하기 쉽지만, 설치된 스킬이 사용자의 환경으로 갈 때 이 로드된 내용은 따라가지 않습니다.
 
-## Versioning Requirements
+## 버전 관리 요구사항 (Versioning Requirements)
 
-**IMPORTANT**: Routine PRs should not cut releases for this plugin.
+**중요**: 일반적인 PR은 이 플러그인의 릴리스를 수행해서는 안 됩니다.
 
-The repo uses an automated release process to prepare plugin releases, including version selection and changelog generation. Because multiple PRs may merge before the next release, contributors cannot know the final released version from within an individual PR.
+이 저장소는 버전 선택 및 변경 이력(changelog) 생성을 포함하여 플러그인 릴리스를 준비하기 위해 자동화된 릴리스 프로세스를 사용합니다. 다음 릴리스 전에 여러 PR이 머지될 수 있으므로, 기여자는 개별 PR 내에서 최종 릴리스 버전을 알 수 없습니다.
 
-**If `bun run release:validate` reports drift, see `docs/solutions/workflow/release-please-version-drift-recovery.md`** for the file-relationship map, the recovery decision tree (forward-sync vs. backward-revert vs. `release-as` pin), and worked examples. That doc answers questions the rules below don't: *why these files are release-managed, how they sync via `extra-files` and `linked-versions`, and what to do when the rules below were violated.*
+**만약 `bun run release:validate` 명령에서 드리프트(Drift)가 보고되면, `docs/solutions/workflow/release-please-version-drift-recovery.md`를 참조하세요.** 이 문서에는 파일 관계 맵, 복구 결정 트리(정방향 동기화 vs 역방향 되돌리기 vs `release-as` 고정), 그리고 실제 사례가 포함되어 있습니다. 이 문서는 아래 규칙들이 답하지 않는 질문들(왜 이 파일들이 릴리스 관리 대상인지, `extra-files` 및 `linked-versions`를 통해 어떻게 동기화되는지, 규칙을 위반했을 때 어떻게 해야 하는지 등)에 대한 답을 제공합니다.
 
-### Contributor Rules
+### 기여자 규칙 (Contributor Rules)
 
-- Do **not** manually bump `.claude-plugin/plugin.json` version in a normal feature PR.
-- Do **not** manually bump `.cursor-plugin/plugin.json` version in a normal feature PR.
-- Do **not** manually bump `.codex-plugin/plugin.json` version in a normal feature PR — release-please owns this via `extra-files` in `.github/release-please-config.json`, parallel to the Claude and Cursor entries.
-- Do **not** manually bump `.claude-plugin/marketplace.json` plugin version in a normal feature PR.
-- Do **not** hand-edit `.agents/plugins/marketplace.json` except to add or remove a plugin. Plugin-list, name, and description drift between the Claude, Cursor, and Codex marketplaces is caught by `bun run release:validate`.
-- Do **not** cut a release section in the canonical root `CHANGELOG.md` for a normal feature PR.
-- Do update substantive docs that are part of the actual change, such as `README.md`, component tables, usage instructions, or counts when they would otherwise become inaccurate.
+- 일반적인 기능 PR에서 `.claude-plugin/plugin.json`의 버전을 수동으로 올리지 **마세요**.
+- 일반적인 기능 PR에서 `.cursor-plugin/plugin.json`의 버전을 수동으로 올리지 **마세요**.
+- 일반적인 기능 PR에서 `.codex-plugin/plugin.json`의 버전을 수동으로 올리지 **마세요**. release-please가 `.github/release-please-config.json`의 `extra-files`를 통해 이를 관리합니다.
+- 일반적인 기능 PR에서 `.claude-plugin/marketplace.json`의 플러그인 버전을 수동으로 올리지 **마세요**.
+- 플러그인을 추가하거나 제거하는 경우를 제외하고는 `.agents/plugins/marketplace.json`을 직접 수정하지 **마세요**. Claude, Cursor, Codex 마켓플레이스 간의 플러그인 목록, 이름, 설명의 드리프트는 `bun run release:validate`에 의해 감지됩니다.
+- 일반적인 기능 PR을 위해 루트의 `CHANGELOG.md`에 릴리스 섹션을 직접 만들지 **마세요**.
+- `README.md`, 컴포넌트 테이블, 사용 지침 또는 개수와 같이 실제 변경 사항의 일부인 실질적인 문서는 정확성을 유지하기 위해 업데이트해 **주세요**.
 
-### Pre-Commit Checklist
+### 커밋 전 체크리스트 (Pre-Commit Checklist)
 
-Before committing ANY changes:
+변경 사항을 커밋하기 전에:
 
-- [ ] No manual release-version bump in `.claude-plugin/plugin.json`
-- [ ] No manual release-version bump in `.cursor-plugin/plugin.json`
-- [ ] No manual release-version bump in `.codex-plugin/plugin.json`
-- [ ] No manual release-version bump in `.claude-plugin/marketplace.json`
-- [ ] No manual release entry added to the root `CHANGELOG.md`
-- [ ] `bun run release:validate` passes (enforces Claude/Cursor/Codex manifest parity)
-- [ ] README.md component counts verified
-- [ ] README.md tables accurate (agents, commands, skills)
-- [ ] plugin.json description matches current counts
+- [ ] `.claude-plugin/plugin.json`에서 수동 릴리스 버전 업 없음
+- [ ] `.cursor-plugin/plugin.json`에서 수동 릴리스 버전 업 없음
+- [ ] `.codex-plugin/plugin.json`에서 수동 릴리스 버전 업 없음
+- [ ] `.claude-plugin/marketplace.json`에서 수동 릴리스 버전 업 없음
+- [ ] 루트 `CHANGELOG.md`에 수동 릴리스 항목 추가 없음
+- [ ] `bun run release:validate` 통과 (Claude/Cursor/Codex 매니페스트 일관성 강제)
+- [ ] `README.md`의 컴포넌트 개수 확인 완료
+- [ ] `README.md`의 테이블(에이전트, 명령어, 스킬) 정확성 확인 완료
+- [ ] `plugin.json`의 설명이 현재 개수와 일치하는지 확인 완료
 
-### Directory Structure
+### 디렉토리 구조 (Directory Structure)
 
 ```
 agents/
-└── ce-*.agent.md  # All agents live flat under agents/, prefixed with ce-
+└── ce-*.agent.md  # 모든 에이전트는 ce- 접두사를 붙여 agents/ 아래에 평면적으로 위치합니다.
 
 skills/
-├── ce-*/          # Core workflow skills (ce-plan, ce-code-review, etc.)
-└── */             # All other skills
+├── ce-*/          # 핵심 워크플로우 스킬 (ce-plan, ce-code-review 등)
+└── */             # 기타 모든 스킬
 ```
 
-Agents are grouped topically in `README.md` (Review, Document Review, Research, Design, Workflow, Docs) for reader navigation — those groupings are conceptual, not filesystem subdirectories.
+에이전트는 독자의 탐색을 돕기 위해 `README.md`에서 주제별(Review, Document Review, Research, Design, Workflow, Docs)로 그룹화되어 있습니다. 이러한 그룹화는 개념적인 것이며 파일 시스템의 하위 디렉토리는 아닙니다.
 
-> **Note:** Commands were migrated to skills in v2.39.0. All former
-> `/command-name` slash commands now live under `skills/command-name/SKILL.md`
-> and work identically in Claude Code. Other targets may convert or map these references differently.
+> **참고:** 명령어(Commands)는 v2.39.0에서 스킬(Skills)로 마이그레이션되었습니다. 이전의 모든
+> `/command-name` 슬래시 명령어는 이제 `skills/command-name/SKILL.md` 아래에 위치하며
+> Claude Code에서 동일하게 작동합니다. 다른 타겟들은 이러한 참조를 다르게 변환하거나 매핑할 수 있습니다.
 
-## Debugging Plugin Bugs
+## 플러그인 버그 디버깅 (Debugging Plugin Bugs)
 
-Developers of this plugin also use it via their marketplace install (`~/.claude/plugins/`). When a developer reports a bug they experienced while using a skill or agent, the installed version may be older than the repo. Glob for the component name under `~/.claude/plugins/` and diff the installed content against the repo version.
+이 플러그인의 개발자들은 마켓플레이스 설치(`~/.claude/plugins/`)를 통해 이 플러그인을 사용하기도 합니다. 개발자가 스킬이나 에이전트를 사용하다가 발생한 버그를 보고할 때, 설치된 버전이 저장소의 버전보다 오래되었을 수 있습니다. `~/.claude/plugins/` 하위에서 해당 컴포넌트 이름을 찾아 설치된 내용과 저장소 버전을 비교(diff)해 보세요.
 
-- **Repo already has the fix**: The developer's install is stale. Tell them to reinstall the plugin or use `--plugin-dir` to load skills from the repo checkout. No code change needed.
-- **Both versions have the bug**: Proceed with the fix normally.
+- **저장소에 이미 수정 사항이 있는 경우**: 개발자의 설치 버전이 오래된 것입니다. 플러그인을 재설치하거나 `--plugin-dir`을 사용하여 저장소 체크아웃에서 스킬을 로드하도록 안내하세요. 코드 변경은 필요하지 않습니다.
+- **두 버전 모두 버그가 있는 경우**: 정상적으로 수정을 진행하세요.
 
-Important: Just because the developer's installed plugin may be out of date, it's possible both old and current repo versions have the bug. The proper fix is to still fix the repo version.
+중요: 개발자의 설치된 플러그인이 오래되었을 수 있더라도, 이전 버전과 현재 저장소 버전 모두에 버그가 있을 수 있습니다. 올바른 해결책은 저장소 버전을 수정하는 것입니다.
 
-## Naming Convention
+## 명명 규칙 (Naming Convention)
 
-**All skills and agents** use the `ce-` prefix to unambiguously identify them as compound-engineering components:
-- `/ce-brainstorm` - Explore requirements and approaches before planning
-- `/ce-plan` - Create implementation plans
-- `/ce-code-review` - Run comprehensive code reviews
-- `/ce-work` - Execute work items systematically
-- `/ce-compound` - Document solved problems
+**모든 스킬과 에이전트**는 compound-engineering 컴포넌트임을 명확히 식별하기 위해 `ce-` 접두사를 사용합니다:
+- `/ce-brainstorm` - 계획 전 요구사항 및 접근 방식 탐색
+- `/ce-plan` - 구현 계획 생성
+- `/ce-code-review` - 종합적인 코드 리뷰 실행
+- `/ce-work` - 작업 항목을 체계적으로 실행
+- `/ce-compound` - 해결된 문제 문서화
 
-**Why `ce-`?** Claude Code has built-in `/plan` and `/review` commands. The `ce-` prefix (short for compound-engineering) makes it immediately clear these components belong to this plugin. The hyphen is used instead of a colon to avoid filesystem issues on Windows and to align directory names with frontmatter names.
+**왜 `ce-`인가요?** Claude Code에는 내장된 `/plan` 및 `/review` 명령어가 있습니다. `ce-` 접두사(compound-engineering의 약자)는 이러한 컴포넌트들이 이 플러그인에 속해 있음을 즉각적으로 알게 해줍니다. 하이픈(-)은 Windows에서의 파일 시스템 문제를 피하고 프론트매터 이름과 디렉토리 이름을 일치시키기 위해 콜론 대신 사용됩니다.
 
-**Agents** follow the same convention: `ce-adversarial-reviewer`, `ce-learnings-researcher`, etc. When referencing agents from skills, use the bare `ce-<agent-name>` form (e.g., `ce-adversarial-reviewer`) — the `ce-` prefix is sufficient for uniqueness across plugins.
+**에이전트**도 동일한 컨벤션을 따릅니다: `ce-adversarial-reviewer`, `ce-learnings-researcher` 등. 스킬에서 에이전트를 참조할 때는 순수하게 `ce-<agent-name>` 형태(예: `ce-adversarial-reviewer`)를 사용하세요. `ce-` 접두사만으로 플러그인 간의 고유성을 보장하기에 충분합니다.
 
-**The `ce-` prefix is required for every new skill and agent — no exceptions.** Three legacy skills (`every-style-editor`, `file-todos`, `lfg`) predate the rule and remain unprefixed; they are pinned in `tests/frontmatter.test.ts` as the only allowed exceptions. Do not add to that allowlist. When adding a new skill, the directory name, the SKILL.md `name:` frontmatter, and any README references must all start with `ce-`. The frontmatter test enforces this and will fail on a missing prefix.
+**새로운 모든 스킬과 에이전트에는 `ce-` 접두사가 필수입니다. 예외는 없습니다.** 세 개의 레거시 스킬(`every-style-editor`, `file-todos`, `lfg`)은 이 규칙이 생기기 전의 것이며 접두사 없이 유지됩니다. 이들은 `tests/frontmatter.test.ts`에서 허용된 유일한 예외로 고정되어 있습니다. 이 허용 목록에 추가하지 마세요. 새로운 스킬을 추가할 때 디렉토리 이름, `SKILL.md`의 `name:` 프론트매터, 그리고 모든 README 참조는 반드시 `ce-`로 시작해야 합니다. 프론트매터 테스트가 이를 강제하며 접두사가 없으면 실패합니다.
 
-## Known External Limitations
+## 알려진 외부 제약 사항 (Known External Limitations)
 
-**Proof HITL surfaces a ghost "AI collaborator" agent** (noted 2026-04-16, may change): The Proof API auto-joins any header-less `/state` read under a synthetic `ai:auto-<hash>` identity, so docs created by the `skills/proof/` HITL workflow show a phantom participant alongside `Compound Engineering`. The only way to suppress it is to set `ownerId: "agent:ai:compound-engineering"` on create — but that transfers document ownership to the agent and prevents the user from claiming it into their Proof library, so we don't use it. Treat as cosmetic noise; don't reintroduce the `ownerId` workaround. Tracked upstream: https://github.com/EveryInc/proof/issues/951.
+**Proof HITL 화면에 유령 "AI 협업자" 에이전트가 나타남** (2026-04-16 확인, 변경될 수 있음): Proof API는 헤더가 없는 `/state` 읽기에 대해 합성된 `ai:auto-<hash>` 식별자로 자동 참여합니다. 따라서 `skills/proof/` HITL 워크플로우로 생성된 문서에는 `Compound Engineering`과 함께 유령 참여자가 표시됩니다. 이를 억제하는 유일한 방법은 생성 시 `ownerId: "agent:ai:compound-engineering"`을 설정하는 것이지만, 이는 문서 소유권을 에이전트에게 이전하여 사용자가 자신의 Proof 라이브러리로 가져가는 것을 방해하므로 사용하지 않습니다. 이는 미관상의 노이즈로 간주하며, `ownerId` 해결책을 다시 도입하지 마세요. 업스트림 추적: https://github.com/EveryInc/proof/issues/951.
 
-## Skill Design Principles
+## 스킬 설계 원칙 (Skill Design Principles)
 
-Skills are guardrails for an intelligent agent, not a step-by-step controller for a non-intelligent one. The principles below were learned from real-world testing and should guide future skill edits.
+스킬은 지능적인 에이전트를 위한 가드레일이지, 지능이 없는 에이전트를 위한 단계별 컨트롤러가 아닙니다. 아래 원칙들은 실제 테스트를 통해 얻은 교훈이며 향후 스킬 편집의 지침이 되어야 합니다.
 
-**Calibrate prescription level to the failure mode.** Three rough levels:
+**처방 수준(Prescription level)을 실패 모드에 맞게 조정하세요.** 대략 세 가지 수준이 있습니다:
 
-- **Hard rules** for deterministic safety (e.g., "don't silently `cd` to another repo and write outputs there"). The agent's judgment must not vary — the failure mode is bad enough that mechanical adherence is right.
-- **Strong guidance with examples** for judgment calls where there's a clear bias to teach (e.g., "name the decision; don't expand it" with bad-vs-good pairs). Concrete examples teach better than abstract principles, but anchor them at the principle level so the agent can generalize.
-- **Trust** for cases where prescription would harm: codebase exploration tactics, how many clarifying questions to ask, when to lean on memory, prose phrasing. Over-prescription robs the agent of intelligence and memory.
+- **결정론적 안전을 위한 엄격한 규칙(Hard rules)** (예: "자동으로 다른 저장소로 `cd`하여 그곳에 결과물을 쓰지 말 것"). 에이전트의 판단이 개입되어서는 안 되며, 실패 시 결과가 매우 나쁘기 때문에 기계적인 준수가 옳습니다.
+- **예시가 포함된 강력한 안내** (예: "결정을 명명하되 확장하지 말 것"을 나쁜 예 vs 좋은 예 쌍으로 제시). 구체적인 예시는 추상적인 원칙보다 더 잘 가르치지만, 에이전트가 일반화할 수 있도록 원칙 수준에서 고정시키세요.
+- **신뢰(Trust)**: 처방이 오히려 해가 되는 경우입니다. 코드베이스 탐색 전략, 얼마나 많은 질문을 던질지, 언제 메모리에 의존할지, 문장의 표현 방식 등입니다. 과도한 처방은 에이전트의 지능과 기억력을 저하시킵니다.
 
-Match the level to the failure mode in both directions. Over-prescribing produces rote output; under-prescribing produces inconsistent behavior and drifted artifacts. The right test: can you name a specific bad outcome the prescription prevents? If yes, prescription is justified. If the rule exists "to be safe" without a concrete failure mode, lean toward trust.
+양방향 모두 실패 모드에 수준을 맞추세요. 과도한 처방은 기계적인 결과물을 만들고, 부족한 처방은 일관성 없는 행동과 변질된 아티팩트를 만듭니다. 올바른 테스트 질문: "이 처방이 방지하는 구체적인 나쁜 결과가 무엇인지 말할 수 있는가?" 그렇다면 처방은 정당화됩니다. 구체적인 실패 모드 없이 "안전을 위해" 존재하는 규칙이라면 신뢰하는 쪽으로 기우세요.
 
-**SKILL.md content caches at session start; references load on demand.** Implications:
+**SKILL.md 콘텐츠는 세션 시작 시 캐싱되며, 참조 파일은 요청 시 로드됩니다.** 이에 따른 시사점:
 
-- For load-bearing rules (those that MUST fire reliably), put strong language at the top of the relevant phase in SKILL.md, not just in the reference. References can be skipped; SKILL.md is always loaded.
-- When the same rule is duplicated across SKILL.md and a reference, both must be updated together. Drift produces confusing agent behavior — the agent follows whichever copy is loaded.
-- Inline content in SKILL.md that describes what's also in a reference makes the reference feel optional ("I have enough from inline"). For references that should always load, minimize the inline alternative or keep it strictly load-instruction-only.
+- 반드시 안정적으로 실행되어야 하는 핵심 규칙은 참조 파일이 아니라 `SKILL.md` 내 해당 단계의 상단에 강력한 언어로 작성하세요. 참조 파일은 건너뛸 수 있지만, `SKILL.md`는 항상 로드됩니다.
+- 동일한 규칙이 `SKILL.md`와 참조 파일에 중복되어 있는 경우, 반드시 함께 업데이트해야 합니다. 내용이 어긋나면 에이전트가 로드된 버전을 따르게 되어 혼란스러운 행동을 유발합니다.
+- 참조 파일에 있는 내용을 `SKILL.md`에서도 설명하면 참조 파일이 선택 사항처럼 느껴지게 합니다 ("인라인 내용만으로 충분해"). 항상 로드되어야 하는 참조 파일의 경우, 인라인 대안을 최소화하거나 엄격하게 로드 지침만 남기세요.
 
-**Split orthogonal decisions into sequential questions.** When a blocking question's options span multiple decision axes (e.g., "where to operate" plus "which skill to use"), users have to reason about both axes simultaneously and individual options end up underspecified. Sequential menus addressing one decision at a time produce clearer interaction shapes — the user resolves one axis, then sees a follow-up for the next. Location vs. skill routing, scope-tier vs. depth, and other multi-axis questions all benefit from this separation.
+**직교하는 결정을 순차적인 질문으로 분리하세요.** 하나의 차단 질문(blocking question)의 옵션이 여러 결정 축을 가로지르는 경우(예: "어디서 작업할지" + "어떤 스킬을 쓸지"), 사용자는 두 축을 동시에 고민해야 하며 개별 옵션은 설명이 부족해집니다. 한 번에 하나의 결정만 처리하는 순차 메뉴는 더 명확한 상호작용 형태를 만듭니다. 위치 vs 스킬 라우팅, 범위 티어 vs 깊이 등 멀티 축 질문은 모두 이 분리를 통해 이점을 얻습니다.
 
-**Process exhaust stays out of artifacts.** Engineering process metadata — "captured at Phase X.Y" notes, `## Next Steps` pointing to the next skill, italic provenance lines — does not belong in user-facing docs. Doc readers want the doc; they do not need to trace which engineering phase produced which section. Keep skill state in chat (where it is interactive and can be acted on) and durable content in the artifact.
+**프로세스 찌꺼기(Process exhaust)를 아티팩트에 포함하지 마세요.** "Phase X.Y에서 캡처됨" 메모, 다음 스킬을 가리키는 `## Next Steps`, 이탤릭체 출처 표시와 같은 엔지니어링 프로세스 메타데이터는 사용자용 문서에 포함되지 않습니다. 문서 독자는 문서 자체를 원하지, 어떤 엔지니어링 단계가 어떤 섹션을 만들었는지 추적할 필요가 없습니다. 스킬 상태는 대화창(상호작용 및 조치가 가능한 곳)에 유지하고, 영구적인 콘텐츠만 아티팩트에 담으세요.
 
-**Distinguish process exhaust from audit content.** Sections that exist for the agent's own bookkeeping are exhaust; sections that exist because downstream readers need to know something about the artifact's authorship are audit content and belong in the doc. The clearest example is non-interactive mode — when no synchronous user confirmed the agent's inferences, those un-validated bets must be visibly labeled in the artifact (e.g., a `## Assumptions` section) so downstream review can scrutinize them as bets rather than mistaking them for user-confirmed decisions. The reader needs that information to do their job; the agent's phase-numbering does not. When evaluating "is this process exhaust?", ask whether removing the section degrades a downstream reader's ability to evaluate the artifact correctly. If yes, it's audit content; keep it.
+**프로세스 찌꺼기와 감사(Audit) 콘텐츠를 구별하세요.** 에이전트 자신의 기록 관리를 위해 존재하는 섹션은 찌꺼기입니다. 반면, 다운스트림 독자가 아티팩트의 작성 과정에 대해 알아야 할 필요가 있어서 존재하는 섹션은 감사 콘텐츠이며 문서에 포함되어야 합니다. 가장 명확한 예는 비대화형(non-interactive) 모드입니다. 사용자가 에이전트의 추론을 실시간으로 확인하지 않았을 때, 검증되지 않은 이러한 베팅들은 아티팩트 내에 명시적으로 표시되어야 합니다 (예: `## Assumptions` 섹션). 그래야 다운스트림 리뷰에서 이를 사용자가 확정한 결정이 아닌 가설로 보고 면밀히 조사할 수 있습니다. 독자는 업무를 수행하기 위해 그 정보가 필요하지만, 에이전트의 단계 번호는 필요하지 않습니다. "이것이 프로세스 찌꺼기인가?"를 평가할 때, 해당 섹션을 제거하면 다운스트림 독자가 아티팩트를 올바르게 평가하는 능력이 저하되는지 자문해 보세요. 그렇다면 그것은 감사 콘텐츠이므로 유지하세요.
 
-**Test the spec by running it, not just by reading it.** Real-world test runs surface failure modes that desk review misses: load reliability, plugin caching across sessions, agent interpretation drift, conflation in menu shapes, edge-case interactions with the user's repo layout. When a test reveals unexpected behavior, ask three questions before tightening the spec:
+**명세를 읽기만 하지 말고 실제로 실행하여 테스트하세요.** 실제 테스트 실행은 데스크 리뷰에서 놓친 실패 모드를 드러냅니다: 로드 안정성, 세션 간 플러그인 캐싱, 에이전트 해석의 변질, 메뉴 형태의 혼동, 사용자의 저장소 레이아웃과의 에지 케이스 상호작용 등입니다. 테스트에서 예상치 못한 행동이 발견되면 명세를 강화하기 전에 세 가지 질문을 던지세요:
 
-- Is the agent's behavior actually wrong, or is it expressing better judgment than the rule encoded?
-- Did the spec drift between SKILL.md and references such that the agent saw inconsistent rules?
-- Is this load-reliability (rule never reached) or rule-content (rule reached but produces wrong output)?
+- 에이전트의 행동이 실제로 잘못된 것인가, 아니면 인코딩된 규칙보다 더 나은 판단을 내린 것인가?
+- `SKILL.md`와 참조 파일 간에 명세가 어긋나서 에이전트가 일관성 없는 규칙을 본 것은 아닌가?
+- 이것이 로드 안정성(규칙에 도달하지 못함) 문제인가, 아니면 규칙 내용(도달했으나 잘못된 결과 생성) 문제인가?
 
-The fix differs by answer. Sometimes "fix the spec" means loosening over-prescription, not adding more rules. Sometimes the right answer is "accept the variance — the agent's adaptation was correct for the case."
+해결책은 답변에 따라 다릅니다. 때로는 "명세 수정"이 과도한 처방을 완화하는 것을 의미할 수도 있습니다. 때로는 "에이전트의 적응이 해당 사례에 적절했으므로 그 차이를 수용한다"가 올바른 답일 수도 있습니다.
 
-## Skill Compliance Checklist
+## 스킬 준수 체크리스트 (Skill Compliance Checklist)
 
-When adding or modifying skills, verify compliance with the skill spec:
+스킬을 추가하거나 수정할 때, 스킬 명세 준수 여부를 확인하세요:
 
-### YAML Frontmatter (Required)
+### YAML 프론트매터 (필수)
 
-- [ ] `name:` present and matches directory name (lowercase-with-hyphens)
-- [ ] `description:` present and describes **what it does and when to use it** (per official spec: "Explains code with diagrams. Use when exploring how code works.")
-- [ ] `description:` is no longer than 1024 characters -- some coding harnesses reject longer skill descriptions. Enforced by `tests/frontmatter.test.ts`.
-- [ ] `description:` value is quoted (single or double) if it contains colons -- unquoted colons break `js-yaml` strict parsing and crash `install --to opencode/codex`. Run `bun test tests/frontmatter.test.ts` to verify.
-- [ ] `description:` value does not contain raw angle-bracket tokens like `<skill-name>`, `<tag>`, or `<placeholder>` -- Cowork's plugin validator parses descriptions as HTML and rejects unknown tags with a generic "Plugin validation failed" banner (see issue #602). Claude Code tolerates them, so the bug only surfaces downstream. Backtick-wrap the token (`` `<skill-name>` ``) or rephrase. Enforced by `tests/frontmatter.test.ts`.
+- [ ] `name:`이 존재하며 디렉토리 이름과 일치함 (소문자와 하이픈 사용)
+- [ ] `description:`이 존재하며 **기능과 사용 시기**를 설명함 (예: "다이어그램으로 코드를 설명합니다. 코드 작동 방식을 탐색할 때 사용하세요.")
+- [ ] `description:`이 1024자를 넘지 않음 (일부 환경에서 긴 설명을 거부함). `tests/frontmatter.test.ts`에 의해 강제됨.
+- [ ] `description:` 값에 콜론이 포함된 경우 따옴표로 감쌈. 따옴표가 없으면 `js-yaml` 구문 분석이 실패하여 설치가 중단될 수 있음.
+- [ ] `description:` 값에 `<skill-name>`, `<tag>`, `<placeholder>`와 같은 가공되지 않은 꺾쇠괄호 토큰을 포함하지 않음. 일부 플러그인 검증기에서 이를 알 수 없는 HTML 태그로 인식하여 거부함. 백틱(`` `<skill-name>` ``)으로 감싸거나 문구를 수정하세요.
 
-### Reference File Inclusion (Required if references/ exists)
+### 참조 파일 포함 (references/가 존재하는 경우 필수)
 
-- [ ] Do NOT use markdown links like `[filename.md](./references/filename.md)` -- agents interpret these as Read instructions with CWD-relative paths, which fail because the CWD is never the skill directory
-- [ ] **Default: use backtick paths.** Most reference files should be referenced with backtick paths so the agent can load them on demand:
+- [ ] `[filename.md](./references/filename.md)`와 같은 마크다운 링크를 사용하지 **마세요**. 에이전트는 이를 현재 작업 디렉토리(CWD) 상대 경로로 해석하여 로드에 실패합니다.
+- [ ] **기본: 백틱 경로 사용.** 대부분의 참조 파일은 에이전트가 필요할 때 로드할 수 있도록 백틱 경로로 참조해야 합니다:
   ```
   `references/architecture-patterns.md`
   ```
-  This keeps the skill lean and avoids inflating the token footprint at load time. Use for: large reference docs, routing-table targets, code scaffolds, executable scripts/templates
-- [ ] **Exception: `@` inline for small structural files** that the skill cannot function without and that are under ~150 lines (schemas, output contracts, subagent dispatch templates). Use `@` file inclusion on its own line:
+  이는 스킬을 가볍게 유지하고 로드 시 토큰 사용량을 줄여줍니다. 대용량 참조 문서, 라우팅 테이블 타겟, 코드 스캐폴드, 실행 가능한 스크립트/템플릿에 사용하세요.
+- [ ] **예외: 소규모 구조적 파일은 `@` 인라인 사용.** 스킬 작동에 필수적이고 150라인 미만인 파일(스키마, 출력 컨트랙트, 서브 에이전트 파견 템플릿)은 별도 라인에 `@` 기호를 사용하여 포함하세요:
   ```
   @./references/schema.json
   ```
-  This resolves relative to the SKILL.md and substitutes content before the model sees it. If a file is over ~150 lines, prefer a backtick path even if it is always needed
-- [ ] For files the agent needs to *execute* (scripts, shell templates), always use backtick paths -- `@` would inline the script as text content instead of keeping it as an executable file
+  이는 `SKILL.md`를 기준으로 상대 경로를 해석하며 모델이 보기 전에 내용을 치환합니다. 150라인이 넘는다면 항상 필요하더라도 백틱 경로를 선호하세요.
+- [ ] 에이전트가 *실행*해야 하는 파일(스크립트, 쉘 템플릿)의 경우 항상 백틱 경로를 사용하세요. `@`는 스크립트를 실행 가능한 파일이 아닌 텍스트 콘텐츠로 인라인화합니다.
 
-### Conditional and Late-Sequence Extraction
+### 조건부 및 후순위 추출 (Conditional and Late-Sequence Extraction)
 
-Skill content loaded at trigger time is carried in every subsequent message — every tool call, agent dispatch, and response. This carrying cost compounds across the session. For skills that orchestrate many tool or agent calls, extract blocks to `references/` when they are conditional (only execute under specific conditions) or late-sequence (only needed after many prior calls) and represent a meaningful share of the skill (~20%+). The more tool/agent calls a skill makes, the more aggressively to extract. Replace extracted blocks with a 1-3 line stub stating the condition and a backtick path reference (e.g., "Read `references/deepening-workflow.md`"). Never use `@` for extracted blocks — it inlines content at load time, defeating the extraction.
+트리거 시 로드된 스킬 콘텐츠는 이후의 모든 메시지에 포함됩니다. 이는 세션 전체의 비용을 증가시킵니다. 많은 도구 또는 에이전트 호출을 조율하는 스킬의 경우, 특정 조건에서만 실행되거나 많은 호출 후에만 필요한 블록(스킬의 20% 이상 차지 시)은 `references/`로 추출하세요. 추출된 블록은 조건과 백틱 경로 참조를 적은 1~3라인의 스텁(stub)으로 교체하세요. 추출된 블록에는 `@`를 사용하지 마세요. 로드 시 인라인화되어 추출의 목적이 사라집니다.
 
-### Writing Style
+### 작성 스타일
 
-- [ ] Use imperative/infinitive form (verb-first instructions)
-- [ ] Avoid second person ("you should") - use objective language ("To accomplish X, do Y")
+- [ ] 명령형/부정사 형태를 사용하세요 (동사 중심의 지침).
+- [ ] 2인칭("당신은 ~해야 한다")을 피하고 객관적인 언어("X를 달성하려면 Y를 하세요")를 사용하세요.
 
-### Rationale Discipline
+### 근거 작성 규율 (Rationale Discipline)
 
-Every line in `SKILL.md` loads on every invocation. Include rationale only when it changes what the agent does at runtime — if behavior wouldn't differ without the sentence, cut it.
+`SKILL.md`의 모든 라인은 호출 시마다 로드됩니다. 근거(Rationale)는 런타임에 에이전트의 행동을 바꿀 때만 포함하세요. 그 문장이 없어도 행동이 달라지지 않는다면 삭제하세요.
 
-Keep rationale at the highest-level location that covers it; restate behavioral directives at the point they take effect. A 500-line skill shouldn't hinge on the agent remembering line 9 by line 400. Portability notes, defenses against mistakes the agent wasn't going to make, and meta-commentary about this repo's authoring rules belong in commit messages or `docs/solutions/`, not in the skill body.
+근거는 이를 포괄하는 가장 높은 수준의 위치에 두세요. 행동 지침은 그것이 효과를 발휘하는 시점에 다시 언급하세요. 500라인짜리 스킬이 9번 라인의 내용을 400번 라인에서 기억하기를 기대해서는 안 됩니다. 이식성 참고 사항, 에이전트가 저지르지 않을 실수에 대한 방어, 이 저장소의 작성 규칙에 대한 메타 코멘트는 스킬 본문이 아닌 커밋 메시지나 `docs/solutions/`에 어울립니다.
 
-### Cross-Platform User Interaction
+### 크로스 플랫폼 사용자 상호작용 (Cross-Platform User Interaction)
 
-- [ ] When a skill needs to ask the user a question, instruct use of the platform's blocking question tool and name the known equivalents (`AskUserQuestion` in Claude Code, `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi via the `pi-ask-user` extension)
-- [ ] For Claude Code, also instruct to load `AskUserQuestion` via `ToolSearch` with `select:AskUserQuestion` first if its schema isn't already loaded — `AskUserQuestion` is a deferred tool and won't be available at session start. A pending schema load is not a valid reason to fall back to text.
-- [ ] Include a fallback: when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes where `request_user_input` is unavailable, or `ToolSearch` returns no match), present numbered options in chat and wait for the user's reply — never silently skip the question.
-- [ ] **Narrow exception for legitimate option overflow:** when a menu has 5 or more genuinely relevant options — each a distinct destination or workflow, none removable without losing real user choice — render as a numbered list in chat rather than trimming to fit the 4-option cap. This is used with restraint, not as a convenience escape from the blocking tool. Default remains the blocking tool. Before invoking the exception, verify that (a) no option can be cut, (b) no two options can be merged, and (c) no option is better surfaced as contextual prose (e.g., a nudge adjacent to the menu). If any of those reductions work, prefer them over the fallback. When the exception applies, include a hint that free-form input is accepted (e.g., "Pick a number or describe what you want.") so the numbered list retains the blocking tool's open-endedness.
+- [ ] 스킬이 사용자에게 질문을 해야 할 때, 플랫폼의 차단 질문 도구를 사용하도록 지시하고 알려진 대응 도구 이름(`AskUserQuestion`, `request_user_input`, `ask_user` 등)을 명시하세요.
+- [ ] Claude Code의 경우, 스키마가 로드되지 않았을 경우를 대비해 `ToolSearch`와 `select:AskUserQuestion`을 먼저 호출하도록 지시하세요.
+- [ ] 폴백(Fallback) 포함: 하네스에 차단 도구가 없거나 호출 오류가 발생하는 경우, 대화창에 번호가 매겨진 옵션을 제시하고 사용자의 응답을 기다리도록 하세요. 질문을 자동으로 건너뛰지 마세요.
+- [ ] **옵션 과다 시의 좁은 예외:** 메뉴에 5개 이상의 진정으로 관련 있는 옵션이 있고, 각 옵션이 고유한 목적지이며 사용자 선택권을 위해 제거할 수 없는 경우, 4개 옵션 제한에 맞추기 위해 자르는 대신 대화창에 번호 목록으로 렌더링하세요. 이는 남용되어서는 안 되며 차단 도구가 기본입니다. 예외를 적용하기 전에 (a) 옵션을 줄일 수 없는지, (b) 두 옵션을 합칠 수 없는지, (c) 옵션을 대화창의 텍스트로 안내하는 것이 더 낫지 않은지 확인하세요.
 
-> **Platform-behavior note (April 2026, may change):** The specifics above reflect current behavior — `AskUserQuestion` is deferred in Claude Code, and `request_user_input` in Codex is exposed only in Plan mode. If Anthropic changes `AskUserQuestion` to a non-deferred tool, or Codex exposes `request_user_input` in edit modes, revisit this guidance rather than carrying the workaround forward indefinitely. Verify before assuming these constraints still hold.
+### 상호작용 질문 도구 설계 (Interactive Question Tool Design)
 
-### Interactive Question Tool Design
+차단 질문 메뉴 설계 규칙입니다. 이를 위반하면 설명 텍스트가 숨겨지거나 레이블이 잘리는 환경에서 사용자 경험이 저하됩니다.
 
-Design rules for blocking question menus (`AskUserQuestion` / `request_user_input` / `ask_user`). Violations silently degrade the UX in harnesses where secondary description text is hidden or labels are truncated.
+- [ ] 각 옵션 레이블은 자체적으로 완결되어야 합니다. 일부 환경은 레이블만 렌더링하므로 레이블만으로 옵션의 기능을 알 수 있어야 합니다.
+- [ ] 전체 옵션은 4개 이하로 유지하세요.
+- [ ] "계속 작업 중" / "나중에 다시 오겠음"과 같은 옵션을 제공하지 마세요. 차단 도구는 이미 기다리고 있으며, 이러한 옵션은 불필요합니다.
+- [ ] 레이블과 질문 내용에서 에이전트를 3인칭("에이전트")으로 참조하세요.
+- [ ] 레이블을 시스템의 내부 상태가 아닌 사용자의 의도 관점에서 표현하세요 (예: "I want to ___"를 완성하는 형태). "phase-3" 같은 용어를 노출하지 마세요.
+- [ ] 질문 내용 자체를 처음 사용하는 메커니즘을 가르치는 용도로 사용하세요.
+- [ ] 표시 레이블을 변경할 때, 해당 라우팅 블록(`**If user selects "X":**`)도 동일하게 수정하세요.
+- [ ] 옵션들이 접두사를 공유하는 경우 차별화되는 단어를 앞에 배치하세요 (예: "Proceed to planning" vs "Proceed directly to work"는 잘리면 똑같아 보입니다).
+- [ ] 아티팩트가 모호할 경우 대상을 명시하세요 (예: "로컬 파일에 저장" vs "파일에 저장").
+- [ ] 메뉴 전체에서 어조를 일관되게 유지하세요 (명령형과 사용자 관점 상태를 섞지 마세요).
 
-- [ ] Each option label must be self-contained — some harnesses render only the label, not the accompanying description; the label alone must convey what the option does
-- [ ] Keep total options to 4 or fewer (`AskUserQuestion` caps at 4 across platforms we target)
-- [ ] Do not offer "still working" / "I'll come back" options — the blocking tool already waits; such options are no-op wrappers. If the user needs to go do something, they simply leave the prompt open
-- [ ] Refer to the agent in third person ("the agent") in labels and stems — first-person "me" / "I'll" is ambiguous in a tool-mediated exchange where it's unclear whether the speaker is the user, the agent, or the tool
-- [ ] Phrase labels from the user's intent, not the system's internal state — each option should complete "I want to ___" from the user's POV; avoid leaking mode names like "end-sync" or "phase-3" into labels
-- [ ] Use the question stem as a teaching surface for first-time mechanics — teach the mechanic there (e.g., "Highlight text in Proof to leave a comment"), not in option descriptions that may be hidden
-- [ ] When renaming a display label, rename its matching routing block (`**If user selects "X":**`) in the same edit — the model matches selections by verbatim label string, so a missed rename silently breaks routing
-- [ ] Front-load the distinguishing word when options share a prefix — "Proceed to planning" vs "Proceed directly to work" look identical when truncated; put the differentiator in the first 3-4 words
-- [ ] Name the target when an artifact is ambiguous — "save to my local file" beats "save to my file" when multiple artifacts (Proof doc, local markdown, cached copy) coexist
-- [ ] Keep voice consistent across a menu — mixing imperative ("Pause") with user-voice status ("I'm done — save…") within the same set reads as authored by different agents
+### 크로스 플랫폼 작업 추적 (Cross-Platform Task Tracking)
 
-### Cross-Platform Task Tracking
+- [ ] 스킬이 작업을 생성하거나 추적해야 할 때 의도를 설명하고 대응 도구 이름(`TaskCreate`/`TaskUpdate`/`TaskList`, `update_plan` 등)을 명시하세요.
+- [ ] `TodoWrite`나 `TodoRead`는 사용하지 마세요. 레거시 도구입니다.
 
-- [ ] When a skill needs to create or track tasks, describe the intent (e.g., "create a task list") and name the known equivalents (`TaskCreate`/`TaskUpdate`/`TaskList` in Claude Code, `update_plan` in Codex)
-- [ ] Do not reference `TodoWrite` or `TodoRead` — these are legacy Claude Code tools replaced by `TaskCreate`/`TaskUpdate`/`TaskList`
+### 크로스 플랫폼 서브 에이전트 파견 (Cross-Platform Sub-Agent Dispatch)
 
-### Cross-Platform Sub-Agent Dispatch
+- [ ] 스킬이 서브 에이전트를 파견할 때 플랫폼의 서브 에이전트 프리미티브를 사용하도록 지시하고 대응 도구 이름(`Agent`/`Task`, `spawn_agent`, `subagent` 등)을 명시하세요.
+- [ ] 제한된 병렬 실행을 선호하세요: 플랫폼의 활성 서브 에이전트 제한을 준수하고, 초과된 작업은 큐에 넣으며, 제한 관련 오류를 백프레셔(backpressure)로 처리하세요. 병렬 파견을 지원하지 않는 플랫폼을 위해 순차적 폴백을 포함하세요.
+- [ ] 플랫폼 내장 에이전트보다 이 플러그인과 함께 제공되는 에이전트(`ce-*`)를 선호하세요.
 
-- [ ] When a skill dispatches sub-agents, instruct use of the platform's subagent primitive and name the known equivalents (`Agent`/`Task` in Claude Code, `spawn_agent` in Codex, `subagent` in Pi via the `pi-subagents` extension)
-- [ ] Prefer bounded parallel execution: respect platform active-subagent limits, queue overflow work, and treat limit-related spawn errors as backpressure. Include a sequential fallback for platforms that do not support parallel dispatch
-- [ ] Prefer sub-agents shipped with this plugin (`ce-*`) over platform built-ins. Built-ins have different names on each target (e.g., Claude Code's `Explore` is `explorer` on Codex via `spawn_agent`'s `agent_type`, `scout` on Pi via `pi-subagents`) — using our own avoids the enumeration tax. Exception: when a built-in offers a meaningful benefit worth keeping, enumerate the per-platform equivalents inline at the call site so the model can route correctly on each target.
+### 스킬 내 스크립트 경로 참조 (Script Path References in Skills)
 
-### Script Path References in Skills
+- [ ] bash 코드 블록에서 함께 위치한 스크립트를 참조할 때는 `${CLAUDE_PLUGIN_ROOT}`와 같은 변수 대신 상대 경로(예: `bash scripts/my-script ARG`)를 사용하세요.
+- [ ] 모든 플랫폼은 스킬 디렉토리를 기준으로 스크립트 경로를 해석합니다.
+- [ ] 에이전트가 스크립트를 찾을 수 있도록 백틱 경로(예: `` `scripts/my-script` ``)로 참조하세요.
 
-- [ ] In bash code blocks, reference co-located scripts using relative paths (e.g., `bash scripts/my-script ARG`) — not `${CLAUDE_PLUGIN_ROOT}` or other platform-specific variables
-- [ ] All platforms resolve script paths relative to the skill's directory; no env var prefix is needed
-- [ ] Reference the script with a backtick path (e.g., `` `scripts/my-script` ``) so agents can locate it; a markdown link is not needed since the bash code block already provides the invocation
+### 크로스 플랫폼 참조 규칙 (Cross-Platform Reference Rules)
 
-### Cross-Platform Reference Rules
+이 플러그인은 한 번 작성된 후 다른 플랫폼용으로 변환됩니다.
 
-This plugin is authored once, then converted for other agent platforms. Commands and agents are transformed during that conversion, but `plugin.skills` are usually copied almost exactly as written.
+- [ ] 명령어와 에이전트는 변환 중에 형태가 바뀌지만, `plugin.skills`는 대개 작성된 그대로 복사됩니다.
+- [ ] 따라서 `SKILL.md` 내부에서 다른 스킬을 참조할 때는 슬래시 구문(`/ce-work`)보다는 "load the `ce-doc-review` skill"과 같은 의미론적 표현을 선호하세요.
+- [ ] 슬래시 구문은 `/ce-work`나 `/ce-compound`처럼 실제로 공개된 명령어 또는 워크플로우를 참조할 때만 사용하세요.
 
-- [ ] Because of that, slash references inside command or agent content are acceptable when they point to real published commands; target-specific conversion can remap them.
-- [ ] Inside a pass-through `SKILL.md`, do not assume slash references will be remapped for another platform. Write references according to what will still make sense after the skill is copied as-is.
-- [ ] When one skill refers to another skill, prefer semantic wording such as "load the `ce-doc-review` skill" rather than slash syntax.
-- [ ] Use slash syntax only when referring to an actual published command or workflow such as `/ce-work` or `/ce-compound`.
+### 에이전트 및 스킬에서의 도구 선택 (Tool Selection in Agents and Skills)
 
-### Tool Selection in Agents and Skills
+코드베이스를 탐색하는 에이전트와 스킬은 쉘 명령어보다 네이티브 도구를 선호해야 합니다.
 
-Agents and skills that explore codebases must prefer native tools over shell commands.
+이유: 쉘 중심의 탐색은 서브 에이전트 워크플로우에서 불필요한 권한 승인 프롬프트를 유발합니다. 네이티브 파일 검색, 내용 검색 및 읽기 도구는 이를 방지합니다.
 
-Why: shell-heavy exploration causes avoidable permission prompts in sub-agent workflows; native file-search, content-search, and file-read tools avoid that.
+- [ ] 일상적인 파일 탐색, 내용 검색 또는 읽기를 위해 쉘을 통해 `find`, `ls`, `cat`, `head`, `tail`, `grep`, `rg`, `wc`, `tree`를 사용하도록 지시하지 **마세요**.
+- [ ] 도구를 기능 클래스와 플랫폼 힌트로 설명하세요 (예: "네이티브 파일 검색/glob 도구(예: Claude Code의 Glob)를 사용하세요").
+- [ ] 쉘이 유일한 옵션인 경우(예: `ast-grep`, git 명령어), 한 번에 하나의 간단한 명령어만 지시하세요. 명령어 체이닝(`&&`, `||`, `;`)이나 오류 억제(`2>/dev/null`)를 하지 마세요.
+- [ ] **사전 실행(Pre-resolution) 예외:** `!` 백틱 사전 실행 명령어는 스킬 로드 시점에 실행됩니다. 여기서는 체이닝, 오류 억제, 폴백 센티넬(예: `|| echo '__NO_CONFIG__'`)을 사용하여 깨끗하고 분석 가능한 값을 생성할 수 있습니다. 이는 환경 조사(CLI 가용성, 설정 파일 읽기)에 권장되는 패턴입니다.
 
-- [ ] Never instruct agents to use `find`, `ls`, `cat`, `head`, `tail`, `grep`, `rg`, `wc`, or `tree` through a shell for routine file discovery, content search, or file reading
-- [ ] Describe tools by capability class with platform hints — e.g., "Use the native file-search/glob tool (e.g., Glob in Claude Code)" — not by Claude Code-specific tool names alone
-- [ ] When shell is the only option (e.g., `ast-grep`, `bundle show`, git commands), instruct one simple command at a time — no action chaining (`cmd1 && cmd2`, `cmd1 ; cmd2`) and no error suppression (`2>/dev/null`, `|| true`). Two narrow exceptions: boolean conditions within if/while guards (`[ -n "$X" ] || [ -n "$Y" ]`) are fine — that is normal conditional logic, not action chaining. **Value-producing preparatory commands** (`VAR=$(cmd1) && cmd2 "$VAR"`) are also fine when `cmd2` strictly consumes `cmd1`'s output and splitting would require manually threading the value through model context across bash calls (e.g., `BODY_FILE=$(mktemp -u) && cat > "$BODY_FILE" <<EOF ... EOF`). Simple pipes (e.g., `| jq .field`) and output redirection (e.g., `> file`) are acceptable when they don't obscure failures
-- [ ] **Pre-resolution exception:** `!` backtick pre-resolution commands run at skill load time, not at agent runtime. They may use chaining (`&&`, `||`), error suppression (`2>/dev/null`), and fallback sentinels (e.g., `|| echo '__NO_CONFIG__'`) to produce a clean, parseable value for the model. This is the preferred pattern for environment probes (CLI availability, config file reads) that would otherwise require runtime shell calls with chaining. Three shapes are rejected by Claude Code's safety check and must be avoided in `!` backticks:
-  - **`case ... esac`** is rejected as `Contains case_statement`. Use `&&` chaining or pipe-to-sed, or extract to a script.
-  - **`;` (semicolon command separator)** is rejected as `Unhandled node type: ;`. Use `&&` or `||` chaining when those operators express the same intent; extract to a script when unconditional sequencing is genuinely required (`;` is not equivalent to either — it runs the next command regardless of exit code).
-  - **`[A] && B || C`** (mixing `&&` and `||` at the same lexical depth) is rejected as `ambiguous syntax with command separators` (issue #710). Wrap the `&&` chain in a subshell so only `||` remains at top level — `(A && B) || C` — or emit the raw value and let the agent's prose decide. Example of the safe shape: `` !`cat "$(git rev-parse --show-toplevel 2>/dev/null)/path/to/file" 2>/dev/null || echo '__SENTINEL__'` ``
-  - **`$(...)` containing a double-quoted string** (e.g., `basename "$(dirname "$common")"`) is rejected as `Unhandled node type: string` (issue #709). Extract the logic to a script under `scripts/` — do NOT replace with parameter expansion (see next bullet).
-  - **Bash parameter expansion operators** (`${var%pattern}`, `${var##pattern}`, `${var#pattern}`, `${var%%pattern}`, `${var/pat/repl}`, `${var:-default}`, etc.) are rejected as `Contains expansion`. Simple `${var}` is fine; operators after the variable name are not. This means paths like `${common%/.git}` (strip-suffix) or `${repo##*/}` (strip-prefix) cannot be used in `!` pre-resolution. To derive a directory name or strip a path component, extract to a script.
+  로직이 단순하지 않은 경우 스킬의 `scripts/` 디렉토리에 있는 스크립트로 추출하는 것이 좋습니다.
 
-  When the logic is non-trivial, prefer extracting to a script under the skill's `scripts/` directory; the safety check then sees only `bash <quoted-path>`, which sidesteps both current and future safety-check tightenings. Tests in `tests/skill-shell-safety.test.ts` enforce all four patterns.
+### 서브 에이전트에게 참조 자료 전달
 
-  **Permission gate on extracted scripts — invoke from the skill body, not from `!` pre-resolution.** A pre-resolution `bash "${CLAUDE_SKILL_DIR}/scripts/<name>.sh"` form passes the safety check but trips Claude Code's permission check at skill-load time, which does *not* honor `defaultMode: bypassPermissions`. Allow-listing via `allowed-tools` frontmatter is unreliable at *load time*: empirically, broad `Bash(bash *)` patterns appear to load with bypass on but narrow filename-pinned patterns like `Bash(bash *upstream-version.sh)` fail with bypass off. Move the script invocation into the skill body so it runs via the runtime Bash tool instead. Two pieces are required for it to actually work:
+코드베이스 참조 자료가 필요한 서브 에이전트를 조율할 때, 파일 내용보다 파일 경로를 전달하는 것을 선호하세요. 서브 에이전트가 필요한 내용만 직접 읽도록 합니다. 내용 전달은 50라인 미만의 작고 정적인 자료(예: JSON 스키마)에만 사용하세요.
 
-  1. **Use `${CLAUDE_SKILL_DIR}` for the script path**, not bare relative paths. The runtime Bash tool runs from the user's project CWD, not the skill directory — `bash scripts/<name>.sh` fails with "No such file or directory" empirically. The `${CLAUDE_SKILL_DIR}` env var resolves correctly across `claude --plugin-dir` and standard marketplace-cached installs.
-  2. **Declare narrow `allowed-tools` patterns** pinned to each script filename. At runtime, `allowed-tools` granting is documented to apply, so users without `bypassPermissions` skip the approval prompt. Pin per filename rather than using broad `Bash(bash *)`.
+### 서브 에이전트 권한 모드
 
-  ```yaml
-  allowed-tools: Bash(bash *upstream-version.sh), Bash(bash *currently-loaded-version.sh)
-  ```
+서브 에이전트를 파견할 때, 스킬이 명시적으로 특정 모드(예: `mode: "plan"`)를 필요로 하지 않는 한 Agent/Task 도구 호출에서 **`mode` 파라미터를 생략**하세요. `mode: "auto"` 등을 전달하면 사용자가 설정한 권한 설정을 덮어쓰게 되는데, 이는 일반적인 서브 에이전트 파견에서 의도된 동작이 아닙니다. `mode`를 생략하면 사용자의 고유 설정이 적용됩니다.
 
-  ````markdown
-  ## Step 1: Probe X
+### 스킬에서 설정 파일 읽기
 
-  Run via the Bash tool, in parallel:
+플러그인 설정은 저장소 루트의 `.compound-engineering/config.local.yaml`에 위치합니다.
 
-  ```bash
-  bash "${CLAUDE_SKILL_DIR}/scripts/upstream-version.sh"
-  bash "${CLAUDE_SKILL_DIR}/scripts/currently-loaded-version.sh"
-  ```
-  ````
+1. **경로 확인:** 절대 CWD(현재 디렉토리) 기준으로 읽지 마세요. 항상 저장소 루트로부터 확인하세요. 사전 실행 명령어에서는 `git rev-parse --show-toplevel`을 사용하세요.
+2. **Worktrees:** `.gitignore`에 등록된 파일은 worktree별로 다를 수 있습니다.
 
-  Use this whenever a `!` pre-resolution would invoke `bash <path>`. Reserve pre-resolution for commands whose first token already matches common user allow rules (`git status`, `gh api`, `cat <path>`, `command -v <name>`).
-- [ ] Do not encode shell recipes for routine exploration when native tools can do the job; encode intent and preferred tool classes instead
-- [ ] For shell-only workflows (e.g., `gh`, `git`, `bundle show`, project CLIs), explicit command examples are acceptable when they are simple, task-scoped, and not chained together
+파일이 없으면 기본값(fallback)을 사용하세요. 설정 파일이 없다고 해서 실행을 중단하거나 차단하지 마세요.
 
-### Passing Reference Material to Sub-Agents
+## 구성 요소 추가 (Adding Components)
 
-When a skill orchestrates sub-agents that need codebase reference material, prefer passing file paths over file contents. The sub-agent reads only what it needs. Content-passing is fine for small, static material consumed in full (e.g., a JSON schema under ~50 lines).
+- **새로운 스킬:** `skills/<name>/SKILL.md`를 필수 YAML 프론트매터와 함께 생성하세요. 참조 파일은 `skills/<name>/references/`에 둡니다. `README.md`의 적절한 카테고리 테이블에 스킬을 추가하고 스킬 개수를 업데이트하세요.
+- **새로운 에이전트:** `agents/ce-<name>.agent.md`를 프론트매터와 함께 생성하세요 (`ce-` 접두사 필수). `README.md`의 적절한 주제 섹션에 에이전트를 추가하고 에이전트 개수를 업데이트하세요.
 
-### Sub-Agent Permission Mode
+### 이 저장소에 새로운 플러그인 추가
 
-When dispatching sub-agents, **omit the `mode` parameter** on the Agent/Task tool call unless the skill explicitly needs a specific mode (e.g., `mode: "plan"` for plan-approval workflows). Passing `mode: "auto"` or any other value overrides the user's configured permission settings (e.g., `bypassPermissions` in their user-level config), which is never the intended behavior for routine subagent dispatch. Omitting `mode` lets the user's own `defaultMode` setting apply.
+`compound-engineering` 및 `coding-tutor`와 함께 새로운 플러그인을 추가할 때, 세 가지 마켓플레이스 형식(Claude, Cursor, Codex)의 동기화가 유지되어야 합니다.
 
-### Reading Config Files from Skills
+- [ ] `.claude-plugin/marketplace.json` — `plugins[]`에 플러그인 추가
+- [ ] `.cursor-plugin/marketplace.json` — `plugins[]`에 플러그인 추가
+- [ ] `.agents/plugins/marketplace.json` — `plugins[]`에 플러그인 추가
+- [ ] `plugins/<name>/.claude-plugin/plugin.json` 생성 (name, version, description)
+- [ ] `plugins/<name>/.cursor-plugin/plugin.json` 생성 (동일 내용)
+- [ ] `plugins/<name>/.codex-plugin/plugin.json` 생성 (동일 내용 + Codex 필드)
+- [ ] `.github/release-please-config.json` — `extra-files`에 세 개의 `plugin.json` 경로 추가
+- [ ] `.github/.release-please-manifest.json` — 새 패키지의 초기 버전 항목 추가
+- [ ] `src/release/metadata.ts` — 새 플러그인에 대한 크로스 체크 타겟 확장
+- [ ] `bun run release:validate` 실행 및 드리프트 없음 확인
 
-Plugin config lives at `.compound-engineering/config.local.yaml` in the repo root. This file is gitignored (machine-local settings), which creates two gotchas:
+## 베타 스킬 (Beta Skills)
 
-1. **Path resolution:** Never read the config relative to CWD — the user may invoke a skill from a subdirectory. Always resolve from the repo root. In pre-resolution commands, use `git rev-parse --show-toplevel` to find the root.
+베타 스킬은 `-beta` 접미사를 사용하고 의도치 않은 자동 트리거를 방지하기 위해 `disable-model-invocation: true`를 설정합니다. 명명, 검증 및 승급 규칙은 `docs/solutions/skill-design/beta-skills-framework.md`를 참조하세요.
 
-2. **Worktrees:** Gitignored files are per-worktree. A config file created in the main checkout does not exist in worktrees. Use `--show-toplevel` to find the root:
-   ```
-   !`cat "$(git rev-parse --show-toplevel 2>/dev/null)/.compound-engineering/config.local.yaml" 2>/dev/null || echo '__NO_CONFIG__'`
-   ```
-   Outside a git repo, `git rev-parse` emits empty and `cat "/.compound-engineering/config.local.yaml"` fails (permission denied or not found, suppressed by `2>/dev/null`), so the `__NO_CONFIG__` sentinel fires. Note: the previous pattern used `(top=$(...); [ -n "$top" ] && cat "$top/...")` with a semicolon to guard the empty-root case, but `;` is rejected by Claude Code's safety checker as `Unhandled node type: ;` (see Pre-resolution exception above) and must not be used in `!` pre-resolution.
+## 스킬 문서 (Skill Documentation)
 
-   Note: in a worktree, `--show-toplevel` returns the worktree path, so config from the main checkout will not be found. This is acceptable — config is optional and users who work from worktrees can add a config file there. A previous pattern used `git-common-dir` with `${common%/.git}` to derive the main repo root as a fallback, but bash parameter expansion operators are rejected as "Contains expansion" (see Pre-resolution exception above), so that approach is no longer viable without a script.
+많은 스킬들이 `docs/skills/<skill>.md`에 사용자용 문서를 가지고 있습니다. 이는 런타임 `SKILL.md`와는 별개로 스킬의 목적, 메커니즘 등을 설명합니다.
 
-If neither path has the file, fall through to defaults — never fail or block on missing config.
+스킬을 수정할 때 스킬 문서 동기화 여부를 명시하세요 (예: "문서 업데이트 완료 - 신규 모드 설명 추가" 또는 "문서 업데이트 불필요 - 내부 로직 변경임").
 
-### Quick Validation Command
+## 해결된 솔루션 (Documented Solutions)
 
-```bash
-# Check for broken markdown link references (should return nothing)
-grep -E '\[.*\]\(\./references/|\[.*\]\(\./assets/|\[.*\]\(references/|\[.*\]\(assets/' skills/*/SKILL.md
-
-# Check description format - should describe what + when
-grep -E '^description:' skills/*/SKILL.md
-```
-
-## Adding Components
-
-- **New skill:** Create `skills/<name>/SKILL.md` with required YAML frontmatter (`name`, `description`). Reference files go in `skills/<name>/references/`. Add the skill to the appropriate category table in `README.md` and update the skill count.
-- **New agent:** Create `agents/ce-<name>.agent.md` with frontmatter (the `ce-` prefix is required). Add the agent to the appropriate topical section of `README.md` (Review, Document Review, Research, Design, Workflow, Docs) and update the agent count.
-
-### Adding a New Plugin to This Repo
-
-When adding a new plugin alongside `compound-engineering` and `coding-tutor`, the repo ships to three marketplace formats (Claude, Cursor, Codex). All three must stay in parity or `bun run release:validate` will fail on next run. Checklist:
-
-- [ ] `.claude-plugin/marketplace.json` — add the plugin to `plugins[]`
-- [ ] `.cursor-plugin/marketplace.json` — add the plugin to `plugins[]`
-- [ ] `.agents/plugins/marketplace.json` — add the plugin to `plugins[]` (Codex schema: nested `source: { source: "local", path: "./plugins/<name>" }`, `policy`, `category`)
-- [ ] `plugins/<name>/.claude-plugin/plugin.json` — create with `name`, `version`, `description`
-- [ ] `plugins/<name>/.cursor-plugin/plugin.json` — create with matching `name`, `version`, `description`
-- [ ] `plugins/<name>/.codex-plugin/plugin.json` — create with matching `name`, `version`, `description`, plus Codex-specific fields (`skills: "./skills/"` if skills exist, plus `interface{}` block)
-- [ ] `.github/release-please-config.json` — add a `plugins/<name>` package entry with `extra-files` for all three plugin.json paths
-- [ ] `.github/.release-please-manifest.json` — add the initial version entry for the new package
-- [ ] `src/release/metadata.ts` — extend `syncReleaseMetadata` with a cross-check target for the new plugin (follow the `codexPluginTargets` pattern)
-- [ ] Run `bun run release:validate` and confirm it reports the new manifests without drift
-
-The validator enforces: plugin-list parity across all three marketplaces, name/version/description parity across each plugin's three plugin.json files, and existence of any `skills:` directory declared in the Codex manifest. Note that only `description` drift is auto-corrected on `write: true` — version drift is detect-only because release-please owns the write.
-
-## Beta Skills
-
-Beta skills use a `-beta` suffix and `disable-model-invocation: true` to prevent accidental auto-triggering. See `docs/solutions/skill-design/beta-skills-framework.md` for naming, validation, and promotion rules.
-
-**Caveat on non-beta use of `disable-model-invocation`:** The flag blocks all model-initiated invocations via the Skill tool, which includes scheduled re-entry from `/loop`. Only a user typing a slash command directly bypasses it. If a skill is intended to be schedulable (e.g., `resolve-pr-feedback`), do not set this flag — rely on description specificity and argument requirements to prevent accidental auto-fire instead.
-
-### Stable/Beta Sync
-
-When modifying a skill that has a `-beta` counterpart (or vice versa), always check the other version and **state your sync decision explicitly** before committing — e.g., "Propagated to beta — shared test guidance" or "Not propagating — this is the experimental delegate mode beta exists to test." Syncing to both, stable-only, and beta-only are all valid outcomes. The goal is deliberate reasoning, not a default rule.
-
-## Skill Documentation
-
-Many skills have a user-facing doc at `docs/skills/<skill>.md` (repo-root `docs/`, not under `plugins/`) that explains the skill's high-level purpose, novel mechanics, and chain position — separate from the runtime SKILL.md. The `docs/skills/README.md` index lists all documented skills grouped by category.
-
-When modifying such a skill, **state your skill-doc sync decision explicitly** before committing — e.g., "doc updated — added new framing for surprise-me mode" or "doc not updated — change is internal to Phase 2, doesn't surface at doc level." **Most changes don't warrant an update**: internal phase refactors, prompt-tuning, and mechanic-level bug fixes typically don't surface at the doc's level of abstraction.
-
-Update the skill doc when:
-
-- The skill's high-level purpose or framing has shifted
-- A highlighted novel mechanic changed materially or was removed
-- A new mechanic emerged that belongs in "What Makes It Novel"
-- The doc's quick example, FAQ, or use cases would mislead a reader
-
-Edit just the parts that became inaccurate; don't rewrite to match SKILL.md. Skills without a doc need no check — creating one is a deliberate decision, not a reflexive one. When adding a doc for a skill that didn't have one, also link it from the skill's row in `plugins/compound-engineering/README.md` and add it to the appropriate category in `docs/skills/README.md`.
-
-## Documented Solutions
-
-`docs/solutions/` holds documented solutions to past problems — bugs, architecture patterns, design patterns, tooling decisions, conventions, workflow practices, and other institutional knowledge. Entries use YAML frontmatter with fields including `module`, `tags`, and `problem_type`. Knowledge-track `problem_type` values are `architecture_pattern`, `design_pattern`, `tooling_decision`, `convention`, `workflow_issue`, `developer_experience`, `documentation_gap`, and `best_practice` (fallback). Bug-track values cover `build_error`, `test_failure`, `runtime_error`, `performance_issue`, `database_issue`, `security_issue`, `ui_bug`, `integration_issue`, and `logic_error`. Search this directory before designing new solutions so institutional memory compounds across changes.
-
-## Documentation
-
-See `docs/solutions/plugin-versioning-requirements.md` for detailed versioning workflow.
+`docs/solutions/`에는 과거 문제(버그, 아키텍처 패턴, 도구 결정 등)에 대한 해결책이 보관되어 있습니다. 새로운 솔루션을 설계하기 전에 이 디렉토리를 검색하여 조직의 지식이 계속 축적되도록 하세요.

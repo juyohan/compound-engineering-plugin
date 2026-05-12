@@ -1,143 +1,143 @@
-# Strategy Interview
+# 전략 인터뷰 (Strategy Interview)
 
-Loaded by `SKILL.md` at the start of Phase 1 and revisited per-section in Phase 2. Every section below maps one-to-one to a section in `strategy-template.md`.
+Phase 1 시작 시 `SKILL.md`에 의해 로드되며, Phase 2의 각 섹션별로 다시 참조됩니다. 아래의 각 섹션은 `strategy-template.md`의 섹션과 일대일로 매칭됩니다.
 
-For each section: ask the opening question, evaluate the answer against the quality bar, push back when it falls into a named anti-pattern, and capture the final answer in the user's own language.
+각 섹션에 대해: 시작 질문을 하고, 답변이 품질 기준을 충족하는지 평가하며, 정해진 안티 패턴(anti-pattern)에 해당하는 경우 개선을 권고하고, 최종 답변을 사용자의 언어로 캡처하십시오.
 
-## Overall Rules
+## 전체 규칙
 
-1. **Ask, don't prescribe.** Do not offer menu options for open answers (problem, approach, persona). Use free-form responses. Reserve multi-select for routing decisions.
-2. **Push back once, maybe twice.** If the first answer is weak, name the specific issue and ask a sharper question. If the second answer is still weak, capture what the user has given and note in the draft that the section is worth revisiting. Do not let the interview spiral.
-3. **Quote the user back at them.** When challenging an answer, use the user's own words verbatim. Paraphrasing softens the challenge and is easier to dismiss.
-4. **Keep each answer to 1-3 sentences.** Longer answers are usually hiding something vague. If the user writes a paragraph, ask them to pick the sentence that matters most.
-5. **Don't leak the anti-pattern names.** The user does not need to hear "that's a vanity metric" - just ask the sharper question that follows.
-
----
-
-## 1. Target Problem
-
-**Opening question:** "What's the core problem this product solves - and what makes that problem hard?"
-
-Strong answers name a specific situation the target user is in, identify what makes the situation hard *right now* (a crux, a constraint, something that isn't easy to route around), and are falsifiable - you could imagine the problem being absent and know the difference.
-
-**Anti-patterns and pushback:**
-
-- **Goal stated as problem** ("the problem is we need to grow revenue") -> "That's a goal, not a problem. What's in the world that's making that goal hard to achieve? Whose situation are you changing?"
-- **Vague wish** ("people need better tools for X") -> "Whose situation specifically? Doing what? What do they try today, and why doesn't it work?"
-- **Symptom, not cause** ("users churn after 30 days") -> "That's a symptom. What's happening in their world that makes them stop caring? What's the underlying condition?"
-- **Too broad** ("communication at work is broken") -> "That's a civilization-scale problem. Narrow it to a situation you can actually affect - which users, doing what, when does it hurt most?"
-- **Feature-shaped** ("there's no good way to do [specific workflow] with AI") -> "That's a missing feature, not the underlying problem. What outcome do users want that the feature would give them?"
-
-**Capture:** One or two sentences naming the user's situation and the crux. No solution language.
+1. **처방하지 말고 질문하십시오.** 개방형 답변(문제, 접근 방식, 페르소나)에 대해 선택지를 제공하지 마십시오. 자유 형식의 응답을 사용하십시오. 다중 선택은 라우팅 결정 시에만 사용하십시오.
+2. **한두 번만 개선을 권고하십시오.** 첫 번째 답변이 부실하면 구체적인 문제를 지적하고 더 날카로운 질문을 던지십시오. 두 번째 답변도 여전히 부실하다면 사용자가 제공한 내용을 그대로 캡처하고, 초안에 해당 섹션을 다시 검토할 가치가 있다는 노트를 남기십시오. 인터뷰가 끝없이 길어지게 하지 마십시오.
+3. **사용자의 말을 그대로 인용하십시오.** 답변에 이의를 제기할 때는 사용자가 사용한 단어를 토씨 하나 틀리지 않고 그대로 사용하십시오. 말을 바꾸어 표현하면 도전의 강도가 약해지고 사용자가 쉽게 무시할 수 있게 됩니다.
+4. **각 답변을 1-3문장으로 유지하십시오.** 답변이 길어지면 대개 모호한 내용이 숨어 있기 마련입니다. 사용자가 문단을 길게 쓰면 가장 중요한 문장 하나를 골라달라고 요청하십시오.
+5. **안티 패턴 이름을 직접 언급하지 마십시오.** 사용자가 "그건 허수 지표(vanity metric)입니다"라는 말을 들을 필요는 없습니다 - 그냥 그 뒤에 따르는 더 날카로운 질문을 던지십시오.
 
 ---
 
-## 2. Our Approach
+## 1. 대상 문제 (Target Problem)
 
-**Opening question:** "Given that problem, what's your approach - the commitment or principle that makes it tractable?"
+**시작 질문:** "이 제품이 해결하려는 핵심 문제는 무엇인가요? 그리고 그 문제가 왜 어려운가요?"
 
-This is the guiding choice: how the product competes or operates, so that many downstream decisions become easier. It is not the product and it is not a feature list.
+강력한 답변은 대상 사용자가 처한 구체적인 상황을 명시하고, 그 상황을 *현재* 어렵게 만드는 요인(핵심 문제, 제약 조건, 쉽게 우회하기 어려운 무언가)을 식별하며, 반증 가능해야 합니다. 즉, 문제가 사라졌을 때 그 차이를 명확히 알 수 있어야 합니다.
 
-Strong answers are a choice (implying alternatives explicitly *not* pursued), are general enough to direct many decisions but specific enough to rule things out, and sound more like "we win by [doing X differently]" than "we do [a list of things]".
+**안티 패턴 및 개선 권고:**
 
-**Anti-patterns and pushback:**
+- **목표를 문제로 제시** ("문제는 우리가 수익을 늘려야 한다는 것입니다") -> "그것은 목표이지 문제가 아닙니다. 그 목표를 달성하기 어렵게 만드는 현실의 장벽은 무엇인가요? 누구의 상황을 바꾸려는 것인가요?"
+- **모호한 바람** ("사람들에게 X를 위한 더 좋은 도구가 필요합니다") -> "구체적으로 누구의 상황인가요? 무엇을 할 때인가요? 그들이 오늘날 시도하는 방식은 무엇이며, 왜 그것이 작동하지 않나요?"
+- **원인이 아닌 증상** ("사용자가 30일 후에 이탈합니다") -> "그것은 증상입니다. 사용자가 더 이상 신경 쓰지 않게 만드는 그들의 환경적 요인은 무엇인가요? 그 밑에 깔린 근본적인 조건은 무엇인가요?"
+- **너무 광범위함** ("직장에서의 커뮤니케이션이 무너졌습니다") -> "그것은 문명 수준의 문제입니다. 실제로 영향을 미칠 수 있는 상황으로 좁혀보세요 - 어떤 사용자가, 무엇을 할 때, 언제 가장 고통을 느끼나요?"
+- **기능 중심적** ("AI로 [특정 워크플로우]를 수행할 좋은 방법이 없습니다") -> "그것은 누락된 기능이지 근본적인 문제가 아닙니다. 그 기능이 사용자에게 제공할 결과물은 무엇인가요?"
 
-- **Fluff / values** ("we're customer-obsessed and move fast") -> "Those are values, not an approach. What are you doing *differently* from the other products users could pick? If the answer applies to any company, it's not your approach."
-- **Feature list** ("we're building AI-powered X, Y, and Z") -> "That's a feature list. What's the underlying bet that makes you pick those features over others? What principle is guiding what you ship?"
-- **Product description as approach** ("we use AI to draft replies") -> "That's what the product does, but what's the *choice* inside it? Every competitor will say the same thing. Your approach should name what you're doing that the obvious alternative isn't - is it a grounding choice, a trust-building commitment, a workflow bet? What are you betting on that they're not?"
-- **Goal restated** ("our approach is to be the market leader") -> "That's still the goal. How does the product win? What choice are you making that competitors aren't?"
-- **Multiple approaches at once** ("we're going deep on enterprise, self-serve, and a consumer app") -> "Pick one as the guiding approach. The others may still get work, but one of them organizes the rest. Which is it?"
-- **Doesn't connect to the problem** (problem: "users can't trust AI output"; approach: "build a fast, beautiful UI") -> "How does that approach solve the problem you named? If there's no line between them, one of the two is wrong."
-
-**Capture:** One or two sentences. Ideally ends with or implies "...so that [outcome tied to the problem]".
+**캡처:** 사용자의 상황과 핵심 문제를 명시한 한두 문장. 솔루션 언어를 포함하지 마십시오.
 
 ---
 
-## 3. Who It's For
+## 2. 접근 방식 (Our Approach)
 
-**Opening question:** "Who is the primary user, and what job are they hiring this product to do?"
+**시작 질문:** "그 문제가 주어졌을 때, 당신의 접근 방식은 무엇인가요? 문제를 해결 가능하게 만드는 약속이나 원칙은 무엇인가요?"
 
-Jobs-to-be-done framing - the user isn't a demographic, they're someone in a situation trying to make progress.
+이것은 가이드가 되는 선택입니다: 하류의 많은 결정을 더 쉽게 만들어주는 제품의 경쟁 방식이나 운영 방식입니다. 이것은 제품 자체가 아니며 기능 목록도 아닙니다.
 
-Strong answers name one primary persona (additional personas allowed but secondary), identify them by role or situation rather than demographic, and state a concrete job as a verb phrase.
+강력한 답변은 선택(명시적으로 추구하지 *않는* 대안을 암시)이며, 많은 결정을 이끌어낼 만큼 일반적이면서도 무언가를 배제할 만큼 구체적입니다. 또한 "[리스트에 있는 것들]을 한다"기보다는 "우리는 [X를 다르게 함]으로써 이긴다"는 식의Bet으로 들려야 합니다.
 
-**Anti-patterns and pushback:**
+**안티 패턴 및 개선 권고:**
 
-- **Too many primary personas** ("it's for founders, PMs, engineers, and designers") -> "If it's for everyone, it's for no one. Who matters most? The others can still benefit, but one of them drives the product decisions."
-- **Demographic framing** ("25-45 year old professionals") -> "That's a demographic, not a user. What are they trying to do that makes them pick up this product?"
-- **Role without situation** ("PMs") -> "PMs doing what? Running a roadmap review? Writing a spec at midnight? Convincing a skeptical eng lead? The situation is where the product matters."
-- **Generic job** ("they want to be more productive") -> "Productive at what specifically? They're hiring this product to do *what*? The more specific, the better the product decisions downstream."
+- **미사여구 / 가치관** ("우리는 고객에 집착하고 빠르게 움직입니다") -> "그것은 가치관이지 접근 방식이 아닙니다. 사용자가 선택할 수 있는 다른 제품들과 *다르게* 하고 있는 것은 무엇인가요? 어떤 회사에나 적용될 수 있는 답변이라면 당신만의 접근 방식이 아닙니다."
+- **기능 목록** ("우리는 AI 기반의 X, Y, Z를 구축하고 있습니다") -> "그것은 기능 목록입니다. 다른 기능 대신 그 기능들을 선택하게 만든 근본적인Bet은 무엇인가요? 무엇을 출시할지 결정하는 가이드 원칙은 무엇인가요?"
+- **제품 설명을 접근 방식으로 제시** ("우리는 AI를 사용하여 답장을 작성합니다") -> "그것은 제품이 하는 일이지만, 그 안의 *선택*은 무엇인가요? 모든 경쟁자가 똑같은 말을 할 것입니다. 당신의 접근 방식은 뻔한 대안이 하지 않는 무언가(근거 확인의 선택, 신뢰 구축을 위한 약속, 워크플로우에 대한Bet 등)를 명시해야 합니다. 당신은 무엇에Bet을 걸고 있나요?"
+- **목표 재진술** ("우리의 접근 방식은 시장 리더가 되는 것입니다") -> "그것은 여전히 목표입니다. 제품이 어떻게 승리하나요? 경쟁자가 내리지 않는 어떤 선택을 하고 있나요?"
+- **한꺼번에 너무 많은 접근 방식** ("우리는 엔터프라이즈, 셀프 서브, 컨슈머 앱 모두에 집중합니다") -> "가이드가 되는 단 하나의 접근 방식을 고르십시오. 다른 분야에도 여전히 공을 들일 수 있지만, 그중 하나가 나머지를 조직화해야 합니다. 그것은 무엇인가요?"
+- **문제와 연결되지 않음** (문제: "사용자가 AI 출력을 신뢰할 수 없음"; 접근 방식: "빠르고 아름다운 UI 구축") -> "그 접근 방식이 앞서 언급한 문제를 어떻게 해결하나요? 둘 사이의 연결 고리가 없다면 둘 중 하나는 잘못된 것입니다."
 
-**Capture:** Persona name plus JTBD sentence. Example: "Solo founders running their own roadmap. They're hiring the product to keep strategy and execution aligned without a PM on staff."
-
----
-
-## 4. Key Metrics
-
-**Opening question:** "What 3-5 metrics will tell you whether the approach is working?"
-
-Metrics are the feedback loop. Bad metrics create the illusion of progress while the product gets worse.
-
-Strong answers stay at 3-5 (not 10), mix leading and lagging (something that moves weekly and something that moves quarterly), and could plausibly regress if the product got worse.
-
-**Anti-patterns and pushback:**
-
-- **Vanity metrics** ("total signups, total pageviews, cumulative users") -> "Those can all go up while the product gets worse. What moves when users actually get value?"
-- **Too many** ("here are 12 metrics we watch") -> "A dashboard isn't a strategy. Pick the 3-5 you'd stake the quarter on. What are the others telling you that those don't?"
-- **Outputs, not outcomes** ("ship velocity, deploys per week") -> "Those measure the team, not the product. If the team doubled velocity but users didn't care, would you call it a win?"
-- **Can only go up** ("cumulative hours saved") -> "A metric that can only go up doesn't tell you much. What's the rate, the ratio, or the thing that can regress?"
-- **Unmeasurable** ("user delight") -> "How specifically? If you can't define how you'd check it on a Tuesday, it's aspirational, not a metric."
-
-**Capture:** A list of 3-5. Each with a one-line definition. Note where each is measured (analytics, DB, qualitative, etc.) if known. If measurement is undefined, ask: "Where does this metric live today? If nowhere, is this something you can start measuring?"
+**캡처:** 한두 문장. 이상적으로는 "...함으로써 [문제와 연결된 결과]를 달성한다"로 끝나거나 이를 암시해야 합니다.
 
 ---
 
-## 5. Tracks
+## 3. 대상 사용자 (Who It's For)
 
-**Opening question:** "What are the 2-4 tracks of work you're investing in to execute the approach?"
+**시작 질문:** "주요 사용자는 누구이며, 그들이 이 제품을 통해 해결하려는 과업(job)은 무엇인가요?"
 
-Tracks are the coherent-actions half of the strategy kernel - concrete areas of investment that flow from the approach. They are not feature lists and not personal todo items. Each track is a named *domain of work*.
+Jobs-to-be-done 프레임워크 — 사용자는 인구통계학적 대상이 아니라, 무언가 진전을 이루려는 상황에 처한 사람입니다.
 
-Strong answers stay at 2-4 (not 8, not 1), connect clearly back to the approach, and are broad enough that multiple features live inside each one.
+강력한 답변은 하나의 주요 페르소나를 명시하고(추가 페르소나는 허용되되 보조적임), 인구통계가 아닌 역할이나 상황으로 식별하며, 구체적인 과업을 동사구로 기술합니다.
 
-**Anti-patterns and pushback:**
+**안티 패턴 및 개선 권고:**
 
-- **Feature list in disguise** ("track 1: Slack integration; track 2: mobile app; track 3: dark mode") -> "Those are features. What's the *investment area* each one lives inside? 'Integrations' might be one track, with Slack, Teams, and Discord as candidates inside it."
-- **Too many tracks** ("we have 7 tracks this quarter") -> "With 7 tracks, every track is starved for attention. Which 3 are load-bearing? The others either fold in or drop."
-- **Doesn't connect to approach** (approach: "win by being the easiest to onboard"; track: "enterprise SSO") -> "How does that track serve the approach? If it's a separate bet, name it as one. If it's load-bearing for onboarding, explain the link."
-- **Too vague** ("improve the product") -> "Every track is 'improve the product.' What's the specific investment area that's different from the others?"
-- **One track only** -> "With one track, there's no real choice being made. What are the 2-3 things the product needs to be good at, and how are they different?"
+- **너무 많은 주요 페르소나** ("창업자, PM, 엔지니어, 디자이너를 위한 것입니다") -> "모두를 위한 것이라면 누구를 위한 것도 아닙니다. 누가 가장 중요한가요? 나머지도 혜택을 볼 수 있지만, 한 명이 제품 결정을 주도해야 합니다."
+- **인구통계학적 프레임** ("25-45세 전문직 종사자") -> "그것은 인구통계이지 사용자가 아닙니다. 그들이 이 제품을 선택하게 만드는 과업은 무엇인가요?"
+- **상황이 결여된 역할** ("PM") -> "무엇을 하는 PM인가요? 로드맵 리뷰를 운영 중인가요? 자정에 사양서를 쓰고 있나요? 회의적인 엔지니어 팀장을 설득 중인가요? 상황이 바로 제품이 의미를 갖는 지점입니다."
+- **일반적인 과업** ("생산성이 높아지길 원합니다") -> "구체적으로 무엇에 대한 생산성인가요? 그들이 *무엇을 하기 위해* 이 제품을 고용하나요? 구체적일수록 하류의 제품 결정이 더 명확해집니다."
 
-**Capture:** 2-4 tracks. For each: a name, a one-line purpose, and a short note on why this serves the approach.
-
----
-
-## 6. Milestones (optional)
-
-**Opening question:** "Are there any dated milestones worth anchoring - a launch, a fundraise, a conference, a renewal? Skip if none apply."
-
-Only capture externally visible, real milestones. Avoid turning this into an internal schedule.
-
-Default is to skip. Do not push the user to invent milestones. If they name some, capture them verbatim with dates.
+**캡처:** 페르소나 이름 및 JTBD 문장. 예: "직접 로드맵을 운영하는 1인 창업자. 그들은 PM 없이 전략과 실행의 일관성을 유지하기 위해 이 제품을 고용합니다."
 
 ---
 
-## 7. Not Working On (optional)
+## 4. 주요 지표 (Key Metrics)
 
-**Opening question:** "Is there anything you've explicitly decided *not* to do right now that's worth naming? This is for things the team keeps being tempted by."
+**시작 질문:** "접근 방식이 효과가 있는지 알려줄 3-5개의 지표는 무엇인가요?"
 
-Clarity tool, not a blocker list. Skip by default. If the user names items, one sentence each. Do not encourage a long list.
+지표는 피드백 루프입니다. 잘못된 지표는 제품이 나빠지는 동안에도 발전하고 있다는 착각을 불러일으킵니다.
+
+강력한 답변은 3-5개(10개가 아님)로 유지되며, 선행 지표와 후행 지표(매주 변하는 것과 매분기 변하는 것)가 섞여 있고, 제품이 나빠질 경우 실제로 수치가 하락할 가능성이 있어야 합니다.
+
+**안티 패턴 및 개선 권고:**
+
+- **허수 지표** ("총 가입자 수, 총 페이지 뷰, 누적 사용자") -> "그 수치들은 제품이 나빠지는 동안에도 계속 올라갈 수 있습니다. 사용자가 실제로 가치를 얻었을 때 움직이는 수치는 무엇인가요?"
+- **너무 많음** ("우리가 모니터링하는 12개의 지표는 다음과 같습니다") -> "대시보드는 전략이 아닙니다. 이번 분기를 걸 수 있는 3-5개를 고르십시오. 나머지가 알려주지 못하는 핵심적인 정보는 무엇인가요?"
+- **결과가 아닌 산출물** ("개발 속도, 주당 배포 횟수") -> "그것들은 팀을 측정하는 것이지 제품을 측정하는 것이 아닙니다. 팀 속도가 두 배가 되었는데 사용자가 신경 쓰지 않는다면, 그것을 성공이라고 부를 수 있을까요?"
+- **올라가기만 하는 지표** ("누적 절감 시간") -> "계속 올라가기만 하는 지표는 많은 정보를 주지 못합니다. 비율, 비중, 또는 하락할 수 있는 수치는 무엇인가요?"
+- **측정 불가능** ("사용자 만족") -> "구체적으로 어떻게 측정하나요? 화요일에 수치를 바로 확인할 수 있는 정의가 없다면, 그것은 지표가 아니라 희망 사항입니다."
+
+**캡처:** 3-5개의 목록. 각각에 대한 한 줄 정의. 아는 경우 측정 위치(분석 도구, DB, 정성적 조사 등)를 기재하십시오. 측정 방법이 정의되지 않았다면 다음과 같이 물으십시오: "이 지표는 현재 어디에서 확인할 수 있나요? 아직 없다면 측정을 시작할 수 있는 항목인가요?"
 
 ---
 
-## 8. Marketing (optional)
+## 5. 트랙 (Tracks)
 
-**Opening question:** "Any positioning or narrative language you want the doc to carry - a one-liner, a tagline, a key message? Skip if not yet."
+**시작 질문:** "접근 방식을 실행하기 위해 투자하고 있는 2-4개의 업무 트랙은 무엇인가요?"
 
-Skip by default. Keep to 2-3 lines if present.
+트랙은 전략 커널(kernel)의 일관된 행동(coherent-actions) 부분으로, 접근 방식에서 흘러나오는 구체적인 투자 영역입니다. 이것은 기능 목록이나 개인의 할 일 목록이 아닙니다. 각 트랙은 이름이 붙여진 *업무 도메인*입니다.
+
+강력한 답변은 2-4개(8개나 1개가 아님)로 유지되며, 접근 방식과 명확히 연결되고, 각 트랙 내에 여러 기능이 포함될 만큼 광범위합니다.
+
+**안티 패턴 및 개선 권고:**
+
+- **기능 목록의 위장** ("트랙 1: Slack 연동; 트랙 2: 모바일 앱; 트랙 3: 다크 모드") -> "그것들은 기능입니다. 각 기능이 속한 *투자 영역*은 무엇인가요? '연동(Integrations)'이 하나의 트랙이 될 수 있고, Slack, Teams, Discord가 그 안의 후보가 될 수 있습니다."
+- **너무 많은 트랙** ("이번 분기에 7개의 트랙이 있습니다") -> "7개의 트랙이 있으면 모든 트랙이 주의 부족으로 굶주리게 됩니다. 중추적인 3개는 무엇인가요? 나머지는 통합하거나 제외해야 합니다."
+- **접근 방식과 연결되지 않음** (접근 방식: "가장 쉬운 온보딩으로 승리함"; 트랙: "엔터프라이즈 SSO") -> "그 트랙이 접근 방식에 어떻게 기여하나요? 별도의Bet이라면 그렇게 명시하십시오. 온보딩에 핵심적이라면 그 연결 고리를 설명하십시오."
+- **너무 모호함** ("제품 개선") -> "모든 트랙이 '제품 개선'입니다. 다른 트랙과 구별되는 구체적인 투자 영역은 무엇인가요?"
+- **단 하나의 트랙** -> "트랙이 하나뿐이라면 실질적인 선택이 이루어지지 않은 것입니다. 제품이 뛰어나야 할 2-3가지 요소는 무엇이며, 그것들은 서로 어떻게 다른가요?"
+
+**캡처:** 2-4개의 트랙. 각 트랙별로 이름, 한 줄의 목적, 그리고 왜 이것이 접근 방식에 기여하는지에 대한 짧은 노트를 작성하십시오.
 
 ---
 
-## After the Interview
+## 6. 마일스톤 (Milestones) (선택 사항)
 
-Once sections 1-5 are captured (and any optional sections the user engaged with), read `strategy-template.md` and fill it in. Present the full draft in chat before writing. Offer one edit round. Then write to `STRATEGY.md`.
+**시작 질문:** "일정이 정해진 중요한 마일스톤이 있나요? 출시, 투자 유치, 컨퍼런스, 갱신 등이 해당됩니다. 해당 사항이 없으면 건너뛰어도 됩니다."
+
+외부에 노출되는 실제 마일스톤만 캡처하십시오. 내부 일정을 나열하는 섹션이 아닙니다.
+
+기본값은 건너뛰기입니다. 사용자가 마일스톤을 억지로 만들어내게 하지 마십시오. 마일스톤이 있다면 날짜와 함께 그대로 캡처하십시오.
+
+---
+
+## 7. 수행하지 않는 작업 (Not Working On) (선택 사항)
+
+**시작 질문:** "현재 의도적으로 하지 않기로 결정한 작업 중 명시할 만한 것이 있나요? 팀이 계속 유혹을 느끼는 항목들을 위한 섹션입니다."
+
+차단 목록이 아닌 명확성을 위한 도구입니다. 기본값은 건너뛰기입니다. 사용자가 항목을 말하면 각 항목당 한 문장으로 작성하십시오. 긴 목록을 권장하지 마십시오.
+
+---
+
+## 8. 마케팅 (Marketing) (선택 사항)
+
+**시작 질문:** "문서에 담고 싶은 포지셔닝이나 내러티브 언어가 있나요? 한 줄 요약, 슬로건, 핵심 메시지 등이 해당됩니다. 아직 없다면 건너뛰어도 됩니다."
+
+기본값은 건너뛰기입니다. 내용이 있다면 2-3행 내외로 유지하십시오.
+
+---
+
+## 인터뷰 종료 후
+
+섹션 1-5(및 사용자가 참여한 선택 섹션)가 캡처되면, `strategy-template.md`를 읽고 내용을 채우십시오. 작성 전 채팅을 통해 전체 초안을 보여주십시오. 한 차례의 수정을 허용한 뒤 `STRATEGY.md`에 작성하십시오.

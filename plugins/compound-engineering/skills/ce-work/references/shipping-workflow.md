@@ -1,142 +1,142 @@
-# Shipping Workflow
+# 배포 워크플로우 (Shipping Workflow)
 
-This file contains the shipping workflow (Phase 3-4). It is loaded when all Phase 2 tasks are complete and execution transitions to quality check.
+이 파일은 배포 워크플로우(Phase 3-4)를 포함합니다. 모든 Phase 2 작업이 완료되고 실행 단계가 품질 검사(Quality Check)로 전환될 때 로드됩니다.
 
-## Phase 3: Quality Check
+## Phase 3: 품질 검사 (Quality Check)
 
-1. **Run Core Quality Checks**
+1. **핵심 품질 검사 실행**
 
-   Always run before submitting:
+   제출 전 항상 다음을 실행하십시오:
 
    ```bash
-   # Run full test suite (use project's test command)
-   # Examples: bin/rails test, npm test, pytest, go test, etc.
+   # 전체 테스트 스위트 실행 (프로젝트의 테스트 명령 사용)
+   # 예: bin/rails test, npm test, pytest, go test 등
 
-   # Run linting (per AGENTS.md)
-   # Use linting-agent before pushing to origin
+   # 린팅(Linting) 실행 (AGENTS.md 참조)
+   # origin에 push하기 전에 linting-agent를 사용하십시오.
    ```
 
-2. **Simplify** (Claude Code only; REQUIRED for >=30 changed lines)
+2. **단순화 (Simplify)** (Claude Code 전용, 30라인 이상 변경 시 필수)
 
-   Before code review, run the `/simplify` skill on the change to consolidate duplicated patterns, remove dead code, and improve reuse. Skip when the diff is purely mechanical (formatting, dependency bumps, lint fixes, generated artifacts) -- simplification has no useful yield on those.
+   코드 리뷰 전에, 변경 사항에 대해 `/simplify` 스킬을 실행하여 중복 패턴을 통합하고, 죽은 코드를 제거하며, 재사용성을 개선하십시오. 변경 사항이 순수하게 기계적인 경우(포맷팅, 의존성 업데이트, 린트 수정, 자동 생성된 아티팩트 등)에는 단순화의 이득이 없으므로 건너뛰십시오.
 
-   On other harnesses, proceed directly to code review.
+   다른 하네스(harness)에서는 코드 리뷰 단계로 직접 진행하십시오.
 
-3. **Code Review** (REQUIRED)
+3. **코드 리뷰 (Code Review)** (필수)
 
-   Every change gets reviewed before shipping. Default to Tier 1 and escalate to Tier 2 only when a concrete signal calls for it. Tier 2 is materially more expensive in time and tokens -- pay that cost when a signal justifies it, not as a default.
+   모든 변경 사항은 배포 전 리뷰를 거칩니다. 기본적으로 Tier 1을 사용하고, 구체적인 신호가 있을 때만 Tier 2로 에스컬레이션하십시오. Tier 2는 시간과 토큰 비용이 실질적으로 더 많이 들기 때문에, 신호에 근거한 정당성이 있을 때만 그 비용을 지불하십시오.
 
-   **Tier 1 -- harness-native code review (default).** Run your built-in code review command or skill (e.g., `/review` in Claude Code). Address blocking and suggested findings inline before Final Validation. Skip the Residual Work Gate. If the current harness has no built-in code review command or skill, escalate to Tier 2 -- Tier 1 cannot run, and "Every change gets reviewed" still applies.
+   **Tier 1 — 하네스 네이티브 코드 리뷰 (기본값).** 기본으로 제공되는 코드 리뷰 명령어 또는 스킬을 실행하십시오 (예: Claude Code의 `/review`). 최종 검증(Final Validation) 전에 차단(blocking) 및 권장(suggested) 발견 사항을 인라인으로 처리하십시오. 잔여 작업 게이트(Residual Work Gate)는 건너뜁니다. 현재 하네스에 기본 제공되는 코드 리뷰 도구가 없는 경우 Tier 2로 에스컬레이션하십시오. "모든 변경 사항은 리뷰를 거친다"는 원칙은 여전히 적용되어야 하기 때문입니다.
 
-   **Tier 2 -- `ce-code-review` (escalation).** Invoke the `ce-code-review` skill with `mode:autofix`, passing `plan:<path>` when known. Then proceed to the Residual Work Gate.
+   **Tier 2 — `ce-code-review` (에스컬레이션).** `ce-code-review` 스킬을 `mode:autofix`로 호출하십시오 (계획 경로가 확인된 경우 `plan:<path>` 전달). 그 후 잔여 작업 게이트(Residual Work Gate)로 진행하십시오.
 
-   Escalate to Tier 2 when **any** of the following is true:
+   다음 중 **하나라도** 해당되면 Tier 2로 에스컬레이션하십시오:
 
-   - **Sensitive surface touched.** The diff modifies any of: authentication or authorization, payments or billing, data migrations or backfills, cryptography or secret handling, security-relevant configuration, public API or library contracts, or dependency manifests.
-   - **Large and diffuse change.** The diff exceeds >=400 changed lines **and** spans more than 3 directories or 2 distinct subsystems. Either alone is a soft signal; together they are an escalation trigger.
-   - **Very large change.** The diff exceeds >=1,000 changed lines regardless of diffusion.
-   - **Plan or task explicitly requests it.** The plan, the originating task, or another instruction in scope calls for a full / deep / thorough code review.
+   - **민감한 표면 수정.** 인증(auth) 또는 권한 부여, 결제 또는 과금, 데이터 마이그레이션 또는 백필, 암호화 또는 시크릿 처리, 보안 관련 설정, 공개 API 또는 라이브러리 계약, 의존성 매니페스트 등을 수정하는 경우.
+   - **대규모 및 분산된 변경.** 변경 사항이 400라인 이상이면서, 3개 이상의 디렉토리 또는 2개 이상의 별도 하위 시스템에 걸쳐 있는 경우. 각각만으로는 약한 신호이지만, 두 조건이 겹치면 에스컬레이션 트리거가 됩니다.
+   - **매우 큰 규모의 변경.** 분산 여부와 상관없이 변경 사항이 1,000라인 이상인 경우.
+   - **계획 또는 작업에서 명시적으로 요청.** 계획, 원천 작업, 또는 범위 내의 다른 지침에서 전체/심층/철저한 코드 리뷰를 요구하는 경우.
 
-   When the change is small, concentrated, and outside the sensitive surface list, Tier 1 is sufficient -- do not escalate "to be safe."
+   변경 사항이 작고 집중되어 있으며 민감한 표면 목록에 해당하지 않는 경우 Tier 1으로 충분합니다. "안전을 위해" 무분별하게 에스컬레이션하지 마십시오.
 
-4. **Residual Work Gate** (REQUIRED when Tier 2 ran)
+4. **잔여 작업 게이트 (Residual Work Gate)** (Tier 2 실행 시 필수)
 
-   After Tier 2 code review completes, inspect the Residual Actionable Work summary it returned (or read the run artifact directly if the summary was not emitted). If one or more residual `downstream-resolver` findings remain, do not proceed to Final Validation until the user decides how to handle them.
+   Tier 2 코드 리뷰가 완료된 후, 반환된 '잔여 조치 가능 작업(Residual Actionable Work)' 요약을 검토하십시오 (요약이 출력되지 않은 경우 실행 아티팩트를 직접 읽으십시오). 하나 이상의 `downstream-resolver` 발견 사항이 남아 있다면, 사용자가 처리 방법을 결정하기 전까지 최종 검증(Final Validation)으로 진행하지 마십시오.
 
-   Ask the user using the platform's blocking question tool (`AskUserQuestion` in Claude Code with `ToolSearch select:AskUserQuestion` pre-loaded if needed, `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension)). Fall back to numbered options in chat only when the harness genuinely lacks a blocking tool. Never silently skip the gate.
+   플랫폼의 차단형 질문 도구(Claude Code의 `AskUserQuestion` (필요 시 `ToolSearch select:AskUserQuestion`), Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user`)를 사용하여 사용자에게 질문하십시오. 하네스에 차단 도구가 없는 경우에만 차선책으로 채팅에 번호가 매겨진 옵션을 제시하십시오. 절대로 이 게이트를 조용히 건너뛰지 마십시오.
 
-   Stem: `Code review found N residual finding(s) the skill did not auto-fix. How should the agent proceed?`
+   질문 요지: `코드 리뷰 결과 에이전트가 자동으로 수정하지 못한 N개의 잔여 발견 사항이 있습니다. 어떻게 진행할까요?`
 
-   Options (four or fewer, self-contained labels):
-   - `Apply/fix now` — loop back into review with focused fixes; the agent investigates each finding, applies changes where safe, and re-runs review.
-   - `File tickets via project tracker` — load `references/tracker-defer.md` in Interactive mode; the agent files tickets in the project's detected tracker (or `gh` fallback, or leaves them in the report if no sink exists) and proceeds to Final Validation.
-   - `Accept and proceed` — record the residual findings verbatim in a durable "Known Residuals" sink before shipping. If a PR will be created or updated in Phase 4, include them in the PR description's "Known Residuals" section (the agent owns this when calling `ce-commit-push-pr`). If the user later chooses the no-PR `ce-commit` path, create `docs/residual-review-findings/<branch-or-head-sha>.md`, include the accepted findings and source review-run context, stage it with the implementation commit, and mention the file path in the final summary. The user has acknowledged the risk, but the findings must not live only in the transient session.
-   - `Stop — do not ship` — abort the shipping workflow. The user will handle findings manually before re-invoking.
+   옵션 (4개 이하의 독립적인 레이블):
+   - `Apply/fix now (지금 수정 적용)` — 집중 수정을 위해 리뷰 루프로 돌아갑니다. 에이전트가 각 발견 사항을 조사하고, 안전한 곳에 수정을 적용한 뒤 리뷰를 재실행합니다.
+   - `File tickets via project tracker (프로젝트 트래커에 티켓 생성)` — `references/tracker-defer.md`를 대화형(Interactive) 모드로 로드합니다. 에이전트가 감지된 프로젝트 트래커(또는 `gh` 폴백, 혹은 트래커가 없는 경우 리포트에 남김)에 티켓을 생성하고 최종 검증으로 진행합니다.
+   - `Accept and proceed (수락 후 진행)` — 배포 전 내구성 있는 "알려진 잔여 사항(Known Residuals)" 저장소에 발견 사항을 있는 그대로 기록합니다. Phase 4에서 PR이 생성되거나 업데이트되는 경우, PR 본문의 "Known Residuals" 섹션에 이를 포함하십시오 (`ce-commit-push-pr` 호출 시 에이전트가 처리). 사용자가 PR 없이 `ce-commit` 경로를 선택한 경우, `docs/residual-review-findings/<branch-or-head-sha>.md`를 생성하여 수락된 발견 사항과 원본 리뷰 컨텍스트를 포함하고, 이를 구현 커밋과 함께 스테이징한 뒤 최종 요약에서 파일 경로를 언급하십시오. 사용자가 리스크를 인지했더라도 발견 사항이 휘발성 세션에만 남아서는 안 됩니다.
+   - `Stop — do not ship (중단 — 배포하지 않음)` — 배포 워크플로우를 중단합니다. 사용자가 다시 호출하기 전에 발견 사항을 수동으로 처리하게 됩니다.
 
-   Skip this gate entirely when the review reported `Residual actionable work: none.` or when only Tier 1 was used. Do not proceed past this gate on an `Accept and proceed` decision until the agent has recorded whether the durable sink is `PR Known Residuals` or `docs/residual-review-findings/<branch-or-head-sha>.md`.
+   리뷰에서 `Residual actionable work: none.`이라고 보고되었거나 Tier 1만 사용한 경우에는 이 게이트를 완전히 건너뜁니다. `Accept and proceed` 결정 시, 에이전트가 "PR Known Residuals" 또는 `docs/residual-review-findings/<branch-or-head-sha>.md` 중 어느 저장소를 사용할지 기록하기 전까지는 이 게이트를 통과하지 마십시오.
 
-5. **Final Validation**
-   - All tasks marked completed
-   - Testing addressed -- tests pass and new/changed behavior has corresponding test coverage (or an explicit justification for why tests are not needed)
-   - Linting passes
-   - Code follows existing patterns
-   - Figma designs match (if applicable)
-   - No console errors or warnings
-   - If the plan has a `Requirements` section (or legacy `Requirements Trace`), verify each requirement is satisfied by the completed work
-   - If any `Deferred to Implementation` questions were noted, confirm they were resolved during execution
+5. **최종 검증 (Final Validation)**
+   - 모든 작업이 완료됨으로 표시됨
+   - 테스트 확인 완료 — 테스트가 통과되었으며, 신규/변경 동작에 대응하는 테스트 커버리지가 확보됨 (또는 테스트가 필요하지 않은 이유에 대한 명시적 정당성 확인)
+   - 린팅 통과
+   - 코드가 기존 패턴을 따름
+   - Figma 디자인과 일치 (해당되는 경우)
+   - 콘솔 에러나 경고 없음
+   - 계획에 `Requirements` 섹션(또는 레거시 `Requirements Trace`)이 있는 경우, 각 요구 사항이 완료된 작업에 의해 충족되었는지 확인
+   - `Deferred to Implementation` 질문이 기록된 경우, 실행 중에 해결되었는지 확인
 
-6. **Prepare Operational Validation Plan** (REQUIRED)
-   - Add a `## Post-Deploy Monitoring & Validation` section to the PR description for every change.
-   - Include concrete:
-     - Log queries/search terms
-     - Metrics or dashboards to watch
-     - Expected healthy signals
-     - Failure signals and rollback/mitigation trigger
-     - Validation window and owner
-   - If there is truly no production/runtime impact, still include the section with: `No additional operational monitoring required` and a one-line reason.
+6. **운영 검증 계획 준비 (필수)**
+   - 모든 변경 사항에 대해 PR 본문에 `## Post-Deploy Monitoring & Validation` 섹션을 추가하십시오.
+   - 다음 내용들을 구체적으로 포함하십시오:
+     - 로그 쿼리/검색어
+     - 모니터링할 지표 또는 대시보드
+     - 기대되는 정상 신호 (Healthy signals)
+     - 실패 신호 및 롤백/완화 트리거
+     - 검증 기간 및 담당자
+   - 운영 환경에 미치는 영향이 전혀 없는 경우에도 다음과 같이 섹션을 포함하십시오: `No additional operational monitoring required` 및 그 이유 한 줄.
 
-## Phase 4: Ship It
+## Phase 4: 배포 (Ship It)
 
-1. **Prepare Evidence Context**
+1. **증거 컨텍스트 준비**
 
-   Do not invoke `ce-demo-reel` directly in this step. Evidence capture belongs to the PR creation or PR description update flow, where the final PR diff and description context are available.
+   이 단계에서 `ce-demo-reel`을 직접 호출하지 마십시오. 증거 캡처는 최종 PR diff와 본문 컨텍스트를 사용할 수 있는 PR 생성 또는 PR 본문 업데이트 플로우의 영역입니다.
 
-   Note whether the completed work has observable behavior (UI rendering, CLI output, API/library behavior with a runnable example, generated artifacts, or workflow output). The `ce-commit-push-pr` skill will ask whether to capture evidence only when evidence is possible.
+   완료된 작업에 관찰 가능한 동작(UI 렌더링, CLI 출력, 실행 가능한 예제가 포함된 API/라이브러리 동작, 생성된 아티팩트 또는 워크플로우 출력)이 있는지 확인하십시오. `ce-commit-push-pr` 스킬은 증거 캡처가 가능한 경우에만 캡처 여부를 물을 것입니다.
 
-2. **Update Plan Status**
+2. **계획 상태 업데이트**
 
-   If the input document has YAML frontmatter with a `status` field, update it to `completed`:
+   입력 문서의 YAML 프론트매터에 `status` 필드가 있는 경우, 이를 `completed`로 업데이트하십시오:
    ```
    status: active  ->  status: completed
    ```
 
-3. **Commit and Create Pull Request**
+3. **커밋 및 풀 리퀘스트(PR) 생성**
 
-   Load the `ce-commit-push-pr` skill to handle committing, pushing, and PR creation. The skill handles convention detection, branch safety, logical commit splitting, adaptive PR descriptions, and attribution badges.
+   커밋, 푸시 및 PR 생성을 처리하기 위해 `ce-commit-push-pr` 스킬을 로드하십시오. 이 스킬은 컨벤션 감지, 브랜치 안전성, 논리적 커밋 분할, 적응형 PR 본문 작성 및 기여 배지 처리를 담당합니다.
 
-   When providing context for the PR description, include:
-   - The plan's summary and key decisions
-   - Testing notes (tests added/modified, manual testing performed)
-   - Evidence context from step 1, so `ce-commit-push-pr` can decide whether to ask about capturing evidence
-   - Figma design link (if applicable)
-   - The Post-Deploy Monitoring & Validation section (see Phase 3 Step 6)
-   - Any "Known Residuals" accepted in the Phase 3 Residual Work Gate, rendered as a dedicated section in the PR body with severity, file:line, and title per finding
+   PR 본문을 위한 컨텍스트 제공 시 다음을 포함하십시오:
+   - 계획의 요약 및 주요 결정 사항
+   - 테스트 노트 (추가/수정된 테스트, 수행된 수동 테스트)
+   - 1단계의 증거 컨텍스트 (이를 통해 `ce-commit-push-pr`이 증거 캡처 여부를 결정함)
+   - Figma 디자인 링크 (해당되는 경우)
+   - 운영 검증 계획 섹션 (Phase 3 6단계 참조)
+   - Phase 3 잔여 작업 게이트에서 수락된 모든 "알려진 잔여 사항(Known Residuals)". PR 본문에 심각도, 파일:라인, 제목을 포함한 전용 섹션으로 렌더링됩니다.
 
-   If the user prefers to commit without creating a PR, load the `ce-commit` skill instead.
+   사용자가 PR 생성 없이 커밋만 하길 원하는 경우, 대신 `ce-commit` 스킬을 로드하십시오.
 
-4. **Notify User**
-   - Summarize what was completed
-   - Link to PR (if one was created)
-   - Note any follow-up work needed
-   - Suggest next steps if applicable
+4. **사용자 알림**
+   - 완료된 내용 요약
+   - PR 링크 (생성된 경우)
+   - 필요한 후속 작업 명시
+   - 적용 가능한 경우 다음 단계 제안
 
-## Quality Checklist
+## 품질 체크리스트 (Quality Checklist)
 
-Before creating PR, verify:
+PR 생성 전 확인 사항:
 
-- [ ] All clarifying questions asked and answered
-- [ ] All tasks marked completed
-- [ ] Testing addressed -- tests pass AND new/changed behavior has corresponding test coverage (or an explicit justification for why tests are not needed)
-- [ ] Linting passes (use linting-agent)
-- [ ] Code follows existing patterns
-- [ ] Figma designs match implementation (if applicable)
-- [ ] Evidence decision handled by `ce-commit-push-pr` when the change has observable behavior
-- [ ] Commit messages follow conventional format
-- [ ] PR description includes Post-Deploy Monitoring & Validation section (or explicit no-impact rationale)
-- [ ] Code review completed (Tier 1 harness-native or Tier 2 `ce-code-review`)
-- [ ] PR description includes summary, testing notes, and evidence when captured
-- [ ] PR description includes Compound Engineered badge with accurate model and harness
+- [ ] 모든 명확화 질문이 해결됨
+- [ ] 모든 작업이 완료됨으로 표시됨
+- [ ] 테스트 확인 완료 — 테스트 통과 및 신규/변경 동작에 대응하는 테스트 커버리지 확보 (또는 정당성 확인)
+- [ ] 린팅 통과 (linting-agent 사용)
+- [ ] 코드가 기존 패턴을 따름
+- [ ] Figma 디자인과 구현이 일치 (해당되는 경우)
+- [ ] 변경 사항에 관찰 가능한 동작이 있는 경우 증거 결정이 `ce-commit-push-pr`에 의해 처리됨
+- [ ] 커밋 메시지가 Conventional Commits 형식을 따름
+- [ ] PR 본문에 운영 검증 계획 섹션 포함 (또는 무영향 근거 명시)
+- [ ] 코드 리뷰 완료 (하네스 네이티브 Tier 1 또는 `ce-code-review` Tier 2)
+- [ ] PR 본문에 요약, 테스트 노트 및 캡처된 경우 증거가 포함됨
+- [ ] PR 본문에 정확한 모델 및 하네스가 기재된 Compound Engineered 배지 포함
 
-## Code Review Tiers
+## 코드 리뷰 티어 (Code Review Tiers)
 
-Every change gets reviewed. Default to Tier 1; escalate to Tier 2 only on a concrete signal. Tier 2 is materially more expensive in time and tokens.
+모든 변경 사항은 리뷰를 거칩니다. 기본적으로 Tier 1을 사용하며, 구체적인 신호가 있을 때만 Tier 2로 에스컬레이션하십시오. Tier 2는 시간과 토큰 비용이 실질적으로 더 많이 듭니다.
 
-**Tier 1 -- harness-native code review (default).** Run your built-in code review command or skill (e.g., `/review` in Claude Code). Address blocking and suggested findings inline. If the current harness has no built-in code review command or skill, escalate to Tier 2 -- Tier 1 cannot run.
+**Tier 1 — 하네스 네이티브 코드 리뷰 (기본값).** 기본 제공되는 코드 리뷰 명령어 또는 스킬을 실행하십시오 (예: Claude Code의 `/review`). 차단 및 권장 발견 사항을 인라인으로 처리하십시오. 하네스에 기본 도구가 없는 경우 Tier 2로 에스컬레이션하십시오.
 
-**Tier 2 -- `ce-code-review` (escalation).** Invoke `ce-code-review mode:autofix` with `plan:<path>` when available. Safe fixes are applied automatically; residual work routes through the Residual Work Gate.
+**Tier 2 — `ce-code-review` (에스컬레이션).** 사용 가능한 경우 `plan:<path>`와 함께 `ce-code-review mode:autofix`를 호출하십시오. 안전한 수정 사항은 자동으로 적용되며, 잔여 작업은 잔여 작업 게이트를 통해 처리됩니다.
 
-Escalate to Tier 2 when any of these holds:
-- Sensitive surface touched (auth/authz, payments/billing, data migrations or backfills, cryptography or secrets, security-relevant config, public API or library contracts, dependency manifests)
-- Large and diffuse change (>=400 changed lines AND >3 directories or 2 subsystems)
-- Very large change (>=1,000 changed lines)
-- Plan or task explicitly requests a full / deep / thorough code review
+다음 중 하나라도 해당되면 Tier 2로 에스컬레이션하십시오:
+- 민감한 표면 수정 (인증/권한 부여, 결제/과금, 데이터 마이그레이션 또는 백필, 암호화 또는 시크릿, 보안 관련 설정, 공개 API 또는 라이브러리 계약, 의존성 매니페스트)
+- 대규모 및 분산된 변경 (400라인 이상 변경 및 3개 이상의 디렉토리 또는 2개 이상의 하위 시스템)
+- 매우 큰 규모의 변경 (1,000라인 이상 변경)
+- 계획 또는 작업에서 전체/심층/철저한 코드 리뷰를 명시적으로 요청

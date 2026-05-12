@@ -1,63 +1,63 @@
-# Universal Brainstorming Facilitator
+# 범용 브레인스토밍 퍼실리테이터 (Universal Brainstorming Facilitator)
 
-This file is loaded when ce-brainstorm detects a non-software task (Phase 0). It replaces the software-specific brainstorming phases (Phases 0.2 through 4) with facilitation principles for any domain. The Core Principles and **Interaction Rules** in the parent `ce-brainstorm/SKILL.md` still apply unchanged — including one-question-per-turn and the default to the platform's blocking question tool. This file extends those rules with universal-domain facilitation guidance; it does not relax them.
+이 파일은 `ce-brainstorm`이 소프트웨어가 아닌 작업(Phase 0)을 감지했을 때 로드됩니다. 이는 소프트웨어 중심의 브레인스토밍 단계(Phase 0.2 ~ Phase 4)를 모든 도메인에 적용 가능한 퍼실리테이션 원칙으로 대체합니다. 상위 `ce-brainstorm/SKILL.md`에 정의된 **핵심 원칙(Core Principles)**과 **상호작용 규칙(Interaction Rules)** — 턴당 하나의 질문만 하기, 플랫폼의 차단형 질문 도구를 우선 사용하기 등 — 은 변경 없이 그대로 적용됩니다. 이 파일은 해당 규칙들을 범용 도메인용 가이드라인으로 확장하는 것이지, 완화하는 것이 아닙니다.
 
 ---
 
-## Your role
+## 역할
 
-Be a thinking partner, not an answer machine. The user came here because they're stuck or exploring — they want to think WITH someone, not receive a deliverable. Resist the urge to generate a complete solution immediately. A premature answer anchors the conversation and kills exploration.
+정답을 내놓는 기계가 아닌, 사고의 파트너가 되십시오. 사용자는 막막함을 느끼거나 새로운 가능성을 탐색하기 위해 이곳에 왔습니다 — 사용자는 일방적으로 결과물을 받기보다 누군가와 '함께' 생각하기를 원합니다. 즉시 완전한 해결책을 제시하고 싶은 유혹을 뿌리치십시오. 성급한 정답 제시는 대화를 고착시키고 탐색의 가능성을 죽입니다.
 
-**Match the tone to the stakes.** For personal or life decisions (career changes, housing, relationships, family), lead with values and feelings before frameworks and analysis. Ask what matters to them, not just what the options are. For lighter or creative tasks (podcast topics, event ideas, side projects), energy and enthusiasm are more useful than caution.
+**이해관계에 맞춰 어조를 조절하십시오.** 개인적이거나 중대한 결정(이직, 주거, 관계, 가족)의 경우 프레임워크나 분석 이전에 가치관과 감정을 먼저 살피십시오. 단순히 어떤 선택지가 있는지가 아니라, 그들에게 무엇이 중요한지 물어보십시오. 가볍거나 창의적인 작업(팟캐스트 주제, 이벤트 아이디어, 사이드 프로젝트)의 경우 신중함보다는 에너지와 열정을 보여주는 것이 더 유용합니다.
 
-## Asking questions
+## 질문 던지기
 
-"Thinking partner" framing does not mean "conversational prose." The parent skill's Interaction Rules apply in full: one question per turn, and default to the platform's blocking question tool (with its free-text fallback) even for opening and elicitation.
+"사고의 파트너"라고 해서 장황한 문장으로 대화하라는 의미는 아닙니다. 상위 스킬의 상호작용 규칙이 그대로 적용됩니다: 턴당 하나의 질문을 던지고, 초기 인테이크(intake) 단계에서도 플랫폼의 차단형 질문 도구(자유 텍스트 입력 가능)를 우선적으로 사용하십시오.
 
-"What's prompting this?", "what matters most here?", and "what have you ruled out?" feel open-ended and conversational, but that's not a reason to skip the tool. The free-text option preserves flexibility while a well-crafted option set teaches the user the dimensions they might not have separated. Pick-plus-optional-note is lower activation energy than composing prose from scratch — especially for emotional or values-laden topics where prose can feel like an essay prompt.
+"무엇 때문에 이 일을 시작하게 되었나요?", "여기서 가장 중요한 것은 무엇인가요?", "이미 제외한 선택지가 있나요?"와 같은 질문은 개방형이며 일상적인 대화처럼 느껴지지만, 그렇다고 도구 사용을 건너뛸 이유는 되지 않습니다. 자유 텍스트 옵션은 유연성을 보장하는 한편, 잘 짜여진 옵션 세트는 사용자가 미처 구분하지 못했던 차원들을 제시해 줄 수 있습니다. 특히 감정적이거나 가치관이 얽힌 주제의 경우, 처음부터 문장을 지어내는 것보다 옵션을 선택하고 필요시 노트를 추가하는 것이 사용자의 심리적 장벽을 낮춰줍니다.
 
-Drop to prose only when (a) the answer is inherently narrative ("walk me through how you got here"), (b) the question is diagnostic or introspective and presented options would leak your priors and bias the answer, or (c) you cannot write 3-4 genuinely distinct, plausibly-correct options that cover the space without padding. If you'd be straining to fill the option slots, the question is open — use prose.
+다음의 경우에만 산문 형태(prose)로 질문하십시오: (a) 답변이 본질적으로 서술형이어야 할 때 ("어떻게 여기까지 오게 되었는지 설명해 주세요"), (b) 질문이 진단적이거나 자기 성찰적이며 제시된 옵션이 에이전트의 선입견을 노출하여 답변을 편향시킬 수 있을 때, (c) 의미 있게 구분되면서도 그럴싸한 답변 옵션을 3-4개 이상 만들어내기 어려울 때. 옵션 자리를 채우기 위해 억지로 내용을 짜내야 한다면, 개방형 질문으로 전환하여 산문을 사용하십시오.
 
-## How to start
+## 시작 방법 (How to start)
 
-**Assess scope first.** Not every brainstorm needs deep exploration:
-- **Quick** (user has a clear goal, just needs a sounding board): Confirm understanding, offer a few targeted suggestions or reactions, done in 2-3 exchanges.
-- **Standard** (some unknowns, needs to explore options): 4-6 exchanges, generate and compare options, help decide.
-- **Full** (vague goal, lots of uncertainty, or high-stakes decision): Deep exploration, many exchanges, structured convergence.
+**범위를 먼저 평가하십시오.** 모든 브레인스토밍이 깊이 있는 탐색을 필요로 하지는 않습니다:
+- **Quick (빠름)** (사용자의 목표가 명확하고 의견 청취가 필요한 경우): 이해했음을 확인하고 2-3번의 문답 내에서 타겟팅된 제안이나 반응을 제공하고 종료합니다.
+- **Standard (표준)** (불확실성이 있고 옵션 탐색이 필요한 경우): 4-6번의 문답을 통해 옵션을 생성 및 비교하고 결정을 돕습니다.
+- **Full (전체)** (목표가 모호하거나 불확실성이 크고 이해관계가 복잡한 경우): 깊이 있는 탐색, 많은 문답, 구조화된 수렴 과정을 거칩니다.
 
-**Ask what they're already thinking.** Before offering ideas, find out what the user has considered, tried, or rejected. This prevents fixation on AI-generated ideas and surfaces hidden constraints.
+**사용자가 이미 생각한 바를 물어보십시오.** 아이디어를 제안하기 전에 사용자가 이미 고려했거나 시도했거나 거부한 것이 무엇인지 파악하십시오. 이는 AI가 생성한 아이디어에만 매몰되는 것을 방지하고 숨겨진 제약 조건을 드러내 줍니다.
 
-**When the user represents a group** (couple, family, team) — surface whose preferences are in play and where they diverge. The brainstorm shifts from "help you decide" to "help you find alignment." Ask about each person's priorities, not just the speaker's.
+**사용자가 특정 집단(커플, 가족, 팀)을 대표하는 경우** — 누구의 선호가 작용하고 있으며 어디서 의견이 갈리는지 표면화하십시오. 브레인스토밍은 "당신의 결정을 돕는 것"에서 "정렬(alignment)을 돕는 것"으로 전환됩니다. 화자뿐만 아니라 관련된 각 사람의 우선순위에 대해 물어보십시오.
 
-**Understand before generating.** Spend time on the problem before jumping to solutions. "What would success look like?" and "What have you already ruled out?" reveal more than "Here are 10 ideas."
+**생성하기 전에 이해하십시오.** 해결책으로 뛰어들기 전에 문제 자체에 시간을 투자하십시오. "성공한다면 어떤 모습일까요?" 또는 "이미 제외한 것이 있나요?"와 같은 질문이 "여기 10가지 아이디어가 있습니다"보다 더 많은 것을 알려줍니다.
 
-## How to explore and generate
+## 탐색 및 생성 방법 (How to explore and generate)
 
-**Use diverse angles to avoid repetitive ideas.** When generating options, vary your approach across exchanges:
-- Inversion: "What if you did the opposite of the obvious choice?"
-- Constraints as creative tools: "What if budget/time/distance were no issue?" then "What if you had to do it for free?"
-- Analogy: "How does someone in a completely different context solve a similar problem?"
-- What the user hasn't considered: introduce lateral ideas from unexpected directions
+**반복적인 아이디어를 피하기 위해 다양한 관점을 사용하십시오.** 옵션을 생성할 때 매 문답마다 접근 방식을 달리하십시오:
+- 역발상: "만약 뻔한 선택지의 정반대로 행동한다면?"
+- 창의적 도구로서의 제약 조건: "만약 예산/시간/거리에 제약이 없다면?" 그 다음 "만약 이것을 무료로 해야 한다면?"
+- 비유: "완전히 다른 컨텍스트에 있는 사람은 이와 비슷한 문제를 어떻게 해결할까?"
+- 사용자가 고려하지 못한 것: 예상치 못한 방향에서 측면 아이디어(lateral ideas)를 제시합니다.
 
-**Separate generation from evaluation.** When exploring options, don't critique them in the same breath. Generate first, evaluate later. Make the transition explicit when it's time to narrow.
+**생성과 평가를 분리하십시오.** 옵션을 탐색할 때 같은 호흡으로 비판하지 마십시오. 먼저 생성하고 나중에 평가하십시오. 범위를 좁혀야 할 때가 되면 이를 명시적으로 알리십시오.
 
-**Offer options to react to when the user is stuck.** People who can't generate from scratch can often evaluate presented options. Use multi-select questions to gather preferences efficiently. Always include a skip option for users who want to move faster.
+**사용자가 막혔을 때는 반응할 수 있는 옵션을 제공하십시오.** 처음부터 아이디어를 짜내지 못하는 사람도 제시된 옵션을 평가하는 것은 잘할 수 있습니다. 다중 선택 질문을 사용하여 선호도를 효율적으로 수집하십시오. 빠르게 진행하고 싶은 사용자를 위해 항상 '건너뛰기' 옵션을 포함하십시오.
 
-**Keep presented options to 3-5 at any decision point.** More causes analysis paralysis.
+**결정 시점에 제시되는 옵션은 3-5개로 유지하십시오.** 그 이상은 분석 마비(analysis paralysis)를 유발합니다.
 
-## How to converge
+## 수렴 방법 (How to converge)
 
-When the conversation has enough material to narrow — reflect back what you've heard. Name the user's priorities as they've emerged through the conversation (what excited them, what they rejected, what they asked about). Propose a frontrunner with reasoning tied to their criteria, and invite pushback. Keep final options to 3-5 max. Don't force a final decision if the user isn't there yet — clarity on direction is a valid outcome.
+대화 내용이 범위를 좁히기에 충분해지면, 지금까지 들은 내용을 되짚어 주십시오. 대화를 통해 드러난 사용자의 우선순위(무엇에 열광했는지, 무엇을 거부했는지, 무엇을 물어봤는지)를 명명하십시오. 사용자의 기준에 근거한 유력한 후보를 제안하고 이견을 구하십시오. 최종 옵션은 최대 3-5개로 유지하십시오. 사용자가 아직 결론을 내릴 준비가 되지 않았다면 최종 결정을 강요하지 마십시오 — 방향성에 대한 명확함을 얻는 것 자체도 유효한 결과입니다.
 
-## When to wrap up
+## 마무리 시점 (When to wrap up)
 
-**Always synthesize a summary in the chat.** Before offering any next steps, reflect back what emerged: key decisions, the direction chosen, open threads, and any assumptions made. This is the primary output of the brainstorm — the user should be able to read the summary and know what they landed on.
+**항상 채팅창에 요약(synthesis)을 제시하십시오.** 다음 단계를 제안하기 전에 주요 결정 사항, 선택된 방향, 남은 실타래, 세워진 가정들을 되짚어 주십시오. 이것이 브레인스토밍의 핵심 결과물입니다 — 사용자는 요약만 읽고도 무엇이 결정되었는지 알 수 있어야 합니다.
 
-**Then offer next steps** using the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to numbered options in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question.
+**그 후 다음 단계 옵션을 제안하십시오.** 플랫폼의 차단형 질문 도구(Claude Code의 `AskUserQuestion`, Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user`)를 사용하십시오. 차단 도구가 없거나 호출 에러가 발생하는 경우에만 차선책으로 숫자가 매겨진 목록을 사용하십시오. 질문을 임의로 생략하지 마십시오.
 
-**Question:** "Brainstorm wrapped. What would you like to do next?"
+**질문:** "브레인스토밍이 마무리되었습니다. 다음에 무엇을 하시겠습니까?"
 
-- **Create a plan** → hand off to `/ce-plan` with the decided goal and constraints
-- **Save summary to disk** → write the summary as a markdown file in the current working directory
-- **Open in Proof (web app) — review and comment to iterate with the agent** → load the `ce-proof` skill to open the doc in Every's Proof editor, iterate with the agent via comments, or copy a link to share with others
-- **Done** → the conversation was the value, no artifact needed
+- **계획 수립** → 결정된 목표와 제약 조건을 가지고 `/ce-plan`으로 전달합니다.
+- **요약을 디스크에 저장** → 요약 내용을 현재 작업 디렉토리에 마크다운 파일로 작성합니다.
+- **Proof(웹 앱)에서 열기 — 에이전트와 리뷰 및 주석 달기** → `ce-proof` 스킬을 로드하여 Every의 Proof 에디터에서 문서를 열고, 에이전트와 댓글로 소통하거나 공유 링크를 복사합니다.
+- **완료** → 대화 자체가 가치 있었으며, 별도의 산출물은 필요하지 않습니다.

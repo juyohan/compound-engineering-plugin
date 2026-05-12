@@ -1,473 +1,491 @@
 ---
 name: ce-plan
-description: "Create structured plans for any multi-step task -- software features, research workflows, events, study plans, or any goal that benefits from structured breakdown. Also deepen existing plans with interactive review of sub-agent findings. Use for plan creation when the user says 'plan this', 'create a plan', 'write a tech plan', 'plan the implementation', 'how should we build', 'what's the approach for', 'break this down', 'plan a trip', 'create a study plan', or when a brainstorm/requirements document is ready for planning. Use for plan deepening when the user says 'deepen the plan', 'deepen my plan', 'deepening pass', or uses 'deepen' in reference to a plan. For exploratory or ambiguous requests where the user is unsure what to do, prefer ce-brainstorm first."
-argument-hint: "[optional: feature description, requirements doc path, plan path to deepen, or any task to plan]"
+description: "소프트웨어 기능, 리서치 워크플로우, 이벤트, 학습 계획 등 모든 다단계 작업을 위한 구조화된 플랜을 생성합니다. 또한 서브 에이전트의 발견 사항을 대화형으로 검토하여 기존 플랜을 심화합니다. 사용자가 'plan this', 'create a plan', 'write a tech plan', 'plan the implementation', 'how should we build', 'what's the approach for', 'break this down', 'plan a trip', 'create a study plan'이라고 말하거나 브레인스토밍/요구사항 문서가 플랜 작성 준비가 되었을 때 사용합니다. 사용자가 'deepen the plan', 'deepen my plan', 'deepening pass'라고 말하거나 플랜에 대해 'deepen'이라는 단어를 사용할 때 플랜 심화 단계로 사용합니다. 사용자가 무엇을 해야 할지 확신하지 못하는 탐색적이고 모호한 요청의 경우 ce-brainstorm을 먼저 사용하는 것이 좋습니다."
+argument-hint: "[선택 사항: 기능 설명, 요구사항 문서 경로, 심화할 플랜 경로 또는 플래닝할 작업]"
+allowed-tools:
+  - gem
 ---
 
-# Create Technical Plan
+# 기술 플랜 생성 (Create Technical Plan)
 
-**Note: The current year is 2026.** Use this when dating plans and searching for recent documentation.
+**참고: 현재 연도는 2026년입니다.** 플랜에 날짜를 기입하거나 최근 문서를 검색할 때 이 연도를 사용하십시오.
 
-`ce-brainstorm` defines **WHAT** to build. `ce-plan` defines **HOW** to build it. `ce-work` executes the plan. A prior brainstorm is useful context but never required — `ce-plan` works from any input: a requirements doc, a bug report, a feature idea, or a rough description.
+`ce-brainstorm`은 **무엇(WHAT)**을 만들지 정의합니다. `ce-plan`은 그것을 **어떻게(HOW)** 만들지 정의합니다. `ce-work`는 플랜을 실행합니다. 이전의 브레인스토밍은 유용한 컨텍스트가 되지만 필수 사항은 아닙니다. `ce-plan`은 요구사항 문서, 버그 보고서, 기능 아이디어 또는 대략적인 설명 등 어떤 입력으로부터도 작동합니다.
 
-**When directly invoked, always plan.** Never classify a direct invocation as "not a planning task" and abandon the workflow. If the input is unclear, ask clarifying questions or use the planning bootstrap (Phase 0.4) to establish enough context — but always stay in the planning workflow.
+**직접 호출되었을 때는 항상 플랜을 수립하십시오.** 직접 호출을 "플래닝 작업이 아님"으로 분류하고 워크플로우를 포기하지 마십시오. 입력이 불명확한 경우, 질문을 통해 명확히 하거나 플래닝 부트스트랩(Phase 0.4)을 사용하여 충분한 컨텍스트를 설정하십시오. 어떤 경우에도 플래닝 워크플로우 내에 머물러야 합니다.
 
-This workflow produces a durable implementation plan. It does **not** implement code, run tests, or learn from execution-time results. If the answer depends on changing code and seeing what happens, that belongs in `ce-work`, not here.
+이 워크플로우는 영구적인 구현 플랜을 생성합니다. 코드를 구현하거나, 테스트를 실행하거나, 실행 시점의 결과로부터 배우는 작업을 수행하지 **않습니다**. 답을 얻기 위해 코드를 변경하고 결과를 확인해야 하는 작업은 여기가 아니라 `ce-work`에 속합니다.
 
-## Interaction Method
+## 상호작용 방식 (Interaction Method)
 
-When asking the user a question, use the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to numbered options in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question.
+사용자에게 질문을 던질 때 플랫폼의 차단 질문 도구를 사용하십시오: Claude Code의 `AskUserQuestion` (스키마가 로드되지 않은 경우 `ToolSearch`를 `select:AskUserQuestion`으로 먼저 호출), Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user` (`pi-ask-user` 확장 프로그램 필요). 도구에 차단 도구가 없거나 호출 에러가 발생하는 경우(예: Codex 편집 모드)에만 채팅에 번호가 매겨진 옵션으로 폴백합니다. 스키마 로드가 필요하다는 이유로 폴백하지 마십시오. 질문을 조용히 건너뛰지 마십시오.
 
-Ask one question at a time. Prefer a concise single-select choice when natural options exist.
+한 번에 하나의 질문만 던집니다. 자연스러운 선택지가 있는 경우 간결한 단일 선택 방식을 선호합니다.
 
-## Feature Description
+## 기능 설명 (Feature Description)
 
 <feature_description> #$ARGUMENTS </feature_description>
 
-**If the feature description above is empty, ask the user:** "What would you like to plan? Describe the task, goal, or project you have in mind." Then wait for their response before continuing.
+## 다중 에이전트 협업 (Multi-Agent Collaboration)
 
-If the input is present but unclear or underspecified, do not abandon — ask one or two clarifying questions, or proceed to Phase 0.4's planning bootstrap to establish enough context. The goal is always to help the user plan, never to exit the workflow.
+사용자의 입력(`$ARGUMENTS`) 내에 `--add <ai-이름>` 형태의 플래그가 포함되어 있는지 확인하십시오. 
+현재 지원되는 외부 AI 인터페이스는 `--add gemini` (또는 `--add gem`)입니다.
 
-**IMPORTANT: All file references in the plan document must use repo-relative paths (e.g., `src/models/user.rb`), never absolute paths (e.g., `/Users/name/Code/project/src/models/user.rb`). This applies everywhere — implementation unit file lists, pattern references, origin document links, and prose mentions. Absolute paths break portability across machines, worktrees, and teammates.**
+만약 해당 플래그가 감지되면, 작업을 단독으로 확정하지 말고 다음 절차를 따르십시오:
+1. **의도 파악:** 플래그를 제외한 나머지 문자열을 실제 지시사항으로 간주합니다.
+2. **초안 작성:** 본인(주 에이전트)의 지식과 코드베이스 컨텍스트를 바탕으로 작업의 초기 뼈대나 접근법을 생각합니다.
+3. **MCP 협업 호출:** `gem` 도구를 호출하여 외부 Gemini 에이전트에게 조언이나 검토를 구합니다.
+   - 호출 시 전달할 메시지 예시: "나는 현재 이 작업에 대한 초안을 세우고 있어. 내 초안은 [초안 요약]이야. 이 접근 방식의 기술적 타당성을 검토하고 누락된 에지 케이스나 더 나은 패턴을 조언해줄 수 있어?"
+4. **결과 통합:** `gem` 도구가 반환한 피드백을 당신의 최종 결과물에 통합(Synthesis)합니다. 
+5. **명시적 표시:** 최종 산출물의 상단 또는 설명 부분에 "이 결과물은 Gemini와의 협업을 통해 검토 및 보완되었습니다."라는 문구를 추가하십시오.
 
-## Core Principles
+이 협업 절차를 염두에 두고 아래의 본래 스킬 워크플로우를 진행하십시오.
 
-1. **Use requirements as the source of truth** - If `ce-brainstorm` produced a requirements document, planning should build from it rather than re-inventing behavior.
-2. **Decisions, not code** - Capture approach, boundaries, files, dependencies, risks, and test scenarios. Do not pre-write implementation code or shell command choreography. Pseudo-code sketches or DSL grammars that communicate high-level technical design are welcome when they help a reviewer validate direction — but they must be explicitly framed as directional guidance, not implementation specification.
-3. **Research before structuring** - Explore the codebase, institutional learnings, and external guidance when warranted before finalizing the plan.
-4. **Right-size the artifact** - Small work gets a compact plan. Large work gets more structure. The philosophy stays the same at every depth.
-5. **Separate planning from execution discovery** - Resolve planning-time questions here. Explicitly defer execution-time unknowns to implementation.
-6. **Keep the plan portable** - The plan should work as a living document, review artifact, or issue body without embedding tool-specific executor instructions.
-7. **Carry execution posture lightly when it matters** - If the request, origin document, or repo context clearly implies test-first, characterization-first, or another non-default execution posture, reflect that in the plan as a lightweight signal. Do not turn the plan into step-by-step execution choreography.
-8. **Honor user-named resources** - When the user names a specific resource — a CLI, MCP server, URL, file, doc link, or prior artifact — treat it as authoritative input, not a suggestion. Discover it if unknown (`command -v`, fetch, read) before assuming it's unavailable. Use it in place of generic alternatives. If it fails or doesn't exist, say so explicitly rather than silently substituting.
 
-## Plan Quality Bar
+**위의 기능 설명이 비어 있으면 사용자에게 다음과 같이 묻습니다:** "What would you like to plan? Describe the task, goal, or project you have in mind." 그 후 사용자의 응답을 기다린 후 진행합니다.
 
-Every plan should contain:
-- A clear problem frame and scope boundary
-- Concrete requirements traceability back to the request or origin document
-- Repo-relative file paths for the work being proposed (never absolute paths — see Planning Rules)
-- Explicit test file paths for feature-bearing implementation units
-- Decisions with rationale, not just tasks
-- Existing patterns or code references to follow
-- Enumerated test scenarios for each feature-bearing unit, specific enough that an implementer knows exactly what to test without inventing coverage themselves
-- Clear dependencies and sequencing
+입력이 있지만 불명확하거나 미흡한 경우, 포기하지 말고 한두 개의 명확한 질문을 던지거나 Phase 0.4의 플래닝 부트스트랩으로 진행하여 충분한 컨텍스트를 설정하십시오. 목표는 항상 사용자가 플랜을 수립하도록 돕는 것이며, 워크플로우를 종료하는 것이 아닙니다.
 
-A plan is ready when an implementer can start confidently without needing the plan to write the code for them.
+**중요: 플랜 문서의 모든 파일 참조는 반드시 레포지토리 상대 경로(예: `src/models/user.rb`)를 사용해야 하며, 절대 경로(예: `/Users/name/Code/project/src/models/user.rb`)를 사용해서는 안 됩니다. 이는 구현 단위 파일 목록, 패턴 참조, 원본 문서 링크 및 본문 언급 등 모든 곳에 적용됩니다. 절대 경로는 다른 머신, worktree 및 팀원 간의 이식성을 해칩니다.**
 
-## Workflow
+## 핵심 원칙
 
-### Phase 0: Resume, Source, and Scope
+1. **요구사항을 소스 오브 트루스(Source of Truth)로 사용하십시오.** - `ce-brainstorm`이 요구사항 문서를 생성했다면, 동작을 새로 발명하는 대신 해당 문서를 기반으로 플래닝해야 합니다.
+2. **코드가 아닌 결정 사항을 기록하십시오.** - 접근 방식, 경계, 파일, 종속성, 리스크 및 테스트 시나리오를 캡처하십시오. 구현 코드나 쉘 명령 시퀀스를 미리 작성하지 마십시오. 상위 수준의 기술 설계를 전달하는 의사 코드(pseudo-code) 스케치나 DSL 문법은 리뷰어가 방향을 검증하는 데 도움이 된다면 환영하지만, 이는 구현 명세가 아닌 방향 가이드로 명시되어야 합니다.
+3. **구조화하기 전에 조사하십시오.** - 플랜을 확정하기 전에 레포지토리 코드베이스, 조직 내 학습 내용 및 필요한 경우 외부 가이드를 탐색하십시오.
+4. **결과물 크기를 적절히 조정하십시오.** - 작은 작업은 압축된 플랜을, 큰 작업은 더 구조화된 플랜을 갖습니다. 철학은 모든 깊이에서 동일하게 유지됩니다.
+5. **플래닝과 실행 탐색을 분리하십시오.** - 플래닝 시점의 질문은 여기서 해결하십시오. 실행 시점의 미지수는 명시적으로 구현 단계로 미루십시오.
+6. **플랜의 이식성을 유지하십시오.** - 플랜은 도구 전용 실행 지침을 포함하지 않고 살아있는 문서, 리뷰 결과물 또는 이슈 본문으로 작동해야 합니다.
+7. **필요한 경우 실행 태세를 가볍게 전달하십시오.** - 요청, 원본 문서 또는 레포지토리 컨텍스트가 테스트 우선(test-first), 캐릭터리제이션 우선(characterization-first) 또는 기타 비기본 실행 태세를 명확하게 암시하는 경우, 플랜에 가벼운 신호로 반영하십시오. 플랜을 단계별 실행 시퀀스로 만들지 마십시오.
+8. **사용자가 명명한 리소스를 존중하십시오.** - 사용자가 CLI, MCP 서버, URL, 파일, 문서 링크 또는 이전 결과물과 같은 특정 리소스를 명명한 경우, 이를 제안이 아닌 권위 있는 입력으로 취급하십시오. 리소스가 사용 불가능하다고 가정하기 전에 먼저 탐색(`command -v`, fetch, read)하십시오. 일반적인 대안 대신 해당 리소스를 사용하십시오. 실패하거나 존재하지 않는 경우 조용히 대체하지 말고 명시적으로 알리십시오.
 
-#### 0.1 Resume Existing Plan Work When Appropriate
+## 플랜 품질 기준 (Plan Quality Bar)
 
-If the user references an existing plan file or there is an obvious recent matching plan in `docs/plans/`:
-- Read it
-- Confirm whether to update it in place or create a new plan
-- If updating, revise only the still-relevant sections. Plans do not carry per-unit progress state — progress is derived from git by `ce-work`, so there is no progress to preserve across edits
+모든 플랜은 다음을 포함해야 합니다.
+- 명확한 문제 프레임과 범위 경계
+- 요청 또는 원본 문서로 이어지는 구체적인 요구사항 추적성
+- 제안된 작업을 위한 레포지토리 상대 파일 경로 (절대 경로 금지 — 플래닝 규칙 참조)
+- 기능을 포함하는 구현 단위를 위한 명시적인 테스트 파일 경로
+- 단순한 태스크가 아닌 근거가 포함된 결정 사항
+- 따를 수 있는 기존 패턴 또는 코드 참조
+- 기능을 포함하는 각 단위에 대한 열거된 테스트 시나리오. 구현자가 스스로 테스트 범위를 고안하지 않고도 정확히 무엇을 테스트해야 할지 알 수 있을 만큼 구체적이어야 합니다.
+- 명확한 종속성 및 순서
 
-**Deepen intent:** The word "deepen" (or "deepening") in reference to a plan is the primary trigger for the deepening fast path. When the user says "deepen the plan", "deepen my plan", "run a deepening pass", or similar, the target document is a **plan** in `docs/plans/`, not a requirements document. Use any path, keyword, or context the user provides to identify the right plan. If a path is provided, verify it is actually a plan document. If the match is not obvious, confirm with the user before proceeding.
+구현자가 플랜에 코드를 작성해 달라고 요구하지 않고도 자신 있게 시작할 수 있다면 그 플랜은 준비된 것입니다.
 
-Words like "strengthen", "confidence", "gaps", and "rigor" are NOT sufficient on their own to trigger deepening. These words appear in normal editing requests ("strengthen that section about the diagram", "there are gaps in the test scenarios") and should not cause a holistic deepening pass. Only treat them as deepening intent when the request clearly targets the plan as a whole and does not name a specific section or content area to change — and even then, prefer to confirm with the user before entering the deepening flow.
+## 워크플로우
 
-Once the plan is identified and appears complete (all major sections present, implementation units defined, `status: active`):
-- If the plan lacks YAML frontmatter (non-software plans use a simple `# Title` heading with `Created:` date instead of frontmatter), route to `references/universal-planning.md` for editing or deepening instead of Phase 5.3. Non-software plans do not use the software confidence check.
-- Otherwise, short-circuit to Phase 5.3 (Confidence Check and Deepening) in **interactive mode**. This avoids re-running the full planning workflow and gives the user control over which findings are integrated.
+### Phase 0: 재개, 소스 및 범위
 
-Normal editing requests (e.g., "update the test scenarios", "add a new implementation unit", "strengthen the risk section") should NOT trigger the fast path — they follow the standard resume flow.
+#### 0.1 적절한 경우 기존 플랜 작업 재개
 
-If the plan already has a `deepened: YYYY-MM-DD` frontmatter field and there is no explicit user request to re-deepen, the fast path still applies the same confidence-gap evaluation — it does not force deepening.
+사용자가 기존 플랜 파일을 참조하거나 `docs/plans/`에 명확하게 일치하는 최근 플랜이 있는 경우:
+- 해당 파일을 읽습니다.
+- 제자리에 업데이트할지 아니면 새 플랜을 생성할지 확인합니다.
+- 업데이트하는 경우, 여전히 유효한 섹션만 수정합니다. 플랜은 단위별 진행 상태를 포함하지 않습니다. 진행 상태는 `ce-work`에 의해 git에서 도출되므로 수정 시 보존할 진행 상태가 없습니다.
 
-#### 0.1b Classify Task Domain
+**심화 의도 (Deepen intent):** 플랜과 관련하여 "deepen"(또는 "deepening")이라는 단어는 심화 빠른 경로(fast path)의 주요 트리거입니다. 사용자가 "deepen the plan", "deepen my plan", "run a deepening pass" 등을 말할 때, 대상 문서는 요구사항 문서가 아닌 `docs/plans/`의 **플랜**입니다. 사용자가 제공한 경로, 키워드 또는 컨텍스트를 사용하여 올바른 플랜을 식별하십시오. 경로가 제공된 경우 실제 플랜 문서인지 확인하십시오. 일치 여부가 명확하지 않으면 진행하기 전에 사용자에게 확인하십시오.
 
-If the task involves building, modifying, or architecting software (references code, repos, APIs, databases, or asks to build/modify/deploy), continue to Phase 0.2.
+"strengthen", "confidence", "gaps", "rigor"와 같은 단어만으로는 심화 단계를 트리거하기에 충분하지 않습니다. 이러한 단어들은 일반적인 수정 요청("그 다이어그램 섹션을 강화해줘", "테스트 시나리오에 공백이 있어")에서도 나타나며, 전체적인 심화 패스를 발생시켜서는 안 됩니다. 요청이 명확하게 플랜 전체를 대상으로 하고 수정할 특정 섹션이나 콘텐츠 영역을 명명하지 않는 경우에만 심화 의도로 취급하십시오. 이 경우에도 심화 흐름에 진입하기 전에 사용자에게 확인하는 것이 좋습니다.
 
-If the domain is genuinely ambiguous (e.g., "plan a migration" with no other context), ask the user before routing.
+플랜이 식별되고 완전해 보이면 (주요 섹션이 모두 존재하고, 구현 단위가 정의되었으며, `status: active`인 경우):
+- 플랜에 YAML frontmatter가 없는 경우(소프트웨어가 아닌 플랜은 frontmatter 대신 단순한 `# 제목` 헤더와 `Created:` 날짜를 사용함), Phase 5.3 대신 편집 또는 심화를 위해 `references/universal-planning.md`로 라우팅합니다. 소프트웨어가 아닌 플랜은 소프트웨어 신뢰도 체크를 사용하지 않습니다.
+- 그렇지 않은 경우, **interactive 모드**의 Phase 5.3 (신뢰도 체크 및 심화)으로 단축 이동합니다. 이는 전체 플래닝 워크플로우를 재실행하는 것을 피하고 사용자가 어떤 발견 사항을 통합할지 제어할 수 있게 합니다.
 
-Otherwise, read `references/universal-planning.md` and follow that workflow instead. Skip all subsequent phases. Named tools or source links don't change this routing — they're inputs, handled per Core Principle 8.
+일반적인 수정 요청 (예: "테스트 시나리오 업데이트해줘", "새 구현 단위 추가해줘", "리스크 섹션 강화해줘")은 빠른 경로를 트리거해서는 안 되며 표준 재개 흐름을 따릅니다.
 
-#### 0.2 Find Upstream Requirements Document
+플랜에 이미 `deepened: YYYY-MM-DD` frontmatter 필드가 있고 재심화에 대한 명시적인 사용자 요청이 없는 경우에도, 빠른 경로는 동일한 신뢰도 공백 평가를 적용하며 심화를 강제하지 않습니다.
 
-Before asking planning questions, search `docs/brainstorms/` for files matching `*-requirements.md`.
+#### 0.1b 작업 도메인 분류
 
-**Relevance criteria:** A requirements document is relevant if:
-- The topic semantically matches the feature description
-- It was created within the last 30 days (use judgment to override if the document is clearly still relevant or clearly stale)
-- It appears to cover the same user problem or scope
+태스크가 소프트웨어 구축, 수정 또는 아키텍처 설계(코드, 레포지토리, API, 데이터베이스 참조 또는 빌드/수정/배포 요청)를 포함하는 경우 Phase 0.2를 계속 진행합니다.
 
-If multiple source documents match, ask which one to use using the platform's blocking question tool when available (see Interaction Method). Otherwise, present numbered options in chat and wait for the user's reply before proceeding.
+도메인이 진정으로 모호한 경우 (예: 다른 컨텍스트 없이 "마이그레이션 플랜 세워줘"), 라우팅 전에 사용자에게 묻습니다.
 
-#### 0.3 Use the Source Document as Primary Input
+그 외의 경우 `references/universal-planning.md`를 읽고 해당 워크플로우를 따릅니다. 이후의 모든 페이즈를 건너뜁니다. 명명된 도구 나 소스 링크는 이 라우팅을 바꾸지 않습니다. 이들은 입력값이며 핵심 원칙 8에 따라 처리됩니다.
 
-If a relevant requirements document exists:
-1. Read it thoroughly
-2. Announce that it will serve as the origin document for planning
-3. Carry forward all of the following:
-   - Problem frame
-   - Actors (A-IDs), Key Flows (F-IDs), and Acceptance Examples (AE-IDs) when present — preserve these as constraints that implementation units must honor
-   - Requirements and success criteria
-   - Scope boundaries (including "Deferred for later" and "Outside this product's identity" subsections when present)
-   - Key decisions and rationale
-   - Dependencies or assumptions
-   - Outstanding questions, preserving whether they are blocking or deferred
-4. Use the source document as the primary input to planning and research
-5. Reference important carried-forward decisions in the plan with `(see origin: <source-path>)`
-6. Do not silently omit source content — if the origin document discussed it, the plan must address it even if briefly. Before finalizing, scan each section of the origin document to verify nothing was dropped.
+#### 0.2 상위 요구사항 문서 찾기
 
-If no relevant requirements document exists, planning may proceed from the user's request directly.
+플래닝 질문을 던지기 전에 `docs/brainstorms/`에서 `*-requirements.md`와 일치하는 파일을 검색합니다.
 
-#### 0.4 Planning Bootstrap (No Requirements Doc or Unclear Input)
+**관련성 기준:** 다음 경우 요구사항 문서가 관련성이 있다고 판단합니다.
+- 주제가 기능 설명과 시맨틱하게 일치함
+- 지난 30일 이내에 생성됨 (문서가 여전히 명확하게 유효하거나 명확하게 오래된 경우 판단에 따라 오버라이드 가능)
+- 동일한 사용자 문제나 범위를 다루는 것으로 보임
 
-If no relevant requirements document exists, or the input needs more structure:
-- Assess whether the request is already clear enough for direct technical planning — if so, continue to Phase 0.5
-- If the ambiguity is mainly product framing, user behavior, or scope definition, recommend `ce-brainstorm` as a suggestion — but always offer to continue planning here as well
-- If the user wants to continue here (or was already explicit about wanting a plan), run the planning bootstrap below
+여러 소스 문서가 일치하는 경우, 플랫폼의 차단 질문 도구를 사용하여 어떤 것을 사용할지 묻습니다 (상호작용 방식 참조). 도구가 없는 경우 채팅에 번호가 매겨진 옵션을 제시하고 사용자의 응답을 기다린 후 진행합니다.
 
-The planning bootstrap should establish:
-- Problem frame
-- Intended behavior
-- Scope boundaries and obvious non-goals
-- Success criteria
-- Blocking questions or assumptions
+#### 0.3 소스 문서를 주요 입력으로 사용
 
-Keep this bootstrap brief. It exists to preserve direct-entry convenience, not to replace a full brainstorm.
+관련 요구사항 문서가 존재하는 경우:
+1. 문서를 철저히 읽습니다.
+2. 해당 문서가 플래닝의 원본 문서(origin document) 역할을 할 것임을 알립니다.
+3. 다음 항목들을 모두 계승합니다.
+   - 문제 프레임
+   - 존재하는 경우 액터(A-ID), 주요 흐름(F-ID) 및 수락 예시(AE-ID). 이들을 구현 단위가 준수해야 하는 제약 사항으로 유지합니다.
+   - 요구사항 및 성공 기준
+   - 범위 경계 (존재하는 경우 "나중에 진행(Deferred for later)" 및 "이 제품의 정체성 밖(Outside this product's identity)" 하위 섹션 포함)
+   - 주요 결정 사항 및 근거
+   - 종속성 또는 가정
+   - 해결되지 않은 질문들 (차단 중인지 또는 연기되었는지 여부 유지)
+4. 소스 문서를 플래닝 및 조사의 주요 입력으로 사용합니다.
+5. 계승된 중요한 결정 사항을 플랜에서 `(see origin: <source-path>)`와 같이 참조합니다.
+6. 소스 내용을 조용히 생략하지 마십시오. 원본 문서에서 논의된 내용은 짧게라도 플랜에서 다루어야 합니다. 확정하기 전에 원본 문서의 각 섹션을 스캔하여 누락된 것이 없는지 확인하십시오.
 
-If the bootstrap uncovers major unresolved product questions:
-- Recommend `ce-brainstorm` again
-- If the user still wants to continue, require explicit assumptions before proceeding
+관련 요구사항 문서가 없는 경우, 사용자의 요청으로부터 직접 플래닝을 진행할 수 있습니다.
 
-If the bootstrap reveals that a different workflow would serve the user better:
+#### 0.4 플래닝 부트스트랩 (요구사항 문서가 없거나 입력이 불명확한 경우)
 
-- **Bug-shaped prompt** (user describes broken behavior — "fix the bug where X", error message, regression, "doesn't work"). Surface `ce-debug` as a route-out option alongside continuing with `ce-plan` whenever the bug surface is reachable (in cwd OR named repo found at another local path). Stay in `ce-plan` silently when the named code can't be found anywhere local — paper-planning is the only useful output for unreachable surfaces.
+관련 요구사항 문서가 없거나 입력에 더 많은 구조가 필요한 경우:
+- 요청이 직접적인 기술 플래닝을 수행하기에 충분히 명확한지 평가합니다. 그렇다면 Phase 0.5로 계속 진행합니다.
+- 모호함이 주로 제품 프레임, 사용자 동작 또는 범위 정의에 있다면 `ce-brainstorm`을 제안으로 권장하되, 항상 여기서 플래닝을 계속할 수 있는 옵션도 제공합니다.
+- 사용자가 여기서 계속하기를 원하거나(이미 플랜 작성을 명시적으로 원하는 경우), 아래의 플래닝 부트스트랩을 실행합니다.
 
-  **When the bug is at another local path (not cwd):**
-  - Announce the target explicitly **before** any cross-repo investigation: which path will be read AND where plan outputs will land (default: target repo's `docs/plans/`, not cwd's).
-  - Default: proceed from the target repo for both investigation and plan-write. The user can interrupt to redirect (switch context, paper-plan, abandon, etc.). No location menu — the announcement makes the cross-repo nature visible, and the user can speak up if they want something unusual.
-  - **After** announcing and proceeding, fire the standard ce-debug routing menu (continue with `ce-plan` vs switch to `ce-debug`) — same shape as the in-cwd case. Cross-repo location and ce-debug skill routing are orthogonal decisions; do not merge them into a single question.
+플래닝 부트스트랩은 다음을 설정해야 합니다.
+- 문제 프레임
+- 의도된 동작
+- 범위 경계 및 명확한 비목표
+- 성공 기준
+- 차단 질문 또는 가정
 
-  Reading code at another path is fine in principle — that's just file access. The harm to avoid is silent operation on the wrong repo, especially writing the plan doc somewhere it won't be discovered (a busyblock plan landing in `cli-printing-press/docs/plans/` is a discoverability disaster). The announcement requirement makes the target visible; defaulting to the target repo for both investigation and outputs respects the user's stated intent (they named that repo); the orthogonal ce-debug menu keeps the skill-choice question clean.
+이 부트스트랩을 간결하게 유지하십시오. 이는 전체 브레인스토밍을 대체하기 위함이 아니라 직접 진입의 편의성을 보존하기 위해 존재합니다.
 
-  The accessibility classification is conservative and may under-suggest in monorepos, dependency bugs, or after renames. Users can always invoke `/ce-debug` manually.
+부트스트랩 과정에서 해결되지 않은 주요 제품 질문이 발견되는 경우:
+- `ce-brainstorm`을 다시 권장합니다.
+- 사용자가 여전히 계속하기를 원한다면 진행하기 전에 명시적인 가정을 요구하십시오.
 
-  **Headless mode**: skip the ce-debug suggestion menu entirely; default to continuing with `/ce-plan` (the user's explicit invocation). There is no synchronous user to resolve a route-out choice, and auto-routing to ce-debug would change the skill mid-flight without authorization.
+부트스트랩 과정에서 다른 워크플로우가 사용자에게 더 도움이 될 것으로 판단되는 경우:
 
-- **Clear task ready to execute** (known root cause, obvious fix, no architectural decisions) — suggest `ce-work` as a faster alternative alongside continuing with planning. The user decides.
+- **버그 형태의 프롬프트** (사용자가 고장 난 동작을 설명함 — "X가 발생하는 버그 수정해줘", 에러 메시지, 리그레션, "작동하지 않음"). 버그 영역에 도달 가능할 때(cwd 또는 다른 로컬 경로에서 찾은 명명된 레포지토리 내) `ce-plan`을 계속 진행하는 것과 함께 `ce-debug`를 외부 경로 옵션으로 노출합니다. 명명된 코드를 로컬 어디에서도 찾을 수 없는 경우 조용히 `ce-plan`에 머뭅니다. 도달할 수 없는 영역에 대해서는 종이 플래닝(paper-planning)만이 유일하게 유용한 출력물이기 때문입니다.
 
-#### 0.5 Classify Outstanding Questions Before Planning
+  **버그가 (cwd가 아닌) 다른 로컬 경로에 있는 경우:**
+  - 교차 레포지토리 조사를 수행하기 **전에** 대상을 명시적으로 안내합니다: 어떤 경로를 읽을 것인지와 플랜 결과물이 어디에 저장될 것인지(기본값: cwd가 아닌 대상 레포지토리의 `docs/plans/`).
+  - 기본값: 조사와 플랜 작성 모두 대상 레포지토리를 기본값으로 사용하는 것은 사용자의 명시된 의도(해당 레포를 명명함)를 존중하는 것입니다.
+  - 안내 및 진행 **후**, 표준 `ce-debug` 라우팅 메뉴(`ce-plan` 계속 진행 vs `ce-debug`로 전환)를 실행합니다 (cwd 내에 있는 경우와 동일한 형태). 교차 레포지토리 위치와 `ce-debug` 스킬 라우팅은 서로 독립적인 결정이며, 하나의 질문으로 합치지 마십시오.
 
-If the origin document contains `Resolve Before Planning` or similar blocking questions:
-- Review each one before proceeding
-- Reclassify it into planning-owned work **only if** it is actually a technical, architectural, or research question
-- Keep it as a blocker if it would change product behavior, scope, or success criteria
+  다른 경로의 코드를 읽는 것은 원칙적으로 괜찮습니다 (단순한 파일 액세스임). 피해야 할 해악은 잘못된 레포지토리에서 조용히 작업하는 것, 특히 플랜 문서를 찾기 어려운 곳에 작성하는 것입니다 (busyblock 플랜이 `cli-printing-press/docs/plans/`에 저장되는 것은 탐색 용이성 측면에서 재앙입니다). 안내 요구 사항은 대상을 가시화합니다. 조사와 결과물 모두 대상 레포지토리를 기본값으로 사용하는 것은 사용자의 명시된 의도(해당 레포를 명명함)를 존중하는 것입니다. 독립적인 `ce-debug` 메뉴는 스킬 선택 질문을 깔끔하게 유지합니다.
 
-If true product blockers remain:
-- Surface them clearly
-- Ask the user, using the platform's blocking question tool when available (see Interaction Method), whether to:
-  1. Resume `ce-brainstorm` to resolve them
-  2. Convert them into explicit assumptions or decisions and continue
-- Do not continue planning while true blockers remain unresolved
+  접근성 분류는 보수적이며 모노레포, 종속성 버그 또는 이름 변경 후에 과소 제안될 수 있습니다. 사용자는 언제든지 `/ce-debug`를 수동으로 호출할 수 있습니다.
 
-#### 0.6 Assess Plan Depth
+  **Headless 모드**: `ce-debug` 제안 메뉴를 완전히 건너뛰고, 사용자가 명시적으로 호출한 `/ce-plan`을 계속 진행하는 것을 기본값으로 합니다. 외부 경로 선택을 해결할 동기적 사용자가 없으며, `ce-debug`로 자동 라우팅하는 것은 승인 없이 비행 중 스킬을 바꾸는 것이기 때문입니다.
 
-Classify the work into one of these plan depths:
+- **실행 준비가 된 명확한 작업** (근본 원인이 알려짐, 명확한 수정 사항, 아키텍처 결정 불필요) — 플래닝을 계속하는 것과 함께 더 빠른 대안으로 `ce-work`를 제안합니다. 결정은 사용자가 내립니다.
 
-- **Lightweight** - small, well-bounded, low ambiguity
-- **Standard** - normal feature or bounded refactor with some technical decisions to document
-- **Deep** - cross-cutting, strategic, high-risk, or highly ambiguous implementation work
+#### 0.5 플래닝 전 해결되지 않은 질문 분류
 
-If depth is unclear, ask one targeted question and then continue.
+원본 문서에 `Resolve Before Planning` 또는 이와 유사한 차단 질문이 포함된 경우:
+- 진행하기 전에 각 질문을 검토합니다.
+- 실제 기술적, 아키텍처적 또는 조사 질문인 **경우에만** 이를 플래닝 소유 작업으로 재분류합니다.
+- 제품 동작, 범위 또는 성공 기준을 바꿀 수 있는 질문인 경우 차단 요소로 유지합니다.
 
-#### 0.7 Solo-Mode Scope Summary
+실제 제품 차단 요소가 남은 경우:
+- 이를 명확하게 노출합니다.
+- 플랫폼의 차단 질문 도구를 사용하여 다음 중 무엇을 할지 사용자에게 묻습니다.
+  1. 해결을 위해 `ce-brainstorm` 재개
+  2. 명시적인 가정이나 결정으로 전환하고 계속 진행
+- 실제 차단 요소가 해결되지 않은 상태에서 플래닝을 계속하지 마십시오.
 
-**STOP. Before composing the synthesis, read `references/synthesis-summary.md`.** The discipline rules, prose-summary requirement, three-bucket structure, anti-pattern guidance, soft-cut behavior, self-redirect support, content focus for the solo variant, and bucket-content routing into plan body sections all live there. Composing a synthesis without these rules loaded reliably produces malformed output — missing prose summary, implementation-detail leakage, the proposal-pitch anti-pattern. This is not optional supplementary reading; it is the source of truth for how the phase behaves.
+#### 0.6 플랜 깊이 평가
 
-Surface a synthesis to the user — the agent's interpretation of scope after the brief Phase 0.4 bootstrap — so scope can be corrected **before Phase 1 research is spent**. Sub-agent dispatch (repo-research-analyst, learnings-researcher, etc.) is the expensive next step this phase guards against wasted effort on.
+작업을 다음 플랜 깊이 중 하나로 분류합니다.
 
-Fires **only in solo invocation** — when Phase 0.2 found no upstream brainstorm doc AND Phase 0.4 stayed in ce-plan (did not route to ce-debug, ce-work, or universal-planning) AND Phase 0.5 cleared (no unresolved blockers) AND not on Phase 0.1 fast paths (resume normal, deepen-intent). Each guard is an explicit conditional. Skip Phase 0.7 entirely when any guard fails — brainstorm-sourced invocations defer to Phase 5.1.5 instead.
+- **Lightweight** - 작고 범위가 잘 정해졌으며 모호성이 낮음
+- **Standard** - 일반적인 기능 또는 문서화할 기술적 결정이 포함된 범위 내 리팩토링
+- **Deep** - 교차 기능적, 전략적, 고위험 또는 구현 작업이 매우 모호함
 
-**Headless mode**: synthesis is composed but not confirmed (no synchronous user). Continue to Phase 1 research as normal. At plan-write time (Phase 5.2), Inferred bets route to a `## Assumptions` section in the plan instead of Key Technical Decisions. See `references/synthesis-summary.md` Headless mode for the full routing.
+깊이가 불분명한 경우 하나의 타겟 질문을 던진 후 계속 진행합니다.
 
-### Phase 1: Gather Context
+#### 0.7 솔로 모드 범위 요약 (Solo-Mode Scope Summary)
 
-#### 1.1 Local Research (Always Runs)
+**멈추십시오. 종합 요약을 작성하기 전에 `references/synthesis-summary.md`를 읽으십시오.** 훈육 규칙, 산문 요약 요구 사항, 세 개의 버킷 구조, 안티 패턴 가이드, soft-cut 동작, 셀프 리다이렉트 지원, 솔로 변형을 위한 콘텐츠 중점 사항 및 플랜 본문 섹션으로의 버킷 콘텐츠 라우팅 규칙이 모두 그곳에 있습니다. 이러한 규칙을 로드하지 않고 요약을 작성하면 산문 요약 누락, 구현 세부 사항 유출, 제안 피치(proposal-pitch) 안티 패턴 등 잘못된 형식이 생성될 가능성이 매우 높습니다. 이는 선택적인 보충 읽기 자료가 아니라 해당 페이즈가 어떻게 작동해야 하는지에 대한 소스 오브 트루스입니다.
 
-Prepare a concise planning context summary (a paragraph or two) to pass as input to the research agents:
-- If an origin document exists, summarize the problem frame, requirements, and key decisions from that document
-- Otherwise use the feature description directly
-- If `STRATEGY.md` exists, read it and include the relevant pieces (target problem, approach, active tracks) in the summary so downstream research and planning decisions are anchored to product strategy
+짧은 Phase 0.4 부트스트랩 후 에이전트가 해석한 범위를 사용자에게 제시하여, **Phase 1 조사가 시작되기 전에** 범위를 수정할 수 있게 합니다. 서브 에이전트 할당(repo-research-analyst, learnings-researcher 등)은 비용이 많이 드는 다음 단계이며, 이 페이즈는 헛수고를 방지하는 가드 역할을 합니다.
 
-Run these agents in parallel:
+**솔로 호출 시에만** 실행됩니다 — Phase 0.2에서 상위 브레인스토밍 문서를 찾지 못했고, Phase 0.4에서 `ce-plan`에 머물렀으며(ce-debug, ce-work 또는 universal-planning으로 라우팅되지 않음), Phase 0.5가 통과되었고(미해결 차단 요소 없음), Phase 0.1 빠른 경로(표준 재개, 심화 의도)가 아닐 때입니다. 각 가드는 명시적인 조건부입니다. 가드 중 하나라도 실패하면 Phase 0.7을 완전히 건너뜁니다. 브레인스토밍에서 파생된 호출은 대신 Phase 5.1.5로 미룹니다.
+
+**Headless 모드**: 요약은 작성되지만 확인은 받지 않습니다(동기적 사용자 없음). 평소처럼 Phase 1 조사로 계속 진행합니다. 플랜 작성 시(Phase 5.2), 'Inferred' 베팅 사항은 Key Technical Decisions 대신 플랜의 `## Assumptions` 섹션으로 라우팅됩니다. 전체 라우팅은 `references/synthesis-summary.md`의 Headless 모드를 참조하십시오.
+
+### Phase 1: 컨텍스트 수집
+
+#### 1.1 로컬 조사 (항상 실행)
+
+조사 에이전트에게 전달할 간결한 플래닝 컨텍스트 요약(한두 단락)을 준비합니다.
+- 원본 문서가 있으면 해당 문서의 문제 프레임, 요구사항 및 주요 결정을 요약합니다.
+- 없으면 기능 설명을 직접 사용합니다.
+- `STRATEGY.md`가 존재하면 이를 읽고 관련 내용(타겟 문제, 접근 방식, 활성 트랙)을 요약에 포함하여 다운스트림 조사 및 플래닝 결정이 제품 전략에 고정되도록 합니다.
+
+다음 에이전트들을 병렬로 실행합니다.
 
 - Task ce-repo-research-analyst(Scope: technology, architecture, patterns. {planning context summary})
 - Task ce-learnings-researcher(planning context summary)
-Collect:
-- Technology stack and versions (used in section 1.2 to make sharper external research decisions)
-- Architectural patterns and conventions to follow
-- Implementation patterns, relevant files, modules, and tests
-- AGENTS.md guidance that materially affects the plan, with CLAUDE.md used only as compatibility fallback when present
-- Institutional learnings from `docs/solutions/`
-- Product strategy context when `STRATEGY.md` is present — flag any plan decisions that pull away from the active tracks or the stated approach
+다음을 수집합니다.
+- 기술 스택 및 버전 (섹션 1.2에서 더 예리한 외부 조사 결정을 내리는 데 사용)
+- 따를 아키텍처 패턴 및 컨벤션
+- 구현 패턴, 관련 파일, 모듈 및 테스트
+- 플랜에 실질적인 영향을 미치는 AGENTS.md 가이드 (CLAUDE.md는 존재하는 경우 호환성 폴백으로만 사용)
+- `docs/solutions/`의 조직 내 학습 내용
+- `STRATEGY.md`가 있을 때의 제품 전략 컨텍스트 — 활성 트랙이나 명시된 접근 방식에서 벗어나는 플랜 결정이 있으면 플래그를 지정합니다.
 
-**Slack context** (opt-in) — never auto-dispatch. Route by condition:
+**Slack 컨텍스트** (선택 사항) — 절대 자동 할당하지 마십시오. 조건에 따라 라우팅합니다.
 
-- **Tools available + user asked**: Dispatch `ce-slack-researcher` with the planning context summary in parallel with other Phase 1.1 agents. If the origin document has a Slack context section, pass it verbatim so the researcher focuses on gaps. Include findings in consolidation.
-- **Tools available + user didn't ask**: Note in output: "Slack tools detected. Ask me to search Slack for organizational context at any point, or include it in your next prompt."
-- **No tools + user asked**: Note in output: "Slack context was requested but no Slack tools are available. Install and authenticate the Slack plugin to enable organizational context search."
+- **도구 사용 가능 + 사용자가 요청함**: 다른 Phase 1.1 에이전트와 병렬로 플래닝 컨텍스트 요약과 함께 `ce-slack-researcher`를 할당합니다. 원본 문서에 Slack 컨텍스트 섹션이 있으면 공백을 메우는 데 집중할 수 있도록 그대로 전달합니다. 결과를 통합 과정에 포함합니다.
+- **도구 사용 가능 + 사용자가 요청하지 않음**: 출력에 다음을 기록합니다. "Slack tools detected. Ask me to search Slack for organizational context at any point, or include it in your next prompt."
+- **도구 없음 + 사용자가 요청함**: 출력에 다음을 기록합니다. "Slack context was requested but no Slack tools are available. Install and authenticate the Slack plugin to enable organizational context search."
 
-#### 1.1b Detect Execution Posture Signals
+#### 1.1b 실행 태세 신호 감지
 
-Decide whether the plan should carry a lightweight execution posture signal.
+플랜에 가벼운 실행 태세 신호를 포함할지 결정합니다.
 
-Look for signals such as:
-- The user explicitly asks for TDD, test-first, or characterization-first work
-- The origin document calls for test-first implementation or exploratory hardening of legacy code
-- Local research shows the target area is legacy, weakly tested, or historically fragile, suggesting characterization coverage before changing behavior
+다음과 같은 신호를 찾습니다.
+- 사용자가 TDD, 테스트 우선 또는 캐릭터리제이션 우선 작업을 명시적으로 요청함
+- 원본 문서가 테스트 우선 구현이나 레거시 코드의 탐색적 강화를 요구함
+- 로컬 조사 결과 타겟 영역이 레거시이거나, 테스트가 취약하거나, 역사적으로 부서지기 쉬운 부분으로 나타나 동작을 변경하기 전에 캐릭터리제이션 커버리지가 필요함을 시사함
 
-When the signal is clear, carry it forward silently in the relevant implementation units.
+신호가 명확하면 관련 구현 단위에 조용히 계승합니다.
 
-Ask the user only if the posture would materially change sequencing or risk and cannot be responsibly inferred.
+태세 변경이 순서나 리스크를 실질적으로 바꾸고 책임 있게 추론할 수 없는 경우에만 사용자에게 묻습니다.
 
-#### 1.2 Decide on External Research
+#### 1.2 외부 조사 수행 여부 결정
 
-Based on the origin document, user signals, and local findings, decide whether external research adds value.
+원본 문서, 사용자 신호 및 로컬 조사 결과를 바탕으로 외부 조사가 가치를 더할지 결정합니다.
 
-**Read between the lines.** Pay attention to signals from the conversation so far:
-- **User familiarity** — Are they pointing to specific files or patterns? They likely know the codebase well.
-- **User intent** — Do they want speed or thoroughness? Exploration or execution?
-- **Topic risk** — Security, payments, external APIs warrant more caution regardless of user signals.
-- **Uncertainty level** — Is the approach clear or still open-ended?
+**행간을 읽으십시오.** 지금까지의 대화 신호에 주의를 기울이십시오.
+- **사용자 숙련도** — 특정 파일이나 패턴을 가리키고 있습니까? 코드베이스를 잘 알고 있을 가능성이 높습니다.
+- **사용자 의도** — 속도 또는 철저함을 원합니까? 탐색 또는 실행을 원합니까?
+- **주제 리스크** — 보안, 결제, 외부 API는 사용자 신호와 관계없이 더 많은 주의가 필요합니다.
+- **불확실성 수준** — 접근 방식이 명확합니까 아니면 여전히 열려 있습니까?
 
-**Leverage ce-repo-research-analyst's technology context:**
+**ce-repo-research-analyst의 기술 컨텍스트 활용:**
 
-The ce-repo-research-analyst output includes a structured Technology & Infrastructure summary. Use it to make sharper external research decisions:
+ce-repo-research-analyst 출력은 구조화된 Technology & Infrastructure 요약을 포함합니다. 이를 사용하여 더 예리한 외부 조사 결정을 내리십시오.
 
-- If specific frameworks and versions were detected (e.g., Rails 7.2, Next.js 14, Go 1.22), pass those exact identifiers to ce-framework-docs-researcher so it fetches version-specific documentation
-- If the feature touches a technology layer the scan found well-established in the repo (e.g., existing Sidekiq jobs when planning a new background job), lean toward skipping external research -- local patterns are likely sufficient
-- If the feature touches a technology layer the scan found absent or thin (e.g., no existing proto files when planning a new gRPC service), lean toward external research -- there are no local patterns to follow
-- If the scan detected deployment infrastructure (Docker, K8s, serverless), note it in the planning context passed to downstream agents so they can account for deployment constraints
-- If the scan detected a monorepo and scoped to a specific service, pass that service's tech context to downstream research agents -- not the aggregate of all services. If the scan surfaced the workspace map without scoping, use the feature description to identify the relevant service before proceeding with research
+- 특정 프레임워크 및 버전이 감지된 경우 (예: Rails 7.2, Next.js 14, Go 1.22), 해당 식별자를 ce-framework-docs-researcher에 전달하여 버전 전용 문서를 가져오게 합니다.
+- 스캔 결과 레포지토리에 잘 정착된 기술 계층을 기능이 건드리는 경우 (예: 새 백그라운드 작업을 플래닝할 때 기존 Sidekiq 작업이 있는 경우), 로컬 패턴으로 충분하므로 외부 조사를 생략하는 쪽으로 기웁니다.
+- 스캔 결과 레포지토리에 없거나 부족한 기술 계층을 기능이 건드리는 경우 (예: 새 gRPC 서비스를 플래닝할 때 기존 proto 파일이 없는 경우), 따를 로컬 패턴이 없으므로 외부 조사 쪽으로 기웁니다.
+- 스캔 결과 배포 인프라(Docker, K8s, serverless)가 감지된 경우, 다운스트림 에이전트가 배포 제약 사항을 고려할 수 있도록 전달되는 플래닝 컨텍스트에 기록합니다.
+- 스캔 결과 모노레포가 감지되고 특정 서비스로 범위가 한정된 경우, 모든 서비스의 합계가 아닌 해당 서비스의 기술 컨텍스트를 다운스트림 조사 에이전트에 전달합니다. 스캔 결과 범위 한정 없이 워크스페이스 맵만 나온 경우, 조사 진행 전에 기능 설명을 사용하여 관련 서비스를 식별하십시오.
 
-**Always lean toward external research when:**
-- The topic is high-risk: security, payments, privacy, external APIs, migrations, compliance
-- The codebase lacks relevant local patterns -- fewer than 3 direct examples of the pattern this plan needs
-- Local patterns exist for an adjacent domain but not the exact one -- e.g., the codebase has HTTP clients but not webhook receivers, or has background jobs but not event-driven pub/sub. Adjacent patterns suggest the team is comfortable with the technology layer but may not know domain-specific pitfalls. When this signal is present, frame the external research query around the domain gap specifically, not the general technology
-- The user is exploring unfamiliar territory
-- The technology scan found the relevant layer absent or thin in the codebase
+**다음과 같은 경우 항상 외부 조사를 선호하십시오:**
+- 주제가 고위험임: 보안, 결제, 프라이버시, 외부 API, 마이그레이션, 컴플라이언스
+- 코드베이스에 관련 로컬 패턴이 부족함 -- 이 플랜이 필요로 하는 패턴의 직접적인 예시가 3개 미만임
+- 인접 도메인에 대한 로컬 패턴은 존재하지만 정확히 일치하는 것은 없음 -- 예: 레포지토리에 HTTP 클라이언트는 있지만 웹훅 리시버는 없음, 또는 백그라운드 작업은 있지만 이벤트 기반 pub/sub은 없음. 인접 패턴은 팀이 기술 계층에는 익숙하지만 도메인 전용 함정은 모를 수 있음을 시사합니다. 이 신호가 있을 때는 일반 기술이 아닌 도메인 공백을 중심으로 외부 조사 쿼리를 구성하십시오.
+- 사용자가 익숙하지 않은 영역을 탐색 중임
+- 기술 스캔 결과 레포지토리에서 관련 계층이 없거나 부족함이 확인됨
 
-**Skip external research when:**
-- The codebase already shows a strong local pattern -- multiple direct examples (not adjacent-domain), recently touched, following current conventions
-- The user already knows the intended shape
-- Additional external context would add little practical value
-- The technology scan found the relevant layer well-established with existing examples to follow
+**다음과 같은 경우 외부 조사를 건너뜁니다:**
+- 코드베이스에 강력한 로컬 패턴이 이미 존재함 -- 인접 도메인이 아닌 직접적인 예시가 여러 개 있고, 최근에 수정되었으며, 현재 컨벤션을 따르고 있음
+- 사용자가 이미 의도한 형태를 알고 있음
+- 추가적인 외부 컨텍스트가 실질적인 가치를 거의 더하지 못함
+- 기술 스캔 결과 레포지토리에 관련 계층이 이미 잘 정착되어 따를 예시가 충분함
 
-Announce the decision briefly before continuing. Examples:
+진행하기 전에 결정을 짧게 안내합니다. 예:
 - "Your codebase has solid patterns for this. Proceeding without external research."
 - "This involves payment processing, so I'll research current best practices first."
 
-#### 1.3 External Research (Conditional)
+#### 1.3 외부 조사 (조건부)
 
-If Step 1.2 indicates external research is useful, run these agents in parallel:
+Step 1.2에서 외부 조사가 유용하다고 판단되면 다음 에이전트들을 병렬로 실행합니다.
 
 - Task ce-best-practices-researcher(planning context summary)
 - Task ce-framework-docs-researcher(planning context summary)
 
-#### 1.4 Consolidate Research
+#### 1.4 조사 결과 통합
 
-Summarize:
-- Relevant codebase patterns and file paths
-- Relevant institutional learnings
-- Organizational context from Slack conversations, if gathered (prior discussions, decisions, or domain knowledge relevant to the feature)
-- External references and best practices, if gathered
-- Related issues, PRs, or prior art
-- Any constraints that should materially shape the plan
+다음을 요약합니다.
+- 관련 코드베이스 패턴 및 파일 경로
+- 관련 조직 내 학습 내용
+- 수집된 경우, Slack 대화에서의 조직 컨텍스트 (기능과 관련된 이전 논의, 결정 또는 도메인 지식)
+- 수집된 경우, 외부 참조 및 베스트 프랙티스
+- 관련 이슈, PR 또는 선행 사례
+- 플랜을 실질적으로 형성해야 하는 모든 제약 사항
 
-#### 1.4b Reclassify Depth When Research Reveals External Contract Surfaces
+#### 1.4b 조사가 외부 계약 표면을 드러낼 때 깊이 재분류
 
-If the current classification is **Lightweight** and Phase 1 research found that the work touches any of these external contract surfaces, reclassify to **Standard**:
+현재 분류가 **Lightweight**이고 Phase 1 조사 결과 작업이 다음 외부 계약 표면 중 하나라도 건드리는 것으로 확인되면 **Standard**로 재분류합니다.
 
-- Environment variables consumed by external systems, CI, or other repositories
-- Exported public APIs, CLI flags, or command-line interface contracts
-- CI/CD configuration files (`.github/workflows/`, `Dockerfile`, deployment scripts)
-- Shared types or interfaces imported by downstream consumers
-- Documentation referenced by external URLs or linked from other systems
+- 외부 시스템, CI 또는 다른 레포지토리에서 사용하는 환경 변수
+- 노출된 공용 API, CLI 플래그 또는 커맨드라인 인터페이스 계약
+- CI/CD 설정 파일 (`.github/workflows/`, `Dockerfile`, 배포 스크립트)
+- 다운스트림 소비자가 임포트하는 공유 타입 또는 인터페이스
+- 외부 URL에서 참조하거나 다른 시스템에서 링크된 문서
 
-This ensures flow analysis (Phase 1.5) runs and the confidence check (Phase 5.3) applies critical-section bonuses. Announce the reclassification briefly: "Reclassifying to Standard — this change touches [environment variables / exported APIs / CI config] with external consumers."
+이는 흐름 분석(Phase 1.5)이 실행되고 신뢰도 체크(Phase 5.3)가 크리티컬 섹션 보너스를 적용하도록 보장합니다. 재분류를 짧게 알립니다: "Reclassifying to Standard — this change touches [environment variables / exported APIs / CI config] with external consumers."
 
-#### 1.5 Flow and Edge-Case Analysis (Conditional)
+#### 1.5 흐름 및 엣지 케이스 분석 (조건부)
 
-For **Standard** or **Deep** plans, or when user flow completeness is still unclear, run:
+**Standard** 또는 **Deep** 플랜의 경우, 또는 사용자 흐름의 완결성이 여전히 불분명한 경우 다음을 실행합니다.
 
 - Task ce-spec-flow-analyzer(planning context summary, research findings)
 
-Use the output to:
-- Identify missing edge cases, state transitions, or handoff gaps
-- Tighten requirements trace or verification strategy
-- Add only the flow details that materially improve the plan
+출력을 사용하여 다음을 수행합니다.
+- 누락된 엣지 케이스, 상태 전이 또는 전달 공백 식별
+- 요구사항 추적성 또는 검증 전략 강화
+- 플랜을 실질적으로 개선하는 흐름 세부 정보만 추가
 
-### Phase 2: Resolve Planning Questions
+### Phase 2: 플래닝 질문 해결
 
-Build a planning question list from:
-- Deferred questions in the origin document
-- Gaps discovered in repo or external research
-- Technical decisions required to produce a useful plan
+다음을 바탕으로 플래닝 질문 목록을 작성합니다.
+- 원본 문서의 연기된 질문들
+- 레포지토리 또는 외부 조사에서 발견된 공백
+- 유용한 플랜을 생성하는 데 필요한 기술적 결정 사항
 
-For each question, decide whether it should be:
-- **Resolved during planning** - the answer is knowable from repo context, documentation, or user choice
-- **Deferred to implementation** - the answer depends on code changes, runtime behavior, or execution-time discovery
+각 질문에 대해 다음 중 하나로 결정합니다.
+- **플래닝 중 해결** - 레포지토리 컨텍스트, 문서 또는 사용자 선택을 통해 알 수 있는 답
+- **구현 단계로 연기** - 코드 변경, 런타임 동작 또는 실행 시점의 탐색에 달려 있는 답
 
-Ask the user only when the answer materially affects architecture, scope, sequencing, or risk and cannot be responsibly inferred. Use the platform's blocking question tool when available (see Interaction Method).
+답변이 아키텍처, 범위, 순서 또는 리스크에 실질적인 영향을 미치고 책임 있게 추론할 수 없는 경우에만 사용자에게 묻습니다. 플랫폼의 차단 질문 도구를 사용하십시오 (상호작용 방식 참조).
 
-**Do not** run tests, build the app, or probe runtime behavior in this phase. The goal is a strong plan, not partial execution.
+이 페이즈에서 테스트를 실행하거나, 앱을 빌드하거나, 런타임 동작을 조사하지 **마십시오**. 목표는 부분적인 실행이 아니라 강력한 플랜입니다.
 
-### Phase 3: Structure the Plan
+### Phase 3: 플랜 구조화
 
-#### 3.1 Title and File Naming
+#### 3.1 제목 및 파일 네이밍
 
-- Draft a clear, searchable title using conventional format such as `feat: Add user authentication` or `fix: Prevent checkout double-submit`
-- Determine the plan type: `feat`, `fix`, or `refactor`
-- Build the filename following the repository convention: `docs/plans/YYYY-MM-DD-NNN-<type>-<descriptive-name>-plan.md`
-  - Create `docs/plans/` if it does not exist
-  - Check existing files for today's date to determine the next sequence number (zero-padded to 3 digits, starting at 001)
-  - Keep the descriptive name concise (3-5 words) and kebab-cased
-  - Examples: `2026-01-15-001-feat-user-authentication-flow-plan.md`, `2026-02-03-002-fix-checkout-race-condition-plan.md`
-  - Avoid: missing sequence numbers, vague names like "new-feature", invalid characters (colons, spaces)
+- `feat: Add user authentication` 또는 `fix: Prevent checkout double-submit`과 같은 컨벤셔널 형식을 사용하여 명확하고 검색 가능한 제목 초안을 작성합니다.
+- 플랜 타입을 결정합니다: `feat`, `fix`, 또는 `refactor`.
+- 레포지토리 컨벤션에 따라 파일 이름을 생성합니다: `docs/plans/YYYY/MM/DD-NNN-<type>-<descriptive-name>-plan.md`
+  - `docs/plans/YYYY/MM/`이 존재하지 않으면 생성합니다.
+  - 오늘 날짜의 기존 파일을 확인하여 다음 시퀀스 번호를 결정합니다 (001부터 시작하는 3자리 제로 패딩).
+  - 설명이 담긴 이름을 간결하게(3~5단어) 유지하고 kebab-case를 사용합니다.
+  - 예시: `2026/05/11-001-feat-user-authentication-flow-plan.md`, `2026/05/11-002-fix-checkout-race-condition-plan.md`
+  - 피해야 할 사항: 시퀀스 번호 누락, "new-feature"와 같은 모호한 이름, 잘못된 문자 (콜론, 공백).
 
-#### 3.2 Stakeholder and Impact Awareness
+#### 3.2 이해관계자 및 영향 인지
 
-For **Standard** or **Deep** plans, briefly consider who is affected by this change — end users, developers, operations, other teams — and how that should shape the plan. For cross-cutting work, note affected parties in the System-Wide Impact section.
+**Standard** 또는 **Deep** 플랜의 경우, 이 변경으로 인해 영향을 받는 대상(최종 사용자, 개발자, 운영팀, 타 팀)을 짧게 고려하고 이것이 플랜에 어떻게 반영되어야 하는지 생각합니다. 교차 기능적 작업의 경우, System-Wide Impact 섹션에 영향을 받는 당사자들을 기록합니다.
 
-#### 3.3 Break Work into Implementation Units
+#### 3.3 작업을 구현 단위로 분할
 
-Break the work into logical implementation units. Each unit should represent one meaningful change that an implementer could typically land as an atomic commit.
+작업을 논리적인 구현 단위(implementation unit)로 나눕니다. 각 단위는 구현자가 일반적으로 원자적 커밋으로 반영할 수 있는 하나의 의미 있는 변경을 나타내야 합니다.
 
-Good units are:
-- Focused on one component, behavior, or integration seam
-- Usually touching a small cluster of related files
-- Ordered by dependency
-- Concrete enough for execution without pre-writing code
+좋은 단위는 다음과 같습니다.
+- 하나의 컴포넌트, 동작 또는 통합 이음새에 집중함
+- 일반적으로 관련된 소수의 파일 클러스터를 건드림
+- 종속성에 따라 순서가 정해짐
+- 코드를 미리 작성하지 않고도 실행할 수 있을 만큼 구체적임
 
-Avoid:
-- 2-5 minute micro-steps
-- Units that span multiple unrelated concerns
-- Units that are so vague an implementer still has to invent the plan
+피해야 할 사항:
+- 2~5분 내외의 마이크로 단계
+- 여러 관련 없는 관심사를 가로지르는 단위
+- 너무 모호해서 구현자가 여전히 플랜을 발명해야 하는 단위
 
-Each unit carries a stable plan-local **U-ID** assigned in Phase 3.5 (`U1`, `U2`, …). U-IDs survive reordering, splitting, and deletion: new units take the next unused number, gaps are fine, and existing IDs are never renumbered. This lets `ce-work` reference units unambiguously across plan edits.
+각 단위는 Phase 3.5에서 할당된 고정된 플랜 로컬 **U-ID**(`U1`, `U2`, …)를 가집니다. U-ID는 재정렬, 분할 및 삭제 시에도 유지됩니다: 새 단위는 다음 미사용 번호를 사용하고, 공백은 허용되며, 기존 ID는 절대 재할당되지 않습니다. 이를 통해 `ce-work`는 플랜 수정 중에도 단위를 명확하게 참조할 수 있습니다.
 
-#### 3.4 High-Level Technical Design (Optional)
+#### 3.4 상위 수준 기술 설계 (선택 사항)
 
-Before detailing implementation units, decide whether an overview would help a reviewer validate the intended approach. This section communicates the *shape* of the solution — how pieces fit together — without dictating implementation.
+구현 단위를 상세화하기 전에, 개요(overview)가 리뷰어가 의도한 접근 방식을 검증하는 데 도움이 될지 결정합니다. 이 섹션은 구현을 강요하지 않으면서 솔루션의 *형태*(조각들이 어떻게 맞춰지는지)를 전달합니다.
 
-**When to include it:**
+**포함해야 하는 경우:**
 
-| Work involves... | Best overview form |
+| 작업이 다음을 포함함... | 최적의 개요 형태 |
 |---|---|
-| DSL or API surface design | Pseudo-code grammar or contract sketch |
-| Multi-component integration | Mermaid sequence or component diagram |
-| Data pipeline or transformation | Data flow sketch |
-| State-heavy lifecycle | State diagram |
-| Complex branching logic | Flowchart |
-| Mode/flag combinations or multi-input behavior | Decision matrix (inputs -> outcomes) |
-| Single-component with non-obvious shape | Pseudo-code sketch |
+| DSL 또는 API 표면 설계 | 의사 코드 문법 또는 계약 스케치 |
+| 멀티 컴포넌트 통합 | Mermaid 시퀀스 또는 컴포넌트 다이어그램 |
+| 데이터 파이프라인 또는 변환 | 데이터 흐름 스케치 |
+| 상태 중심의 라이프사이클 | 상태 다이어그램 |
+| 복잡한 분기 로직 | 순서도 |
+| 모드/플래그 조합 또는 다중 입력 동작 | 결정 행렬 (입력 -> 결과) |
+| 형태가 명확하지 않은 단일 컴포넌트 | 의사 코드 스케치 |
 
-**When to skip it:**
-- Well-patterned work where prose and file paths tell the whole story
-- Straightforward CRUD or convention-following changes
-- Lightweight plans where the approach is obvious
+**건너뛰어야 하는 경우:**
+- 산문과 파일 경로만으로 전체 내용을 충분히 알 수 있을 만큼 정형화된 작업
+- 간단한 CRUD 또는 컨벤션을 따르는 변경 사항
+- 접근 방식이 명확한 Lightweight 플랜
 
-Choose the medium that fits the work. Do not default to pseudo-code when a diagram communicates better, and vice versa.
+작업에 맞는 매체를 선택하십시오. 다이어그램이 더 잘 전달될 때 의사 코드를 기본으로 사용하지 마십시오. 반대의 경우도 마찬가지입니다.
 
-Frame every sketch with: *"This illustrates the intended approach and is directional guidance for review, not implementation specification. The implementing agent should treat it as context, not code to reproduce."*
+모든 스케치 앞에 다음 문구를 넣으십시오: *"This illustrates the intended approach and is directional guidance for review, not implementation specification. The implementing agent should treat it as context, not code to reproduce."*
 
-Keep sketches concise — enough to validate direction, not enough to copy-paste into production.
+스케치를 간결하게 유지하십시오 — 방향을 검증하기에 충분해야 하며, 운영 코드에 복사해서 붙여넣을 정도여서는 안 됩니다.
 
-#### 3.4b Output Structure (Optional)
+#### 3.4b 출력 구조 (선택 사항)
 
-For greenfield plans that create a new directory structure (new plugin, service, package, or module), include an `## Output Structure` section with a file tree showing the expected layout. This gives reviewers the overall shape before diving into per-unit details.
+새 디렉토리 구조(새 플러그인, 서비스, 패키지 또는 모듈)를 생성하는 그린필드 플랜의 경우, 예상되는 레이아웃을 보여주는 파일 트리와 함께 `## Output Structure` 섹션을 포함하십시오. 이는 리뷰어에게 각 단위의 세부 사항을 파헤치기 전에 전체적인 형태를 제공합니다.
 
-**When to include it:**
-- The plan creates 3+ new files in a new directory hierarchy
-- The directory layout itself is a meaningful design decision
+**포함해야 하는 경우:**
+- 플랜이 새 디렉토리 계층 구조에 3개 이상의 새 파일을 생성함
+- 디렉토리 레이아웃 자체가 의미 있는 설계 결정임
 
-**When to skip it:**
-- The plan only modifies existing files
-- The plan creates 1-2 files in an existing directory — the per-unit file lists are sufficient
+**건너뛰어야 하는 경우:**
+- 플랜이 기존 파일만 수정함
+- 플랜이 기존 디렉토리에 1~2개의 파일을 생성함 — 단위별 파일 목록으로 충분함
 
-The tree is a scope declaration showing the expected output shape. It is not a constraint — the implementer may adjust the structure if implementation reveals a better layout. The per-unit `**Files:**` sections remain authoritative for what each unit creates or modifies.
+트리는 예상되는 출력 형태를 보여주는 범위 선언입니다. 이는 제약 사항이 아니며, 구현 과정에서 더 나은 레이아웃이 발견되면 구현자가 구조를 조정할 수 있습니다. 각 단위가 생성하거나 수정하는 내용에 대해서는 단위별 `**Files:**` 섹션이 여전히 권위 있는 근거가 됩니다.
 
-#### 3.5 Define Each Implementation Unit
+#### 3.5 각 구현 단위 정의
 
-Each unit is a level-3 heading carrying a stable U-ID prefix matching the format used for R/A/F/AE in requirements docs: `### U1. [Name]`. Number sequentially within the plan starting at U1. Do not render units as bulleted list items or prefix them with `- [ ]` / `- [x]` checkbox markers. List-based unit titles fragment in every standard renderer because the per-unit fields (`**Goal:**`, `**Files:**`, `**Approach:**`, etc.) are written flush-left, which terminates CommonMark list continuation and detaches the fields from the unit they describe. Headings render correctly everywhere, are the right semantic match for sections containing multi-block content, and give each unit an anchor link. The plan is a decision artifact; execution progress is derived from git by `ce-work` rather than stored in the plan body.
+각 단위는 요구사항 문서의 R/A/F/AE에 사용되는 형식과 일치하는 고정된 U-ID 접두사가 포함된 레벨 3 헤더입니다: `### U1. [이름]`. 플랜 내에서 U1부터 순차적으로 번호를 매깁니다. 단위를 불릿 리스트 항목으로 렌더링하거나 `- [ ]` / `- [x]` 체크박스 마커를 붙이지 마십시오. 리스트 기반의 단위 제목은 모든 표준 렌더러에서 조각납니다. 왜냐하면 단위별 필드(`**Goal:**`, `**Files:**`, `**Approach:**` 등)가 왼쪽 정렬로 작성되어 CommonMark 리스트 연속성을 끊고 필드를 설명 대상 단위로부터 분리시키기 때문입니다. 헤더는 모든 곳에서 올바르게 렌더링되며, 멀티 블록 콘텐츠를 포함하는 섹션에 대한 올바른 시맨틱 매치이며, 각 단위에 앵커 링크를 제공합니다. 플랜은 결정 결과물입니다. 실행 진행 상태는 플랜 본문에 저장되지 않고 `ce-work`에 의해 git에서 도출됩니다.
 
-**Stability rule.** Once assigned, a U-ID is never renumbered. Reordering units leaves their IDs in place (e.g., U1, U3, U5 in their new order is correct; renumbering to U1, U2, U3 is not). Splitting a unit keeps the original U-ID on the original concept and assigns the next unused number to the new unit. Deletion leaves a gap; gaps are fine. This rule matters most during deepening (Phase 5.3), which is the most likely accidental-renumber vector.
+**안정성 규칙.** 일단 할당된 U-ID는 절대 재할당되지 않습니다. 단위를 재정렬하더라도 ID는 유지됩니다 (예: 새로운 순서대로 U1, U3, U5가 되는 것이 맞으며, U1, U2, U3로 번호를 다시 매기는 것은 틀립니다). 단위를 분할할 때는 원래 개념에 원래 U-ID를 유지하고 새 단위에 다음 미사용 번호를 할당합니다. 삭제 시에는 공백이 생기며, 공백은 허용됩니다. 이 규칙은 사고로 인한 번호 재할당 가능성이 가장 높은 심화 단계(Phase 5.3)에서 가장 중요합니다.
 
-For each unit, include:
-- **Goal** - what this unit accomplishes
-- **Requirements** - which requirements or success criteria it advances (cite R-IDs, and A/F/AE IDs when origin supplies them)
-- **Dependencies** - what must exist first (cite by U-ID, e.g., "U1, U3")
-- **Files** - repo-relative file paths to create, modify, or test (never absolute paths)
-- **Approach** - key decisions, data flow, component boundaries, or integration notes
-- **Execution note** - optional, only when the unit benefits from a non-default execution posture such as test-first or characterization-first
-- **Technical design** - optional pseudo-code or diagram when the unit's approach is non-obvious and prose alone would leave it ambiguous. Frame explicitly as directional guidance, not implementation specification
-- **Patterns to follow** - existing code or conventions to mirror
-- **Test scenarios** - enumerate the specific test cases the implementer should write, right-sized to the unit's complexity and risk. Consider each category below and include scenarios from every category that applies to this unit. A simple config change may need one scenario; a payment flow may need a dozen. The quality signal is specificity — each scenario should name the input, action, and expected outcome so the implementer doesn't have to invent coverage. For units with no behavioral change (pure config, scaffolding, styling), use `Test expectation: none -- [reason]` instead of leaving the field blank. **AE-link convention:** when a test scenario directly enforces an origin Acceptance Example, prefix it with `Covers AE<N>.` (or `Covers F<N> / AE<N>.`). This is sparse-by-design — most test scenarios are finer-grained than AEs and do not link. Do not force AE links onto tests that only cover lower-level implementation details.
-  - **Happy path behaviors** - core functionality with expected inputs and outputs
-  - **Edge cases** (when the unit has meaningful boundaries) - boundary values, empty inputs, nil/null states, concurrent access
-  - **Error and failure paths** (when the unit has failure modes) - invalid input, downstream service failures, timeout behavior, permission denials
-  - **Integration scenarios** (when the unit crosses layers) - behaviors that mocks alone will not prove, e.g., "creating X triggers callback Y which persists Z". Include these for any unit touching callbacks, middleware, or multi-layer interactions
-- **Verification** - how an implementer should know the unit is complete, expressed as outcomes rather than shell command scripts
+각 단위에 대해 다음을 포함합니다.
+- **Goal** - 이 단위가 달성하는 것
+- **Requirements** - 이 단위가 진전시키는 요구사항 또는 성공 기준 (R-ID 및 원본이 제공하는 경우 A/F/AE ID 인용)
+- **Dependencies** - 먼저 존재해야 하는 것 (U-ID로 인용, 예: "U1, U3")
+- **Files** - 생성, 수정 또는 테스트할 레포지토리 상대 파일 경로 (절대 경로 금지)
+- **Approach** - 주요 설계 또는 순서 결정, 데이터 흐름, 컴포넌트 경계 또는 통합 노트
+- **Execution note** - 선택 사항, 해당 단위가 테스트 우선 또는 캐릭터리제이션 우선과 같은 비기본 실행 태세를 취할 때만 사용
+- **Technical design** - 선택 사항, 단위의 접근 방식이 명확하지 않고 산문만으로는 모호할 때의 의사 코드 또는 다이어그램. 구현 명세가 아닌 방향 가이드로 명시
+- **Patterns to follow** - 미러링할 기존 코드 또는 컨벤션
+- **Test scenarios** - 구현자가 작성해야 할 구체적인 테스트 케이스를 열거하며, 단위의 복잡성과 리스크에 맞게 크기를 조정합니다. 아래 각 카테고리를 고려하고 해당 단위에 적용되는 모든 카테고리의 시나리오를 포함하십시오. 단순한 설정 변경은 하나의 시나리오로 충분할 수 있고, 결제 흐름은 수십 개가 필요할 수 있습니다. 품질 신호는 구체성입니다 — 각 시나리오는 입력, 액션 및 예상 결과를 명시하여 구현자가 커버리지를 스스로 고안할 필요가 없어야 합니다. 동작 변경이 없는 단위(단순 설정, 스캐폴딩, 스타일링)의 경우 섹션을 비워두지 말고 `Test expectation: none -- [reason]`을 사용하십시오. **AE 링크 컨벤션:** 테스트 시나리오가 원본 수락 예시를 직접 강제하는 경우, `Covers AE<N>.` (또는 `Covers F<N> / AE<N>.`) 접두사를 붙입니다. 이는 설계상 드물게 사용됩니다 — 대부분의 테스트 시나리오는 AE보다 더 세밀하며 링크되지 않습니다. 하위 수준의 구현 세부 사항만 다루는 테스트에 억지로 AE 링크를 붙이지 마십시오.
+  - **Happy path behaviors** - 예상되는 입력과 출력을 갖는 핵심 기능
+  - **Edge cases** (단위에 의미 있는 경계가 있는 경우) - 경계값, 빈 입력, nil/null 상태, 동시 액세스
+  - **Error and failure paths** (단위에 실패 모드가 있는 경우) - 잘못된 입력, 다운스트림 서비스 실패, 타임아웃 동작, 권한 거부
+  - **Integration scenarios** (단위가 여러 계층을 가로지르는 경우) - "X를 생성하면 Z를 영구 저장하는 콜백 Y가 트리거됨"과 같이 모의 객체(mock)만으로는 증명할 수 없는 동작들. 콜백, 미들웨어 또는 다계층 상호작용을 건드리는 모든 단위에 포함하십시오.
+- **Verification** - 구현자가 단위 완료를 확인하는 방법. 쉘 명령 스크립트가 아닌 결과(outcome)로 표현합니다.
 
-Every feature-bearing unit should include the test file path in `**Files:**`.
+기능을 포함하는 모든 단위는 `**Files:**`에 테스트 파일 경로를 포함해야 합니다.
 
-Use `Execution note` sparingly. Good uses include:
+`Execution note`는 절제해서 사용하십시오. 좋은 사용 예시는 다음과 같습니다.
 - `Execution note: Start with a failing integration test for the request/response contract.`
 - `Execution note: Add characterization coverage before modifying this legacy parser.`
 - `Execution note: Implement new domain behavior test-first.`
 
-Do not expand units into literal `RED/GREEN/REFACTOR` substeps.
+단위를 문자 그대로의 `RED/GREEN/REFACTOR` 하위 단계로 확장하지 마십시오.
 
-#### 3.6 Keep Planning-Time and Implementation-Time Unknowns Separate
+#### 3.6 플래닝 시점과 구현 시점의 미지수 분리
 
-If something is important but not knowable yet, record it explicitly under deferred implementation notes rather than pretending to resolve it in the plan.
+중요하지만 아직 알 수 없는 사항이 있다면, 플랜에서 해결된 척하는 대신 'Deferred to Implementation' 아래에 명시적으로 기록하십시오.
 
-Examples:
-- Exact method or helper names
-- Final SQL or query details after touching real code
-- Runtime behavior that depends on seeing actual test failures
-- Refactors that may become unnecessary once implementation starts
+예시:
+- 정확한 메서드 또는 헬퍼 이름
+- 실제 코드를 건드린 후 알 수 있는 최종 SQL 또는 쿼리 세부 사항
+- 실제 테스트 실패를 확인해야 알 수 있는 런타임 동작
+- 구현이 시작되면 불필요해질 수 있는 리팩토링
 
-#### 3.7 Anti-Expansion: Tangential Cleanup and Scope Creep Go to Deferred
+#### 3.7 안티 확장(Anti-Expansion): 부수적인 정리 및 범위 확장은 연기 대상으로
 
-Distinct from 3.6 (which is about *unknowns* at plan time): 3.7 is about *known but tangential* work that the agent notices while planning but that falls outside the user's confirmed scope. When research surfaces an adjacent refactor, a "while we're here" cleanup, or a scope-adjacent nice-to-have ("we could also add rate limiting"), route it to the existing `### Deferred to Follow-Up Work` subsection in Scope Boundaries (Phase 4.2 Core Plan Template), not into active Implementation Units.
+3.6(플래닝 시점의 *미지수*)과는 별개로, 3.7은 플래닝 도중 에이전트가 인지했지만 사용자의 확인된 범위를 벗어나는 *알려진 부수적* 작업에 대한 것입니다. 조사 과정에서 인접한 리팩토링, "온 김에 하는" 정리 작업 또는 범위에 인접한 있으면 좋은 기능("레이트 리밋도 추가할 수 있겠네요")이 발견되면, 이를 활성 Implementation Units에 넣지 말고 Scope Boundaries의 기존 `### Deferred to Follow-Up Work` 하위 섹션(Phase 4.2 코어 플랜 템플릿)으로 라우팅하십시오.
 
-This reinforces the synthesis discipline established at Phase 0.7 / Phase 5.1.5 — the user's confirmed scope is what the active plan executes; everything else is deferred. Does NOT impose architectural bias on extend-vs-invent decisions within confirmed scope — that judgment stays with the agent (and is surfaced via the Phase 5.1.5 synthesis when material). The user's explicit ask overrides this default — if the user explicitly requested a refactor, it's in-scope, not deferred.
+이는 Phase 0.7 / Phase 5.1.5에서 설정된 종합 훈육을 강화합니다 — 확인된 범위만이 활성 플랜이 실행하는 것이며, 그 외의 모든 것은 연기됩니다. 확인된 범위 내에서의 확장(extend) vs 발명(invent) 결정에 아키텍처적 편향을 부여하지는 않습니다 — 그 판단은 에이전트에게 남으며 실질적인 경우 Phase 5.1.5 종합을 통해 노출됩니다. 사용자의 명시적인 요청은 이 기본값을 덮어씁니다 — 사용자가 리팩토링을 명시적으로 요청했다면 그것은 범위 내에 있으며 연기되지 않습니다.
 
-### Phase 4: Write the Plan
+### Phase 4: 플랜 작성
 
-**NEVER CODE during this skill.** Research, decide, and write the plan — do not start implementation.
+**이 스킬을 실행하는 동안 절대 코딩하지 마십시오.** 조사하고, 결정하고, 플랜을 작성하십시오 — 구현을 시작하지 마십시오.
 
-Use one planning philosophy across all depths. Change the amount of detail, not the boundary between planning and execution.
+모든 깊이에서 하나의 플래닝 철학을 사용하십시오. 플래닝과 실행 사이의 경계가 아닌 상세함의 양을 조정하십시오.
 
-#### 4.1 Plan Depth Guidance
+#### 4.1 플랜 깊이 가이드
 
 **Lightweight**
-- Keep the plan compact
-- Usually 2-4 implementation units
-- Omit optional sections that add little value
+- 플랜을 압축해서 유지합니다.
+- 일반적으로 2~4개의 구현 단위입니다.
+- 가치가 적은 선택적 섹션은 생략합니다.
 
 **Standard**
-- Use the full core template, omitting optional sections (including High-Level Technical Design) that add no value for this particular work
-- Usually 3-6 implementation units
-- Include risks, deferred questions, and system-wide impact when relevant
+- 코어 템플릿을 전체적으로 사용하되, 특정 작업에 가치가 없는 선택적 섹션(상위 수준 기술 설계 포함)은 생략합니다.
+- 일반적으로 3~6개의 구현 단위입니다.
+- 관련이 있는 경우 리스크, 연기된 질문 및 시스템 전반의 영향을 포함합니다.
 
 **Deep**
-- Use the full core template plus optional analysis sections where warranted
-- Usually 4-8 implementation units
-- Group units into phases when that improves clarity
-- Include alternatives considered, documentation impacts, and deeper risk treatment when warranted
+- 코어 템플릿에 근거가 있는 선택적 분석 섹션을 추가하여 사용합니다.
+- 일반적으로 4~8개의 구현 단위입니다.
+- 명확성을 높이기 위해 단위를 페이즈(phase)로 그룹화합니다.
+- 근거가 있는 경우 고려된 대안, 문서 영향 및 깊이 있는 리스크 처리를 포함합니다.
 
-#### 4.1b Optional Deep Plan Extensions
+#### 4.1b 선택적 Deep 플랜 확장
 
-For sufficiently large, risky, or cross-cutting work, add the sections that genuinely help:
+충분히 크거나, 위험하거나, 교차 기능적인 작업의 경우 실질적으로 도움이 되는 섹션들을 추가하십시오.
 - **Alternative Approaches Considered**
 - **Success Metrics**
 - **Dependencies / Prerequisites**
@@ -475,188 +493,181 @@ For sufficiently large, risky, or cross-cutting work, add the sections that genu
 - **Phased Delivery**
 - **Documentation Plan**
 - **Operational / Rollout Notes**
-- **Future Considerations** only when they materially affect current design
+- **Future Considerations** (현재 설계에 실질적인 영향을 미치는 경우에만)
 
-Do not add these as boilerplate. Include them only when they improve execution quality or stakeholder alignment.
+이들을 상투적인 문구로 추가하지 마십시오. 실행 품질이나 이해관계자 조율을 실질적으로 개선할 때만 포함하십시오.
 
-**Alternatives Considered — what to vary.** When this section is included, alternatives must differ on *how* the work is built: architecture, sequencing, boundaries, integration pattern, rollout strategy. Tiny implementation variants (which hash function, which serialization format) belong in Key Technical Decisions, not Alternatives. Product-shape alternatives (different actors, different core outcome, different positioning) belong in `ce-brainstorm`, not here — surface them back upstream rather than re-litigating product questions during planning.
+**고려된 대안 (Alternatives Considered) — 무엇을 다룰 것인가.** 이 섹션을 포함할 때, 대안들은 작업이 *어떻게* 구축되는지에 대해 서로 달라야 합니다: 아키텍처, 순서, 경계, 통합 패턴, 롤아웃 전략. 사소한 구현 변형(어떤 해시 함수를 쓸지, 어떤 직렬화 형식을 쓸지)은 Alternatives가 아닌 Key Technical Decisions에 속합니다. 제품 형태에 대한 대안(다른 액터, 다른 핵심 결과, 다른 포지셔닝)은 여기가 아닌 `ce-brainstorm`에 속합니다 — 플래닝 중에 제품 질문을 다시 논쟁하기보다 상위 단계로 다시 돌려보내십시오.
 
-#### 4.2 Core Plan Template
+#### 4.2 코어 플랜 템플릿
 
-Omit clearly inapplicable optional sections, especially for Lightweight plans.
+명백히 해당되지 않는 선택적 섹션은 생략하십시오. 특히 Lightweight 플랜의 경우 더욱 그렇습니다.
 
 ```markdown
 ---
-title: [Plan Title]
+title: [플랜 제목]
 type: [feat|fix|refactor]
 status: active
 date: YYYY-MM-DD
-origin: docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md  # include when planning from a requirements doc
-deepened: YYYY-MM-DD  # optional, set when the confidence check substantively strengthens the plan
+origin: docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md  # 요구사항 문서로부터 플래닝할 때 포함
+deepened: YYYY-MM-DD  # 선택 사항, 신뢰도 체크가 플랜을 실질적으로 강화했을 때 설정
 ---
 
-# [Plan Title]
+# [플랜 제목]
 
-## Summary
+## 요약 (Summary)
 
-[1-3 line prose summary — what the plan is proposing, in plain language. Forward-looking. With an origin requirements doc, focus on HOW the implementation approaches the work (the WHAT is in origin); without one, carry both WHAT scope and HOW execution. Required for all tiers; skip only for truly-trivial plans (≤ 2 Requirements bullets that echo the prompt).]
-
----
-
-## Problem Frame
-
-[Backward-looking / situational: the user/business problem and context that motivates this plan. Establishes the pain — does NOT restate the proposal (that lives in Summary). With an origin requirements doc, keep this brief (1-2 sentences plus any plan-specific framing) and link to origin via Sources & References. Without one, carry the full pain narrative. **Omit entirely at Lightweight tier when Summary already carries the situational context** — a focused bug fix or one-line change rarely needs both sections.]
+[1~3줄의 산문 요약 — 플랜이 제안하는 내용을 평이한 언어로 작성합니다. 미래 지향적입니다. 원본 요구사항 문서가 있는 경우 구현이 작업에 어떻게(HOW) 접근하는지에 집중합니다(무엇(WHAT)은 원본에 있음). 없는 경우 무엇(WHAT)을 할지(범위)와 어떻게(HOW) 실행할지 모두 담습니다. 모든 티어에서 필수입니다. 프롬프트를 그대로 반복하는 2개 이하의 요구사항 불릿만 있는 매우 사소한 플랜의 경우에만 생략 가능합니다.]
 
 ---
 
-<!-- Include ONLY in non-interactive (headless) mode when the agent had Inferred bets that
-     were not user-confirmed. Lists the un-validated agent inferences explicitly so downstream
-     review (ce-doc-review, ce-work, human PR review) can scrutinize them as bets, not as
-     authoritative decisions. Omit entirely in interactive mode — Inferred bets get user-
-     corrected in chat and become Key Technical Decisions or are revised away. -->
+## 문제 프레임 (Problem Frame)
+
+[과거 지향적 / 상황적: 이 플랜의 동기가 되는 사용자/비즈니스 문제와 컨텍스트입니다. 고통(pain)을 설정하며, 제안 내용을 다시 기술하지 않습니다(그것은 요약에 있음). 원본 요구사항 문서가 있는 경우, 이 섹션을 짧게(1~2문장 및 플랜 전용 프레임) 유지하고 Sources & References를 통해 원본으로 링크합니다. 없는 경우 전체 고통 서사를 담습니다. **Lightweight 티어에서 요약 섹션이 이미 상황적 컨텍스트를 담고 있는 경우 완전히 생략하십시오** — 집중된 버그 수정이나 한 줄 변경 사항은 두 섹션이 모두 필요한 경우가 드뭅니다.]
+
+---
+
+<!-- 에이전트가 사용자 확인 없이 추론(Inferred)한 베팅 사항이 있을 때만 비대화형(headless) 모드에서 포함합니다.
+     검증되지 않은 에이전트의 추론 목록을 명시하여 다운스트림 리뷰(ce-doc-review, ce-work, 사람의 PR 리뷰)에서
+     이를 권위 있는 결정이 아닌 베팅으로 면밀히 조사할 수 있게 합니다. 대화형 모드에서는 완전히 생략합니다 —
+     추론된 베팅 사항은 채팅에서 사용자에 의해 교정되어 Key Technical Decisions가 되거나 수정됩니다. -->
 ## Assumptions
 
 *This plan was authored without synchronous user confirmation. The items below are agent inferences that fill gaps in the input — un-validated bets that should be reviewed before implementation proceeds.*
 
-- [Inferred item the agent chose without user confirmation]
+- [사용자 확인 없이 에이전트가 선택한 추론 항목]
 
 ---
 
-## Requirements
+## 요구사항 (Requirements)
 
-- R1. [Requirement or success criterion this plan must satisfy]
-- R2. [Requirement or success criterion this plan must satisfy]
+- R1. [이 플랜이 충족해야 하는 요구사항 또는 성공 기준]
+- R2. [이 플랜이 충족해야 하는 요구사항 또는 성공 기준]
 
-<!-- With an origin requirements doc, R-IDs trace to origin's; without one, R-IDs are derived
-     during planning. The optional origin trace sub-blocks below carry forward what's relevant
-     when origin actors/flows/acceptance examples exist. -->
+<!-- 원본 요구사항 문서가 있는 경우 R-ID는 원본의 것과 이어집니다. 없는 경우 R-ID는 플래닝 중에 도출됩니다.
+     아래의 선택적인 원본 추적 하위 블록은 원본 액터/흐름/수락 예시가 존재할 때 관련 내용을 계승합니다. -->
 
-**Origin actors:** [A1 (role/name), A2 (role/name), …]
-**Origin flows:** [F1 (flow name), F2 (flow name), …]
-**Origin acceptance examples:** [AE1 (covers R1, R4), AE2 (covers R3), …]
+**Origin actors:** [A1 (역할/이름), A2 (역할/이름), …]
+**Origin flows:** [F1 (흐름 이름), F2 (흐름 이름), …]
+**Origin acceptance examples:** [AE1 (R1, R4 커버), AE2 (R3 커버), …]
 
 ---
 
-## Scope Boundaries
+## 범위 경계 (Scope Boundaries)
 
-<!-- Default structure (no origin doc, or origin was Lightweight / Standard / Deep-feature):
-     a single bulleted list of explicit non-goals. The optional `### Deferred to Follow-Up Work`
-     subsection below may still be included when this plan's implementation is intentionally
-     split across other PRs/issues/repos. -->
+<!-- 기본 구조 (원본 문서가 없거나, 원본이 Lightweight / Standard / Deep-feature였던 경우):
+     명시적인 비목표에 대한 단일 불릿 리스트입니다. 이 플랜의 구현이 의도적으로 다른 PR/이슈/레포로
+     나뉘는 경우 아래의 선택적인 `### Deferred to Follow-Up Work` 하위 섹션을 포함할 수 있습니다. -->
 
-- [Explicit non-goal or exclusion]
+- [명시적인 비목표 또는 제외 사항]
 
-<!-- Optional plan-local subsection — include when this plan's implementation is intentionally
-     split across other PRs, issues, or repos. Distinct from origin-carried "Deferred for later"
-     (product sequencing) and "Outside this product's identity" (positioning). -->
+<!-- 선택적인 플랜 로컬 하위 섹션 — 이 플랜의 구현이 의도적으로 다른 PR, 이슈 또는 레포로 나뉘는 경우 포함합니다.
+     원본에서 계승된 "나중에 진행"(제품 순서) 및 "이 제품의 정체성 밖"(포지셔닝)과는 구별됩니다. -->
 ### Deferred to Follow-Up Work
 
-- [Work that will be done separately]: [Where or when -- e.g., "separate PR in repo-x", "future iteration"]
+- [별도로 진행될 작업]: [어디서 또는 언제 -- 예: "repo-x의 별도 PR", "향후 반복 회차"]
 
-<!-- Triggered structure: replace the single list above with the three subsections below ONLY
-     when the origin doc is Deep-product (detectable by presence of an "Outside this product's
-     identity" subsection in the origin's Scope Boundaries). At all other tiers and when no
-     origin exists, use the single-list structure above. -->
+<!-- 트리거되는 구조: 원본 문서가 Deep-product인 경우(원본의 Scope Boundaries에 "이 제품의 정체성 밖"
+     하위 섹션이 있는 것으로 감지됨)에만 위의 단일 리스트를 아래 세 개의 하위 섹션으로 교체합니다.
+     다른 모든 티어 및 원본이 없는 경우에는 위의 단일 리스트 구조를 사용합니다. -->
 
 <!--
 ### Deferred for later
 
-[Carried from origin — product/version sequencing. Work that will be done eventually but not in v1.]
+[원본에서 계승 — 제품/버전 순서. 결국 수행될 것이지만 v1에는 포함되지 않는 작업.]
 
-- [Item]
+- [항목]
 
 ### Outside this product's identity
 
-[Carried from origin — positioning rejection. Adjacent product the plan must not accidentally build.]
+[원본에서 계승 — 포지셔닝 거부. 플랜이 실수로 구축해서는 안 되는 인접 제품.]
 
-- [Item]
+- [항목]
 
 ### Deferred to Follow-Up Work
 
-[Plan-local — implementation work intentionally split across other PRs/issues/repos. Distinct from origin's "Deferred for later" (product) and "Outside this product's identity" (positioning).]
+[플랜 로컬 — 의도적으로 다른 PR/이슈/레포로 나뉜 구현 작업. 원본의 "나중에 진행"(제품) 및 "이 제품의 정체성 밖"(포지셔닝)과 구별됩니다.]
 
-- [Item]
+- [항목]
 -->
 
 ---
 
-## Context & Research
+## 컨텍스트 및 조사 (Context & Research)
 
-### Relevant Code and Patterns
+### 관련 코드 및 패턴 (Relevant Code and Patterns)
 
-- [Existing file, class, component, or pattern to follow]
+- [따라야 할 기존 파일, 클래스, 컴포넌트 또는 패턴]
 
-### Institutional Learnings
+### 조직 내 학습 내용 (Institutional Learnings)
 
-- [Relevant `docs/solutions/` insight]
+- [관련된 `docs/solutions/` 통찰]
 
-### External References
+### 외부 참조 (External References)
 
-- [Relevant external docs or best-practice source, if used]
-
----
-
-## Key Technical Decisions
-
-- [Decision]: [Rationale]
-
-<!-- With an origin requirements doc, scope this section to plan-time architectural choices —
-     product-level decisions are in origin's Key Decisions. Without an origin, both belong here. -->
+- [사용된 경우, 관련된 외부 문서 또는 베스트 프랙티스 소스]
 
 ---
 
-## Open Questions
+## 주요 기술적 결정 사항 (Key Technical Decisions)
 
-<!-- With an origin requirements doc, scope this section to plan-time questions; product-level
-     open questions stay in origin's Outstanding Questions. -->
+- [결정 사항]: [근거]
 
-### Resolved During Planning
-
-- [Question]: [Resolution]
-
-### Deferred to Implementation
-
-- [Question or unknown]: [Why it is intentionally deferred]
+<!-- 원본 요구사항 문서가 있는 경우, 이 섹션의 범위를 플래닝 시점의 아키텍처 선택으로 한정합니다 —
+     제품 수준의 결정은 원본의 Key Decisions에 있습니다. 원본이 없는 경우 두 가지 모두 여기에 속합니다. -->
 
 ---
 
-<!-- Optional: Include when the plan creates a new directory structure (greenfield plugin,
-     new service, new package). Shows the expected output shape at a glance. Omit for plans
-     that only modify existing files. This is a scope declaration, not a constraint --
-     the implementer may adjust the structure if implementation reveals a better layout. -->
+## 열린 질문 (Open Questions)
+
+<!-- 원본 요구사항 문서가 있는 경우, 이 섹션의 범위를 플래닝 시점의 질문으로 한정합니다.
+     제품 수준의 열린 질문은 원본의 Outstanding Questions에 남습니다. -->
+
+### 플래닝 중 해결됨 (Resolved During Planning)
+
+- [질문]: [해결 내용]
+
+### 구현 단계로 연기됨 (Deferred to Implementation)
+
+- [질문 또는 미지수]: [의도적으로 연기된 이유]
+
+---
+
+<!-- 선택 사항: 플랜이 새 디렉토리 구조(그린필드 플러그인, 새 서비스, 새 패키지)를 생성할 때 포함합니다.
+     예상되는 출력 형태를 한눈에 보여줍니다. 기존 파일만 수정하는 플랜의 경우 생략합니다.
+     이는 범위 선언이며 제약 사항이 아닙니다 -- 구현 과정에서 더 나은 레이아웃이 발견되면
+     구현자가 구조를 조정할 수 있습니다. -->
 ## Output Structure
 
-    [directory tree showing new directories and files]
+    [새 디렉토리 및 파일을 보여주는 디렉토리 트리]
 
 ---
 
-<!-- Optional: Include this section only when the work involves DSL design, multi-component
-     integration, complex data flow, state-heavy lifecycle, or other cases where prose alone
-     would leave the approach shape ambiguous. Omit it entirely for well-patterned or
-     straightforward work. -->
-## High-Level Technical Design
+<!-- 선택 사항: 작업이 DSL 설계, 멀티 컴포넌트 통합, 복잡한 데이터 흐름, 상태 중심의 라이프사이클을
+     포함하거나, 산문만으로는 접근 방식의 형태가 모호할 때만 이 섹션을 포함합니다.
+     정형화되었거나 간단한 작업의 경우 완전히 생략하십시오. -->
+## 상위 수준 기술 설계 (High-Level Technical Design)
 
 > *This illustrates the intended approach and is directional guidance for review, not implementation specification. The implementing agent should treat it as context, not code to reproduce.*
 
-[Pseudo-code grammar, mermaid diagram, data flow sketch, or state diagram — choose the medium that best communicates the solution shape for this work.]
+[의사 코드 문법, mermaid 다이어그램, 데이터 흐름 스케치 또는 상태 다이어그램 중 이 작업의 솔루션 형태를 가장 잘 전달하는 매체를 선택하십시오.]
 
 ---
 
-## Implementation Units
+## 구현 단위 (Implementation Units)
 
-<!-- Each unit carries a stable plan-local U-ID (U1, U2, …) assigned sequentially.
-     U-IDs are never renumbered: reordering preserves them in place, splitting keeps the
-     original U-ID and assigns the next unused number to the new unit, deletion leaves
-     a gap. This anchor is what ce-work references in blockers and verification, so
-     stability across plan edits is load-bearing. -->
+<!-- 각 단위는 순차적으로 할당된 고정된 플랜 로컬 U-ID(U1, U2, …)를 가집니다.
+     U-ID는 절대 재할당되지 않습니다: 재정렬 시에도 제자리에 유지되며, 분할 시 원래 U-ID를 유지하고
+     새 단위에 다음 미사용 번호를 할당하며, 삭제 시에는 공백을 남깁니다. 이 앵커는 ce-work가
+     차단 요소 및 검증에서 참조하는 대상이므로, 플랜 수정 중의 안정성이 매우 중요합니다. -->
 
-### U1. [Name]
+### U1. [이름]
 
-**Goal:** [What this unit accomplishes]
+**Goal:** [이 단위가 달성하는 것]
 
 **Requirements:** [R1, R2]
 
-**Dependencies:** [None / U1 / external prerequisite]
+**Dependencies:** [없음 / U1 / 외부 전제 조건]
 
 **Files:**
 - Create: `path/to/new_file`
@@ -664,251 +675,252 @@ deepened: YYYY-MM-DD  # optional, set when the confidence check substantively st
 - Test: `path/to/test_file`
 
 **Approach:**
-- [Key design or sequencing decision]
+- [주요 설계 또는 순서 결정]
 
-**Execution note:** [Optional test-first, characterization-first, or other execution posture signal]
+**Execution note:** [선택 사항, 테스트 우선, 캐릭터리제이션 우선 또는 기타 실행 태세 신호]
 
-**Technical design:** *(optional -- pseudo-code or diagram when the unit's approach is non-obvious. Directional guidance, not implementation specification.)*
+**Technical design:** *(선택 사항 -- 단위의 접근 방식이 명확하지 않을 때의 의사 코드 또는 다이어그램. 구현 명세가 아닌 방향 가이드.)*
 
 **Patterns to follow:**
-- [Existing file, class, or pattern]
+- [기존 파일, 클래스 또는 패턴]
 
 **Test scenarios:**
-<!-- Include only categories that apply to this unit. Omit categories that don't. For units with no behavioral change, use "Test expectation: none -- [reason]" instead of leaving this section blank. -->
-- [Scenario: specific input/action -> expected outcome. Prefix with category — Happy path, Edge case, Error path, or Integration — to signal intent]
+<!-- 이 단위에 적용되는 카테고리만 포함하고 그렇지 않은 카테고리는 생략하십시오. 동작 변경이 없는 단위의 경우
+     이 섹션을 비워두지 말고 "Test expectation: none -- [reason]"을 사용하십시오. -->
+- [시나리오: 구체적인 입력/액션 -> 예상 결과. 의도를 알 수 있게 Happy path, Edge case, Error path, 또는 Integration 카테고리 접두사를 붙임]
 
 **Verification:**
-- [Outcome that should hold when this unit is complete]
+- [이 단위가 완료되었을 때 유지되어야 하는 결과]
 
 ---
 
-## System-Wide Impact
+## 시스템 전반의 영향 (System-Wide Impact)
 
-- **Interaction graph:** [What callbacks, middleware, observers, or entry points may be affected]
-- **Error propagation:** [How failures should travel across layers]
-- **State lifecycle risks:** [Partial-write, cache, duplicate, or cleanup concerns]
-- **API surface parity:** [Other interfaces that may require the same change]
-- **Integration coverage:** [Cross-layer scenarios unit tests alone will not prove]
-- **Unchanged invariants:** [Existing APIs, interfaces, or behaviors that this plan explicitly does not change — and how the new work relates to them. Include when the change touches shared surfaces and reviewers need blast-radius assurance]
+- **상호작용 그래프 (Interaction graph):** [영향을 받을 수 있는 콜백, 미들웨어, 옵저버 또는 엔트리 포인트]
+- **에러 전파 (Error propagation):** [실패가 계층 간에 전달되어야 하는 방식]
+- **상태 라이프사이클 리스크 (State lifecycle risks):** [부분 쓰기, 캐시, 중복 또는 정리 관련 우려 사항]
+- **API 표면 일관성 (API surface parity):** [동일한 변경이 필요할 수 있는 다른 인터페이스]
+- **통합 커버리지 (Integration coverage):** [단위 테스트만으로는 증명할 수 없는 계층 간 시나리오]
+- **변경되지 않는 불변성 (Unchanged invariants):** [이 플랜이 명시적으로 변경하지 않는 기존 API, 인터페이스 또는 동작 — 그리고 새 작업이 이들과 어떻게 관련되는지. 변경 사항이 공유 표면을 건드려 리뷰어에게 영향 범위(blast-radius) 확신이 필요할 때 포함]
 
 ---
 
-## Risks & Dependencies
+## 리스크 및 종속성 (Risks & Dependencies)
 
-| Risk | Mitigation |
+| 리스크 | 완화 방안 |
 |------|------------|
-| [Meaningful risk] | [How it is addressed or accepted] |
+| [의미 있는 리스크] | [어떻게 다루거나 수용하는지] |
 
 ---
 
-## Documentation / Operational Notes
+## 문서화 / 운영 노트 (Documentation / Operational Notes)
 
-- [Docs, rollout, monitoring, or support impacts when relevant]
+- [해당하는 경우, 문서, 롤아웃, 모니터링 또는 지원 영향]
 
 ---
 
-## Sources & References
+## 소스 및 참조 (Sources & References)
 
 - **Origin document:** [docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md](path)
-- Related code: [path or symbol]
-- Related PRs/issues: #[number]
+- Related code: [경로 또는 심볼]
+- Related PRs/issues: #[번호]
 - External docs: [url]
 ```
 
-For larger `Deep` plans, extend the core template only when useful with sections such as:
+더 큰 `Deep` 플랜의 경우, 필요한 경우에만 다음과 같은 섹션들로 코어 템플릿을 확장하십시오.
 
 ```markdown
-## Alternative Approaches Considered
+## 고려된 대안 (Alternative Approaches Considered)
 
-- [Approach]: [Why rejected or not chosen]
-
----
-
-## Success Metrics
-
-- [How we will know this solved the intended problem]
+- [접근 방식]: [거부되었거나 선택되지 않은 이유]
 
 ---
 
-## Dependencies / Prerequisites
+## 성공 지표 (Success Metrics)
 
-- [Technical, organizational, or rollout dependency]
+- [이것이 의도한 문제를 해결했음을 어떻게 알 수 있는지]
 
 ---
 
-## Risk Analysis & Mitigation
+## 종속성 / 전제 조건 (Dependencies / Prerequisites)
 
-| Risk | Likelihood | Impact | Mitigation |
+- [기술적, 조직적 또는 롤아웃 종속성]
+
+---
+
+## 리스크 분석 및 완화 (Risk Analysis & Mitigation)
+
+| 리스크 | 가능성 | 영향 | 완화 방안 |
 |------|-----------|--------|------------|
-| [Risk] | [Low/Med/High] | [Low/Med/High] | [How addressed] |
+| [리스크] | [Low/Med/High] | [Low/Med/High] | [대처 방법] |
 
 ---
 
-## Phased Delivery
+## 단계별 인도 (Phased Delivery)
 
 ### Phase 1
-- [What lands first and why]
+- [먼저 배포될 내용과 이유]
 
 ### Phase 2
-- [What follows and why]
+- [다음에 이어질 내용과 이유]
 
 ---
 
-## Documentation Plan
+## 문서화 플랜 (Documentation Plan)
 
-- [Docs or runbooks to update]
+- [업데이트할 문서 또는 런북]
 
 ---
 
-## Operational / Rollout Notes
+## 운영 / 롤아웃 노트 (Operational / Rollout Notes)
 
-- [Monitoring, migration, feature flag, or rollout considerations]
+- [모니터링, 마이그레이션, 피처 플래그 또는 롤아웃 고려 사항]
 ```
 
-#### 4.3 Planning Rules
+#### 4.3 플래닝 규칙 (Planning Rules)
 
-- **Horizontal rules (`---`) between top-level sections** in Standard and Deep plans, mirroring the `ce-brainstorm` requirements doc convention. Improves scannability of dense plans where many H2 sections sit close together. Omit for Lightweight plans where the whole doc fits on a single screen.
-- **All file paths must be repo-relative** — never use absolute paths like `/Users/name/Code/project/src/file.ts`. Use `src/file.ts` instead. Absolute paths make plans non-portable across machines, worktrees, and teammates. When a plan targets a different repo than the document's home, state the target repo once at the top of the plan (e.g., `**Target repo:** my-other-project`) and use repo-relative paths throughout
-- Prefer path plus class/component/pattern references over brittle line numbers
-- Do not include implementation code — no imports, exact method signatures, or framework-specific syntax
-- Pseudo-code sketches and DSL grammars are allowed in the High-Level Technical Design section and per-unit technical design fields when they communicate design direction. Frame them explicitly as directional guidance, not implementation specification
-- Mermaid diagrams are encouraged when they clarify relationships or flows that prose alone would make hard to follow — ERDs for data model changes, sequence diagrams for multi-service interactions, state diagrams for lifecycle transitions, flowcharts for complex branching logic
-- Do not include git commands, commit messages, or exact test command recipes
-- Do not expand implementation units into micro-step `RED/GREEN/REFACTOR` instructions
-- Do not pretend an execution-time question is settled just to make the plan look complete
+- `ce-brainstorm` 요구사항 문서 컨벤션을 미러링하여 Standard 및 Deep 플랜의 **최상위 섹션 사이에 가로줄(`---`)**을 넣습니다. 많은 H2 섹션이 가깝게 붙어 있는 밀집된 플랜의 탐색 용이성을 높입니다. 전체 문서가 한 화면에 들어오는 Lightweight 플랜의 경우 생략합니다.
+- **모든 파일 경로는 반드시 레포지토리 상대 경로여야 합니다** — 절대 경로(예: `/Users/name/Code/project/src/file.ts`)를 절대 사용하지 마십시오. 대신 `src/file.ts`를 사용하십시오. 절대 경로는 플랜을 다른 머신, worktree 및 팀원 간에 이식할 수 없게 만듭니다. 플랜의 대상이 문서가 저장된 곳과 다른 레포지토리인 경우, 플랜 상단에 대상 레포지토리를 한 번 명시하고(예: `**Target repo:** my-other-project`) 전체에서 레포지토리 상대 경로를 사용하십시오.
+- 깨지기 쉬운 줄 번호 대신 경로와 클래스/컴포넌트/패턴 참조를 선호하십시오.
+- 구현 코드를 포함하지 마십시오 — 임포트문, 정확한 메서드 시그니처 또는 프레임워크 전용 구문 금지.
+- 설계 방향을 전달할 때 High-Level Technical Design 섹션 및 단위별 기술 설계 필드에서 의사 코드 스케치와 DSL 문법이 허용됩니다. 구현 명세가 아닌 방향 가이드로 명시하십시오.
+- 산문만으로는 이해하기 힘든 관계나 흐름을 명확히 할 때 Mermaid 다이어그램 사용을 권장합니다 — 데이터 모델 변경을 위한 ERD, 멀티 서비스 상호작용을 위한 시퀀스 다이어그램, 라이프사이클 전이를 위한 상태 다이어그램, 복잡한 분기 로직을 위한 순서도 등.
+- git 명령, 커밋 메시지 또는 정확한 테스트 명령 레시피를 포함하지 마십시오.
+- 구현 단위를 마이크로 단계인 `RED/GREEN/REFACTOR` 지침으로 확장하지 마십시오.
+- 플랜을 완전해 보이게 만들기 위해 실행 시점의 질문이 해결된 것처럼 꾸미지 마십시오.
 
-#### 4.4 Visual Communication in Plan Documents
+#### 4.4 플랜 문서의 시각적 커뮤니케이션
 
-When the plan contains 4+ implementation units with non-linear dependencies, 3+ interacting surfaces in System-Wide Impact, 3+ behavioral modes/variants in Summary or Problem Frame, or 3+ interacting decisions in Key Technical Decisions or alternatives in Alternative Approaches, read `references/visual-communication.md` for diagram and table guidance. This covers plan-structure visuals (dependency graphs, interaction diagrams, comparison tables) — not solution-design diagrams, which are covered in Section 3.4.
+플랜이 비선형적 종속성을 가진 4개 이상의 구현 단위, System-Wide Impact의 3개 이상의 상호작용 표면, 요약 또는 문제 프레임의 3개 이상의 행동 모드/변형, 또는 Key Technical Decisions의 3개 이상의 상호작용하는 결정 사항이나 Alternative Approaches의 대안들을 포함하는 경우, 다이어그램 및 테이블 가이드를 위해 `references/visual-communication.md`를 읽으십시오. 이는 솔루션 설계 다이어그램(섹션 3.4에서 다룸)이 아닌 플랜 구조 시각화(종속성 그래프, 상호작용 다이어그램, 비교 테이블)를 다룹니다.
 
-### Phase 5: Final Review, Write File, and Handoff
+### Phase 5: 최종 검토, 파일 작성 및 핸드오프
 
-#### 5.1 Review Before Writing
+#### 5.1 작성 전 검토
 
-Before finalizing, check:
-- The plan does not invent product behavior that should have been defined in `ce-brainstorm`
-- If there was no origin document, the bounded planning bootstrap established enough product clarity to plan responsibly
-- Every major decision is grounded in the origin document or research
-- Each implementation unit is concrete, dependency-ordered, and implementation-ready
-- If test-first or characterization-first posture was explicit or strongly implied, the relevant units carry it forward with a lightweight `Execution note`
-- Each feature-bearing unit has test scenarios from every applicable category (happy path, edge cases, error paths, integration) — right-sized to the unit's complexity, not padded or skimped
-- Test scenarios name specific inputs, actions, and expected outcomes without becoming test code
-- Feature-bearing units with blank or missing test scenarios are flagged as incomplete — feature-bearing units must have actual test scenarios, not just an annotation. The `Test expectation: none -- [reason]` annotation is only valid for non-feature-bearing units (pure config, scaffolding, styling)
-- Deferred items are explicit and not hidden as fake certainty
-- If a High-Level Technical Design section is included, it uses the right medium for the work, carries the non-prescriptive framing, and does not contain implementation code (no imports, exact signatures, or framework-specific syntax)
-- Per-unit technical design fields, if present, are concise and directional rather than copy-paste-ready
-- If the plan creates a new directory structure, would an Output Structure tree help reviewers see the overall shape?
-- If Scope Boundaries lists items that are planned work for a separate PR, issue, or repo, are they under `### Deferred to Follow-Up Work` rather than mixed with true non-goals?
-- U-IDs are unique within the plan and follow the stability rule — no two units share an ID; reordering or splitting did not renumber existing units; gaps from deletions are preserved
-- Would a visual aid (dependency graph, interaction diagram, comparison table) help a reader grasp the plan structure faster than scanning prose alone?
+확정하기 전에 다음을 확인하십시오.
+- 플랜이 `ce-brainstorm`에서 정의되었어야 할 제품 동작을 새로 발명하지 않았는지 확인
+- 원본 문서가 없는 경우, 제한된 플래닝 부트스트랩이 책임 있게 플래닝할 수 있을 만큼 충분한 제품 명확성을 설정했는지 확인
+- 모든 주요 결정이 원본 문서 또는 조사에 근거하고 있는지 확인
+- 각 구현 단위가 구체적이고, 종속성에 따라 정렬되었으며, 구현 준비가 되었는지 확인
+- 테스트 우선 또는 캐릭터리제이션 우선 태세가 명시적이거나 강력하게 암시된 경우, 관련 단위가 가벼운 `Execution note`로 이를 계승하는지 확인
+- 기능을 포함하는 각 단위가 모든 해당 카테고리(happy path, edge cases, error paths, integration)의 테스트 시나리오를 갖추었는지 확인 — 단위의 복잡성에 맞게 조정되었으며, 불필요하게 부풀려지거나 부족하지 않아야 함
+- 테스트 시나리오가 테스트 코드가 되지 않으면서 구체적인 입력, 액션 및 예상 결과를 명명하는지 확인
+- 기능을 포함하는 단위의 테스트 시나리오가 비어 있거나 누락된 경우 미완성으로 플래그 지정 — 기능을 포함하는 단위는 단순한 주석이 아닌 실제 테스트 시나리오를 가져야 함. `Test expectation: none -- [reason]` 주석은 기능을 포함하지 않는 단위(단순 설정, 스캐폴딩, 스타일링)에만 유효함
+- 연기된 항목들이 가짜 확신 뒤에 숨겨지지 않고 명시되어 있는지 확인
+- 상위 수준 기술 설계 섹션이 포함된 경우, 작업에 적합한 매체를 사용하고, 비강제적 프레임워크를 갖추었으며, 구현 코드(임포트, 정확한 시그니처, 프레임워크 구문)를 포함하지 않는지 확인
+- 단위별 기술 설계 필드가 있는 경우, 복사-붙여넣기용이 아닌 간결하고 방향성을 제시하는 내용인지 확인
+- 플랜이 새 디렉토리 구조를 생성하는 경우, Output Structure 트리가 리뷰어가 전체 형태를 보는 데 도움이 될지 확인
+- Scope Boundaries에 별도의 PR, 이슈 또는 레포지토리로 예정된 작업이 나열된 경우, 실제 비목표와 섞이지 않고 `### Deferred to Follow-Up Work` 아래에 있는지 확인
+- U-ID가 플랜 내에서 고유하고 안정성 규칙을 따르는지 확인 — 두 단위가 ID를 공유하지 않음; 재정렬이나 분할이 기존 단위의 번호를 바꾸지 않음; 삭제로 인한 공백이 유지됨
+- 시각적 보조 자료(종속성 그래프, 상호작용 다이어그램, 비교 테이블)가 산문만 읽는 것보다 독자가 플랜 구조를 더 빨리 파악하는 데 도움이 될지 확인
 
-If the plan originated from a requirements document, re-read that document and verify:
-- The chosen approach still matches the product intent
-- Scope boundaries and success criteria are preserved
-- Blocking questions were either resolved, explicitly assumed, or sent back to `ce-brainstorm`
-- Every section of the origin document is addressed in the plan — scan each section to confirm nothing was silently dropped
-- If origin supplies A/F/AE IDs: every origin R/F/AE that *affects implementation* is referenced in Requirements, a U-ID unit, test scenarios, verification, scope boundaries, or explicitly deferred. Actors are carried forward when they affect behavior, permissions, UX, orchestration, handoff, or verification. The standard is preservation of product intent, not mandatory ID spam — irrelevant origin IDs may be omitted
-- If origin was Deep-product (origin contains an `Outside this product's identity` subsection): the plan's Scope Boundaries preserves the three-way split — `Deferred for later` and `Outside this product's identity` carried verbatim from origin, `Deferred to Follow-Up Work` reserved for plan-local implementation sequencing
+플랜이 요구사항 문서로부터 생성된 경우, 해당 문서를 다시 읽고 다음을 검증하십시오.
+- 선택된 접근 방식이 여전히 제품 의도와 일치하는지 확인
+- 범위 경계 및 성공 기준이 보존되었는지 확인
+- 차단 질문들이 해결되었거나, 명시적으로 가정되었거나, `ce-brainstorm`으로 다시 보내졌는지 확인
+- 원본 문서의 모든 섹션이 플랜에서 다루어지는지 확인 — 조용히 누락된 것이 없는지 각 섹션을 스캔하여 확인
+- 원본이 A/F/AE ID를 제공하는 경우: *구현에 영향을 미치는* 모든 원본 R/F/AE가 Requirements, U-ID 단위, 테스트 시나리오, 검증, 범위 경계에서 참조되거나 명시적으로 연기되었는지 확인. 액터는 동작, 권한, UX, 오케스트레이션, 전달 또는 검증에 영향을 미칠 때 계승됩니다. 기준은 필수적인 ID 나열이 아니라 제품 의도의 보존이며, 관련 없는 원본 ID는 생략될 수 있습니다.
+- 원본이 Deep-product인 경우 (원본의 Scope Boundaries에 `Outside this product's identity` 하위 섹션이 포함됨): 플랜의 Scope Boundaries가 원본의 `Deferred for later` 및 `Outside this product's identity` 내용을 그대로 계승하고, 플랜 로컬의 구현 순서 조정을 위해 `Deferred to Follow-Up Work`를 별도로 유지하는 3분할 구조를 보존하는지 확인
 
-#### 5.1.5 Brainstorm-Sourced Scope Summary
+#### 5.1.5 브레인스토밍 소스 범위 요약 (Brainstorm-Sourced Scope Summary)
 
-**STOP. Before composing the synthesis, read `references/synthesis-summary.md`.** The discipline rules, prose-summary requirement, three-bucket structure, anti-pattern guidance, soft-cut behavior, self-redirect support, content focus for the brainstorm-sourced variant, doc-body reading rules, and bucket-content routing into plan body sections all live there. Composing a synthesis without these rules loaded reliably produces malformed output — missing prose summary, implementation-detail leakage, the proposal-pitch anti-pattern. This is not optional supplementary reading; it is the source of truth for how the phase behaves.
+**멈추십시오. 종합 요약을 작성하기 전에 `references/synthesis-summary.md`를 읽으십시오.** 훈육 규칙, 산문 요약 요구 사항, 세 개의 버킷 구조, 안티 패턴 가이드, soft-cut 동작, 셀프 리다이렉트 지원, 브레인스토밍 소스 변형을 위한 콘텐츠 중점 사항, 문서 본문 읽기 규칙 및 플랜 본문 섹션으로의 버킷 콘텐츠 라우팅 규칙이 모두 그곳에 있습니다. 이러한 규칙을 로드하지 않고 요약을 작성하면 산문 요약 누락, 구현 세부 사항 유출, 제안 피치 안티 패턴 등 잘못된 형식이 생성될 가능성이 매우 높습니다. 이는 선택적인 보충 읽기 자료가 아니라 해당 페이즈가 어떻게 작동해야 하는지에 대한 소스 오브 트루스입니다.
 
-Surface the agent's plan-time decisions to the user before Phase 5.2 commits the plan to disk — the latest cheap moment to catch plan-time scope errors. The brainstorm already validated WHAT to build; this phase surfaces HOW the plan will execute.
+Phase 5.2에서 플랜을 디스크에 기록하기 전에 에이전트의 플래닝 시점 결정 사항을 사용자에게 제시합니다 — 이는 플래닝 시점의 범위 에러를 잡을 수 있는 마지막으로 저렴한 순간입니다. 브레인스토밍은 이미 무엇(WHAT)을 만들지 검증했습니다. 이 페이즈는 플랜이 어떻게(HOW) 실행될지를 보여줍니다.
 
-Fires **only when the plan was sourced from an upstream brainstorm doc** (Phase 0.2 found a `*-requirements.md` match) AND not on Phase 0.1 fast paths (resume normal, deepen-intent). Skip Phase 5.1.5 in solo invocation — solo plans handled their synthesis in Phase 0.7.
+**플랜이 상위 브레인스토밍 문서로부터 도출된 경우에만** 실행됩니다 (Phase 0.2에서 `*-requirements.md` 일치 항목을 찾음). Phase 0.1 빠른 경로(표준 재개, 심화 의도)일 때는 실행되지 않습니다. 솔로 호출의 경우에는 Phase 5.1.5를 건너뜁니다 — 솔로 플랜은 Phase 0.7에서 요약을 처리했습니다.
 
-**Headless mode**: synthesis is composed but not confirmed (no synchronous user). Proceed to Phase 5.2 plan-write. Inferred bets route to a `## Assumptions` section in the plan instead of Key Technical Decisions. See `references/synthesis-summary.md` Headless mode for the full routing.
+**Headless 모드**: 요약은 작성되지만 확인은 받지 않습니다(동기적 사용자 없음). Phase 5.2 플랜 작성으로 진행합니다. 'Inferred' 베팅 사항은 Key Technical Decisions 대신 플랜의 `## Assumptions` 섹션으로 라우팅됩니다. 전체 라우팅은 `references/synthesis-summary.md`의 Headless 모드를 참조하십시오.
 
-#### 5.2 Write Plan File
+#### 5.2 플랜 파일 작성
 
-**REQUIRED: Write the plan file to disk before presenting any options.**
+**필수: 옵션을 제시하기 전에 플랜 파일을 디스크에 작성하십시오.**
 
-Use the Write tool to save the complete plan to:
+Write 도구를 사용하여 전체 플랜을 다음 위치에 저장합니다.
 
 ```text
-docs/plans/YYYY-MM-DD-NNN-<type>-<descriptive-name>-plan.md
+docs/plans/YYYY/MM/DD-NNN-<type>-<descriptive-name>-plan.md
 ```
 
-Confirm (use absolute path so the reference is clickable in modern terminals):
+확인합니다 (현대적인 터미널에서 참조를 클릭할 수 있도록 절대 경로를 사용하십시오).
 
 ```text
-Plan written to <absolute path to plan>
+Plan written to <플랜에 대한 절대 경로>
 ```
 
-**Pipeline mode:** If invoked from an automated workflow such as LFG or any `disable-model-invocation` context, skip interactive questions. Make the needed choices automatically and proceed to writing the plan.
+**Pipeline 모드:** LFG나 `disable-model-invocation` 컨텍스트와 같은 자동화된 워크플로우에서 호출된 경우, 대화형 질문을 건너뜁니다. 필요한 선택을 자동으로 내리고 플랜 작성 단계로 진행합니다.
 
-#### 5.3 Confidence Check and Deepening
+#### 5.3 신뢰도 체크 및 심화 (Confidence Check and Deepening)
 
-After writing the plan file, automatically evaluate whether the plan needs strengthening.
+플랜 파일을 작성한 후, 플랜을 강화해야 할지 자동으로 평가합니다.
 
-**Two deepening modes:**
+**두 가지 심화 모드:**
 
-- **Auto mode** (default during plan generation): Runs without asking the user for approval. The user sees what is being strengthened but does not need to make a decision. Sub-agent findings are synthesized directly into the plan.
-- **Interactive mode** (activated by the re-deepen fast path in Phase 0.1): The user explicitly asked to deepen an existing plan. Sub-agent findings are presented individually for review before integration. The user can accept, reject, or discuss each agent's findings. Only accepted findings are synthesized into the plan.
+- **Auto 모드** (플랜 생성 중 기본값): 사용자에게 승인을 묻지 않고 실행됩니다. 사용자는 무엇이 강화되고 있는지 보게 되지만 결정을 내릴 필요는 없습니다. 서브 에이전트의 발견 사항은 플랜에 직접 통합됩니다.
+- **Interactive 모드** (Phase 0.1의 re-deepen 빠른 경로에 의해 활성화됨): 사용자가 기존 플랜을 심화해 달라고 명시적으로 요청한 경우입니다. 서브 에이전트의 발견 사항이 통합 전에 검토를 위해 개별적으로 제시됩니다. 사용자는 각 에이전트의 발견 사항을 수락, 거부 또는 논의할 수 있습니다. 수락된 발견 사항만 플랜에 통합됩니다.
 
-Interactive mode exists because on-demand deepening is a different user posture — the user already has a plan they are invested in and wants to be surgical about what changes. This applies whether the plan was generated by this skill, written by hand, or produced by another tool.
+Interactive 모드는 온디맨드 심화가 다른 사용자 태세이기 때문에 존재합니다 — 사용자는 이미 자신이 공들인 플랜을 가지고 있으며 무엇을 변경할지 세밀하게 조정하기를 원합니다. 이는 플랜이 이 스킬에 의해 생성되었든, 직접 작성되었든, 다른 도구에 의해 생성되었든 상관없이 적용됩니다.
 
-`ce-doc-review` and this confidence check are different:
-- Use the `ce-doc-review` skill when the document needs clarity, simplification, completeness, or scope control
-- This confidence check strengthens rationale, sequencing, risk treatment, and system-wide thinking when the plan is structurally sound but still needs stronger grounding
+`ce-doc-review`와 이 신뢰도 체크는 서로 다릅니다:
+- 문서에 명확성, 단순화, 완결성 또는 범위 제어가 필요할 때는 `ce-doc-review` 스킬을 사용하십시오.
+- 이 신뢰도 체크는 플랜이 구조적으로는 견고하지만 근거, 순서, 리스크 처리 및 시스템 전반의 사고를 더 강화해야 할 때 사용합니다.
 
-**Pipeline mode:** This phase always runs in auto mode in pipeline/disable-model-invocation contexts. No user interaction needed.
+**Pipeline 모드:** 파이프라인/disable-model-invocation 컨텍스트에서 이 페이즈는 항상 auto 모드로 실행됩니다. 사용자 상호작용이 필요하지 않습니다.
 
-##### 5.3.1 Classify Plan Depth and Topic Risk
+##### 5.3.1 플랜 깊이 및 주제 리스크 분류
 
-Determine the plan depth from the document:
-- **Lightweight** - small, bounded, low ambiguity, usually 2-4 implementation units
-- **Standard** - moderate complexity, some technical decisions, usually 3-6 units
-- **Deep** - cross-cutting, high-risk, or strategically important work, usually 4-8 units or phased delivery
+문서로부터 플랜 깊이를 결정합니다.
+- **Lightweight** - 작고, 범위가 제한적이며, 모호성이 낮음. 일반적으로 2~4개 구현 단위.
+- **Standard** - 중간 정도의 복잡성, 일부 기술적 결정 포함. 일반적으로 3~6개 단위.
+- **Deep** - 교차 기능적, 고위험 또는 전략적으로 중요한 작업. 일반적으로 4~8개 단위 또는 단계별 인도.
 
-Build a risk profile. Treat these as high-risk signals:
-- Authentication, authorization, or security-sensitive behavior
-- Payments, billing, or financial flows
-- Data migrations, backfills, or persistent data changes
-- External APIs or third-party integrations
-- Privacy, compliance, or user data handling
-- Cross-interface parity or multi-surface behavior
-- Significant rollout, monitoring, or operational concerns
+리스크 프로필을 작성합니다. 다음을 고위험 신호로 취급합니다.
+- 인증, 인가 또는 보안에 민감한 동작
+- 결제, 과금 또는 재무 흐름
+- 데이터 마이그레이션, 백필 또는 영구적인 데이터 변경
+- 외부 API 또는 서드파티 통합
+- 프라이버시, 컴플라이언스 또는 사용자 데이터 처리
+- 인터페이스 간 일관성(parity) 또는 다중 표면 동작
+- 중요한 롤아웃, 모니터링 또는 운영 관련 우려 사항
 
-##### 5.3.2 Gate: Decide Whether to Deepen
+##### 5.3.2 게이트: 심화 여부 결정
 
-- **Lightweight** plans usually do not need deepening unless they are high-risk
-- **Standard** plans often benefit when one or more important sections still look thin
-- **Deep** or high-risk plans often benefit from a targeted second pass
-- **Thin local grounding override:** If Phase 1.2 triggered external research because local patterns were thin (fewer than 3 direct examples or adjacent-domain match), always proceed to scoring regardless of how grounded the plan appears. When the plan was built on unfamiliar territory, claims about system behavior are more likely to be assumptions than verified facts. The scoring pass is cheap — if the plan is genuinely solid, scoring finds nothing and exits quickly
+- **Lightweight** 플랜은 고위험 작업이 아닌 한 대개 심화가 필요하지 않습니다.
+- **Standard** 플랜은 하나 이상의 중요한 섹션이 여전히 빈약해 보일 때 심화를 통해 이득을 얻는 경우가 많습니다.
+- **Deep** 또는 고위험 플랜은 타겟팅된 두 번째 패스를 통해 이득을 얻는 경우가 많습니다.
+- **부족한 로컬 근거 오버라이드 (Thin local grounding override):** 로컬 패턴이 부족하여(직접적인 예시가 3개 미만이거나 인접 도메인만 일치) Phase 1.2에서 외부 조사가 트리거된 경우, 플랜이 얼마나 견고해 보이는지와 관계없이 항상 스코어링 단계로 진행합니다. 익숙하지 않은 영역에서 작성된 플랜은 시스템 동작에 대한 주장이 검증된 사실보다 가정일 가능성이 높기 때문입니다. 스코어링 패스는 비용이 저렴합니다 — 플랜이 진정으로 견고하다면 스코어링 결과가 없을 것이며 빠르게 종료됩니다.
 
-If the plan already appears sufficiently grounded and the thin-grounding override does not apply, report "Confidence check passed — no sections need strengthening", then **load `references/plan-handoff.md` now and execute 5.3.8 → 5.3.9 → 5.4 in sequence**. Document review is mandatory — do not skip it because the confidence check passed. The two tools catch different classes of issues.
+플랜이 이미 충분히 근거가 있는 것으로 보이고 부족한 근거 오버라이드가 적용되지 않는 경우, "Confidence check passed — no sections need strengthening"이라고 보고한 후, **지금 `references/plan-handoff.md`를 로드하고 5.3.8 → 5.3.9 → 5.4를 순서대로 실행하십시오**. 문서 리뷰(ce-doc-review)는 필수 사항입니다 — 신뢰도 체크를 통과했다는 이유로 건너뛰지 마십시오. 두 도구는 서로 다른 종류의 이슈를 잡아냅니다.
 
-##### 5.3.3–5.3.7 Deepening Execution
+##### 5.3.3–5.3.7 심화 실행
 
-When deepening is warranted, read `references/deepening-workflow.md` for confidence scoring checklists, section-to-agent dispatch mapping, execution mode selection, research execution, interactive finding review, and plan synthesis instructions. Execute steps 5.3.3 through 5.3.7 from that file, then return here for 5.3.8.
+심화가 보증되는 경우, 신뢰도 스코어링 체크리스트, 섹션별 에이전트 할당 매핑, 실행 모드 선택, 조사 실행, 대화형 발견 사항 검토 및 플랜 통합 지침을 위해 `references/deepening-workflow.md`를 읽으십시오. 해당 파일의 5.3.3부터 5.3.7 단계를 실행한 후, 5.3.8을 위해 여기로 돌아오십시오.
 
-##### 5.3.8–5.4 Document Review, Final Checks, and Post-Generation Options
+##### 5.3.8–5.4 문서 리뷰, 최종 확인 및 생성 후 옵션
 
-**STOP. Load `references/plan-handoff.md` now before continuing.** It carries the full instructions for 5.3.8 (document review), 5.3.9 (final checks and cleanup), and 5.4 (post-generation handoff, including the Proof HITL flow, post-HITL re-review, and Issue Creation branching). **This load is non-optional** — without it, the agent renders the post-generation menu, captures the user's selection, and stops without firing the routed action. Document review at 5.3.8 is also mandatory regardless of whether the confidence check already ran. The default mode is headless (`mode:headless`) — `safe_auto` fixes apply silently, remaining findings surface contextually above the menu, and a deeper interactive review is opt-in via free-form prompt.
+**멈추십시오. 계속하기 전에 지금 `references/plan-handoff.md`를 로드하십시오.** 여기에는 5.3.8(문서 리뷰), 5.3.9(최종 확인 및 정리) 및 5.4(Proof HITL 흐름, post-HITL 재리뷰 및 이슈 생성 분기를 포함한 생성 후 핸드오프)에 대한 전체 지침이 포함되어 있습니다. **이 로드는 필수 사항입니다** — 로드하지 않으면 에이전트가 생성 후 메뉴를 렌더링하고 사용자의 선택을 캡처한 뒤, 라우팅된 액션을 실행하지 않고 멈춰버립니다. 5.3.8의 문서 리뷰 역시 신뢰도 체크 실행 여부와 관계없이 필수입니다. 기본 모드는 headless(`mode:headless`)입니다 — `safe_auto` 수정은 조용히 적용되고, 남은 발견 사항은 메뉴 위에 컨텍스트와 함께 표시되며, 더 깊은 대화형 리뷰는 자유 형식 프롬프트를 통해 선택할 수 있습니다.
 
-After document review and final checks, print a one-line summary of the headless review state above the menu (e.g., `Doc review applied 3 fixes. 2 decisions, 1 proposed fix, 4 FYI observations remain (1 at P1).`), then present the menu. The menu has 5 options when actionable findings remain (`proposed_fixes_count + decisions_count > 0`) and 4 options otherwise — including the FYI-only case, which hides option 2 because ce-doc-review's walkthrough is gated to actionable findings and would have nothing to walk through. See `references/plan-handoff.md` for the full rule. Render the 5-option menu as a numbered list in chat per the AGENTS.md narrow exception for legitimate option overflow, with the hint "Pick a number or describe what you want." On platforms whose blocking question tool has no option cap (Codex `request_user_input`, Pi `ask_user`), use the platform's blocking tool; when that tool is unavailable or errors (e.g., Codex edit modes where `request_user_input` is not exposed), fall back to the same numbered-list-in-chat rendering with the "Pick a number or describe what you want." hint. The 4-option case routes through the platform's blocking tool normally (`AskUserQuestion` in Claude Code — call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), with the same numbered-list-in-chat fallback when no blocking tool is available or the call errors. Never silently skip the question.
+문서 리뷰 및 최종 확인 후, 메뉴 위에 headless 리뷰 상태에 대한 한 줄 요약을 출력합니다 (예: `Doc review applied 3 fixes. 2 decisions, 1 proposed fix, 4 FYI observations remain (1 at P1).`). 그 후 메뉴를 제시합니다. 실행 가능한 발견 사항이 남은 경우(`proposed_fixes_count + decisions_count > 0`) 메뉴는 5가지 옵션을 가지며, 그렇지 않은 경우(FYI 전용 상태 포함) 4가지 옵션을 가집니다. 후자의 경우 `ce-doc-review`의 워크스루가 실행 가능한 발견 사항으로 제한되어 있어 검토할 항목이 없으므로 옵션 2가 숨겨집니다. 전체 규칙은 `references/plan-handoff.md`를 참조하십시오. AGENTS.md의 정당한 옵션 초과에 대한 좁은 예외 조항에 따라 5개 옵션 메뉴를 채팅에 번호 리스트로 렌더링하고, "Pick a number or describe what you want."라는 힌트를 추가하십시오. 옵션 제한이 없는 플랫폼의 차단 질문 도구(Codex의 `request_user_input`, Pi의 `ask_user`)를 사용하는 경우 해당 플랫폼 도구를 사용하십시오. 해당 도구를 사용할 수 없거나 에러가 발생하는 경우(예: `request_user_input`이 노출되지 않는 Codex 편집 모드)에는 동일하게 채팅 내 번호 리스트 렌더링과 힌트를 사용하십시오. 4개 옵션의 경우 평소대로 플랫폼의 차단 도구를 통해 라우팅합니다 (Claude Code의 `AskUserQuestion` — 스키마가 로드되지 않은 경우 `ToolSearch`를 먼저 호출). 질문 도구가 없거나 에러 발생 시 동일한 번호 리스트 폴백을 사용합니다. 질문을 조용히 건너뛰지 마십시오.
 
-**Question:** "Plan ready at `<absolute path to plan>`. What would you like to do next?" (use absolute path so the reference is clickable in modern terminals)
+**질문:** "Plan ready at `<플랜에 대한 절대 경로>`. What would you like to do next?" (현대적인 터미널에서 참조를 클릭할 수 있도록 절대 경로를 사용하십시오)
 
-**Options (5 when actionable findings remain; option 2 dropped and remaining options renumbered otherwise — including FYI-only state):**
-1. **Start `/ce-work`** (recommended) - Begin implementing this plan in the current session
-2. **Run deeper doc review** - Walk through the remaining findings interactively (full ce-doc-review walkthrough)
-3. **Create Issue** - Create a tracked issue from this plan in your configured issue tracker (GitHub or Linear)
-4. **Open in Proof (web app) — review and comment to iterate with the agent** - Open the doc in Every's Proof editor, iterate with the agent via comments, or copy a link to share with others
-5. **Done for now** - Pause; the plan file is saved and can be resumed later
+**옵션 (실행 가능한 발견 사항이 남은 경우 5개; 그렇지 않으면 옵션 2를 제거하고 번호를 다시 매긴 4개 — FYI 전용 상태 포함):**
+1. **Start `/ce-work`** (권장) - 현재 세션에서 이 플랜 구현 시작
+2. **Run deeper doc review** - 남은 발견 사항들을 대화형으로 검토 (전체 ce-doc-review 워크스루 실행)
+3. **Create Issue** - 설정된 이슈 트래커(GitHub 또는 Linear)에 이 플랜으로 추적되는 이슈 생성
+4. **Open in Proof (web app) — review and comment to iterate with the agent** - Every의 Proof 에디터에서 문서를 열고, 코멘트를 통해 에이전트와 반복 작업하거나 다른 사람과 공유할 링크 복사
+5. **Done for now** - 중단; 플랜 파일이 저장되었으며 나중에 재개 가능
 
-**Routing.** Act on the user's selection — do not just announce it. Elaborate sub-flows (Proof HITL state machine, Issue Creation tracker detection, post-HITL resync) live in `references/plan-handoff.md`.
+**라우팅.** 사용자의 선택에 따라 행동하십시오 — 단순히 안내만 하지 마십시오. 상세한 하위 흐름(Proof HITL 상태 머신, 이슈 생성 트래커 감지, post-HITL 재동기화)은 `references/plan-handoff.md`에 있습니다.
 
-- **Start `/ce-work`** — Invoke the `ce-work` skill via the platform's skill-invocation primitive (`Skill` in Claude Code, `Skill` in Codex, the equivalent on Gemini/Pi), passing the plan path as the skill argument. Do not merely tell the user to type `/ce-work` — fire the invocation now so the plan executes in this session.
-- **Run deeper doc review** — Re-invoke the `ce-doc-review` skill on the plan path **without** `mode:headless` so the interactive routing question and walkthrough fire. After it returns, re-render this menu with refreshed counts so the user can pick a next-stage action.
-- **Create Issue** — Detect the project tracker (`gh` for GitHub, `linear` for Linear) and create the issue from the plan file as described under "Issue Creation" in `references/plan-handoff.md`. After creation, display the issue URL and ask whether to proceed to `/ce-work` via the platform's blocking question tool.
-- **Open in Proof (web app) — review and comment to iterate with the agent** — Load the `ce-proof` skill in HITL-review mode with the plan file as `source file`, the plan title as `doc title`, identity `ai:compound-engineering` / `Compound Engineering`, and recommended next step `/ce-work`. Then follow the post-HITL resync logic in `references/plan-handoff.md`, which handles the four `ce-proof` return statuses, re-runs `ce-doc-review` after material edits, and falls back gracefully on upload failure.
-- **Done for now** — Display a brief confirmation that the plan file is saved and end the turn. Do not start follow-up work without an explicit further user prompt.
+- **Start `/ce-work`** — 플랫폼의 스킬 호출 프리미티브(Claude Code의 `Skill`, Codex의 `Skill`, Gemini/Pi의 동등한 도구)를 통해 `ce-work` 스킬을 호출하고 플랜 경로를 스킬 인자로 전달합니다. 사용자에게 단순히 `/ce-work`를 입력하라고 말하지 마십시오. 이번 세션에서 플랜이 바로 실행되도록 지금 호출을 실행하십시오.
+- **Run deeper doc review** — `mode:headless` **없이** 플랜 경로에 대해 `ce-doc-review` 스킬을 다시 호출하여 대화형 라우팅 질문과 워크스루가 실행되게 합니다. 반환된 후, 사용자가 다음 단계 액션을 선택할 수 있도록 갱신된 개수와 함께 이 메뉴를 다시 렌더링합니다.
+- **Create Issue** — 프로젝트 트래커(GitHub의 경우 `gh`, Linear의 경우 `linear`)를 감지하고 `references/plan-handoff.md`의 "Issue Creation" 섹션에 기술된 대로 플랜 파일로부터 이슈를 생성합니다. 생성 후 이슈 URL을 표시하고 플랫폼의 차단 질문 도구를 통해 `/ce-work`로 진행할지 묻습니다.
+- **Open in Proof (web app) — review and comment to iterate with the agent** — 플랜 파일을 `source file`로, 플랜 제목을 `doc title`로, 정체성을 `ai:compound-engineering` / `Compound Engineering`으로, 권장되는 다음 단계를 `/ce-work`로 설정하여 HITL 리뷰 모드로 `ce-proof` 스킬을 로드합니다. 그 후 `references/plan-handoff.md`의 post-HITL 재동기화 로직을 따릅니다. 이 로직은 4가지 `ce-proof` 반환 상태를 처리하고, 실질적인 수정 후 `ce-doc-review`를 재실행하며, 업로드 실패 시 우아하게 폴백합니다.
+- **Done for now** — 플랜 파일이 저장되었다는 짧은 확인 메시지를 표시하고 턴을 마칩니다. 사용자의 명시적인 추가 프롬프트 없이 후속 작업을 시작하지 마십시오.
 
-If the user types free-form prompts targeting the findings (e.g., "review", "walk through", "deep review"), route as if they picked `Run deeper doc review` — fire the skill rather than looping back to the menu. For other free-text revisions, accept the input and loop back to this menu after applying the revision.
+사용자가 발견 사항을 겨냥한 자유 형식 프롬프트를 입력하는 경우(예: "review", "walk through", "deep review"), `Run deeper doc review`를 선택한 것처럼 라우팅합니다 — 메뉴로 돌아가는 대신 스킬을 실행하십시오. 다른 자유 텍스트 수정 요청의 경우, 입력을 수락하고 수정을 적용한 뒤 이 메뉴로 돌아옵니다.
 
-**Completion check:** This skill is not complete until the post-generation menu above has been presented, the user has selected an action, and the inline routing for that selection has been executed. Presenting the menu and stopping at the user's selection is not completion — fire the routed action.
+**완료 확인:** 이 스킬은 위의 생성 후 메뉴가 제시되고, 사용자가 액션을 선택하고, 해당 선택에 대한 인라인 라우팅이 실행될 때까지 완료된 것이 아닙니다. 메뉴를 제시하고 사용자의 선택에서 멈추는 것은 완료가 아닙니다 — 라우팅된 액션을 실행하십시오.
 
-**Pipeline mode exception:** In LFG or any `disable-model-invocation` context, skip the interactive menu and return control to the caller after the plan file is written, confidence check has run, and `ce-doc-review` has run in headless mode (per `references/plan-handoff.md`).
+**파이프라인 모드 예외:** LFG나 `disable-model-invocation` 컨텍스트인 경우, 대화형 메뉴를 건너뛰고 플랜 파일이 작성되고, 신뢰도 체크가 실행되고, `ce-doc-review`가 headless 모드로 실행된 후(`references/plan-handoff.md` 참조) 호출자에게 제어권을 반환합니다.

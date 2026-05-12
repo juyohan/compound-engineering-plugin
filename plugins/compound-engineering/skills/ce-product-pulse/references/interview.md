@@ -1,260 +1,260 @@
-# Product Pulse First-Run Interview
+# Product Pulse 초기 실행 인터뷰
 
-Loaded by `SKILL.md` at the start of Phase 1. Captures the configuration that will be merged into `.compound-engineering/config.local.yaml` (the unified CE local config, gitignored, machine-local) as `pulse_*` keys and re-read on every subsequent run.
+Phase 1 시작 시 `SKILL.md`에 의해 로드됩니다. `.compound-engineering/config.local.yaml`(통합 CE 로컬 설정 파일, gitignore 대상, 머신 로컬 전용)에 `pulse_*` 키로 병합되어 저장되며, 이후 모든 실행 시마다 다시 읽어옵니다.
 
-For each section: ask the opening question, evaluate the answer against the quality bar, push back when it falls into a named anti-pattern, and capture the final answer in the user's own language.
+각 섹션에 대해: 시작 질문을 하고, 답변이 품질 기준을 충족하는지 평가하며, 정해진 안티 패턴(anti-pattern)에 해당하는 경우 개선을 권고하고, 최종 답변을 사용자의 언어로 캡처하십시오.
 
-## Overall Rules
+## 전체 규칙
 
-1. **Push back, but don't spiral.** One round of pushback per section max. If the second answer still isn't usable, capture what the user gave, flag it in the config as `needs-review`, and move on.
-2. **Name events in the user's own words.** The config will be readable by the whole team - use the terms they actually use, not a generic template.
-3. **Ask about tools, not credentials.** The interview captures *which* tool and *what shape of query*. It does not collect API keys, tokens, or database passwords. Those stay in the user's environment.
-4. **Honor strategy seeds.** If `SKILL.md` Phase 1.0 surfaced a product name or a list of key metrics from `STRATEGY.md`, start with those as defaults and let the user edit. Do not re-ask questions that the strategy doc already answered unambiguously.
-5. **Evaluate metrics against the SMART bar.** Every event, metric, and signal the user proposes should be:
-   - **Specific** - a named event or a named metric, not a category. `message_sent` passes; "engagement" does not.
-   - **Measurable** - you can point to the tool and query that returns a number. "Users like it" does not pass; "NPS score from Delighted" does.
-   - **Actionable** - if the number moves, the team knows what to do next. "Daily active users" alone usually fails this - pair it with a conversion or retention signal that surfaces a decision.
-   - **Relevant** - ties to the product's target problem and persona (from the strategy doc if seeded). Generic funnel metrics that don't connect to the strategy are suspect.
-   - **Timely** - reads in the pulse window (24h, 7d, etc.) and reflects the current state. Lagging metrics that only move quarterly don't belong in a daily pulse.
+1. **개선을 권고하되 집착하지 마십시오.** 섹션당 최대 한 번만 다시 물어보십시오. 두 번째 답변도 사용하기 어렵다면 사용자가 제공한 내용을 그대로 캡처하고, 설정 파일에 `needs-review` 플래그를 표시한 후 다음으로 넘어가십시오.
+2. **이벤트 이름은 사용자의 용어를 사용하십시오.** 설정 파일은 팀 전체가 읽게 됩니다. 범용적인 템플릿 용어 대신 팀에서 실제로 사용하는 용어를 사용하십시오.
+3. **자격 증명(credentials)이 아닌 도구에 대해 물어보십시오.** 인터뷰는 *어떤* 도구를 사용하는지와 *쿼리의 형태*가 어떠한지를 캡처합니다. API 키, 토큰, 데이터베이스 비밀번호 등은 수집하지 않습니다. 이러한 정보는 사용자의 환경에 유지되어야 합니다.
+4. **전략 기반 데이터를 존중하십시오.** `SKILL.md` Phase 1.0에서 `STRATEGY.md`의 제품 이름이나 주요 지표 목록이 확인되었다면, 이를 기본값으로 제시하고 사용자가 수정할 수 있게 하십시오. 전략 문서에서 이미 명확히 답변된 질문을 다시 묻지 마십시오.
+5. **지표를 SMART 기준에 따라 평가하십시오.** 사용자가 제안하는 모든 이벤트, 지표, 신호는 다음과 같아야 합니다:
+   - **Specific (구체적)** - 카테고리가 아닌 명명된 이벤트나 지표여야 합니다. `message_sent`는 통과하지만 "참여도"는 통과하지 못합니다.
+   - **Measurable (측정 가능)** - 도구를 통해 수치를 반환하는 쿼리를 지정할 수 있어야 합니다. "사용자가 좋아함"은 통과하지 못하며, "Delighted의 NPS 점수"는 통과합니다.
+   - **Actionable (실행 가능)** - 수치가 변했을 때 팀이 다음에 무엇을 해야 할지 알 수 있어야 합니다. "일일 활성 사용자(DAU)" 단독으로는 보통 통과하지 못합니다 - 의사결정을 이끌어낼 수 있는 전환 또는 리텐션 신호와 결합하십시오.
+   - **Relevant (관련성)** - 제품의 목표 문제 및 페르소나와 연결되어야 합니다 (전략 문서 내용 기반). 전략과 연결되지 않는 일반적인 퍼널 지표는 지양하십시오.
+   - **Timely (적시성)** - Pulse 윈도우(24h, 7d 등) 내에서 읽을 수 있고 현재 상태를 반영해야 합니다. 분기별로만 변하는 지연 지표는 일일 Pulse에 적합하지 않습니다.
 
-   When a user proposes a metric that fails one of these, push back by naming the specific dimension: "That sounds more like a vanity metric than an actionable one - if it moves, what do we do? Is there a tighter signal that would drive a decision?" Do not use the word "SMART" with the user; use the plain-English question.
-
----
-
-## 1. Product Name
-
-**Opening question:**
-
-- If seeded from strategy: "Product name from strategy is `{{name}}`. Keep it or edit?"
-- Otherwise: "What's the product called?"
-
-No pushback needed. Capture verbatim.
+   사용자가 이 중 하나라도 실패하는 지표를 제안하면, 구체적인 차원을 언급하며 개선을 권고하십시오: "그것은 실행 가능한 지표라기보다는 허수 지표(vanity metric)에 가까워 보입니다. 수치가 변했을 때 우리가 무엇을 할 수 있을까요? 의사결정에 도움이 될 더 명확한 신호가 있을까요?" 사용자에게 "SMART"라는 단어를 직접 사용하지 말고 일상적인 언어로 질문하십시오.
 
 ---
 
-## 2. Primary Engagement Event
+## 1. 제품 이름 (Product Name)
 
-**Opening question:** "When someone is using your product, what single event fires? The one that tells you a user is active right now."
+**시작 질문:**
 
-This is the heartbeat of the pulse. Pick one event - the one that represents a user actually using the product, not opening a page.
+- 전략 문서에 내용이 있는 경우: "전략 문서의 제품 이름은 `{{name}}`입니다. 그대로 유지할까요, 수정할까요?"
+- 없는 경우: "제품 이름이 무엇인가요?"
 
-**Apply the SMART bar** (see Overall Rules). The event must be specific (a named event), measurable (the analytics tool returns a count), actionable (if it moves, the team notices), relevant (ties to the product's job), and timely (reads cleanly in short windows).
-
-**Engagement vs value test.** After the user names an event, ask yourself: does this event fire when the user is *using* the product, or when the user has *gotten value* from it? Engagement is earlier (they're in it). Value is later (it worked). If the candidate is really value-realization, push back: "That sounds like the moment the product *worked* for them. What event happens earlier - when they're in the middle of using it? The value event belongs in section 3." Common slips: `agent_accepted_draft` (value) vs `agent_received_draft` (engagement); `ride_completed` (value) vs `ride_started` (engagement); `question_answered_correctly` (value) vs `question_asked` (engagement).
-
-**Anti-patterns and pushback:**
-
-- **Page view or visit** ("pageview", "app opened", "login") -> "Those tell you someone showed up. I'm looking for the event that says they actually *used* the product. What fires when a user is doing the thing the product is for?"
-- **Multiple events with no clear primary** ("well, it could be X or Y or Z depending on the flow") -> "For the pulse, pick the one that's closest to 'a user is active using the core product.' If two candidates are genuinely tied, pick the one that happens *when the user spends time in exchange for value* - for async products that's usually 'contributed content' over 'opened app'."
-- **Too deep in the funnel** ("purchase_completed") -> "That's a conversion event - we'll capture that separately. For the primary engagement event, what happens earlier - when they're using the product, not when they've already converted?"
-- **Vague** ("interaction", "activity") -> "Is there a specific event name in your analytics tool? I want to write down the literal event name so this is repeatable."
-
-**Capture:** Event name verbatim (e.g., `message_sent`, `document_edited`, `ride_started`). Plus a one-line description of what it means.
+개선 권고가 필요 없습니다. 그대로 캡처하십시오.
 
 ---
 
-## 3. Value-Realization Event
+## 2. 기본 참여 이벤트 (Primary Engagement Event)
 
-**Opening question:** "What event fires when a user actually gets value - when the product delivered what they came for?"
+**시작 질문:** "사용자가 제품을 사용할 때 발생하는 단일 이벤트는 무엇인가요? 사용자가 현재 활성 상태임을 알려주는 바로 그 이벤트입니다."
 
-Different from engagement. Engagement says "they're using it"; value-realization says "they got what they wanted." Some products have a clear distinction (engagement: `typed_in_box`; value: `got_useful_answer`); for others it's the same event (engagement: `ride_requested`; value: `ride_completed`).
+이것은 Pulse의 심장 박동과 같습니다. 사용자가 단순히 페이지를 여는 것이 아니라, 실제로 제품을 사용하고 있음을 나타내는 이벤트를 하나 선택하십시오.
 
-**Apply the SMART bar.** The bar here is the same - specific, measurable, actionable, relevant, timely - and the proxy test is especially important because value-realization is often felt, not fired.
+**SMART 기준 적용** (전체 규칙 참조). 이벤트는 구체적(명명된 이벤트)이고, 측정 가능(분석 도구가 카운트를 반환)하며, 실행 가능(변동 시 팀이 인지)하고, 관련성(제품의 역할과 연결)이 있으며, 적시성(짧은 기간 내에 명확히 읽힘)이 있어야 합니다.
 
-**Anti-patterns and pushback:**
+**참여(Engagement) vs 가치(Value) 테스트.** 사용자가 이벤트 이름을 말한 후 스스로 질문해 보십시오: 이 이벤트가 사용자가 제품을 *사용 중일 때* 발생하나요, 아니면 제품으로부터 *가치를 얻었을 때* 발생하나요? 참여는 더 이른 시점(사용 중)이고, 가치는 더 늦은 시점(결과 발생)입니다. 제안된 이벤트가 실제로는 가치 실현에 가깝다면 개선을 권고하십시오: "그것은 제품이 사용자에게 *동작한* 순간처럼 들립니다. 사용자가 사용 중인 중간 단계에서 더 일찍 발생하는 이벤트는 무엇인가요? 가치 이벤트는 섹션 3에서 다룰 예정입니다." 흔한 실수 예시: `agent_accepted_draft` (가치) vs `agent_received_draft` (참여); `ride_completed` (가치) vs `ride_started` (참여); `question_answered_correctly` (가치) vs `question_asked` (참여).
 
-- **Same as engagement event, accidentally** -> "Is that the same as the engagement event you gave me? If so, that's fine - some products have one event that covers both. Want to confirm, or is there a later signal that says 'this user got the thing they came for'?"
-- **Revenue event** ("purchase") -> "Purchase is a conversion event - we'll capture that separately. For value-realization, I'm looking for the moment a user knows the product worked for them, which is usually before or separate from payment."
-- **Value is a feeling, not an event** ("they feel like the team aligned", "they trust the output") -> "That's real, but we can't measure a feeling directly in the pulse. What's a proxy event that correlates? Common patterns: a completion event (workflow finished), a time-to-first-X metric (seconds from open to output), a short-window return rate (came back the next day), or a copy/share/export event (took the output into their actual work). Pick the one closest to the feeling."
-- **Can't name one** -> "That's useful to know. If there's no discrete event, is there a session or workflow *completion* that stands in? Something like 'they finished the task they opened the product to do.' If not, we'll treat engagement as the value proxy and note it in the config."
+**안티 패턴 및 개선 권고:**
 
-**Capture:** Event name verbatim, or `same-as-engagement` with a note, or `not-defined` with a note.
+- **페이지 뷰 또는 방문** ("pageview", "app opened", "login") -> "그것은 누군가 나타났다는 것만 알려줍니다. 사용자가 실제로 제품을 *사용*했다는 이벤트를 찾고 있습니다. 사용자가 제품의 본래 목적에 맞는 행동을 할 때 발생하는 것은 무엇인가요?"
+- **명확한 우선순위 없이 여러 이벤트 나열** ("플로우에 따라 X일 수도 있고 Y나 Z일 수도 있어요") -> "Pulse를 위해 '핵심 제품을 활발히 사용 중'인 상태에 가장 가까운 것을 하나 고르십시오. 두 후보가 막상막하라면, 사용자가 *가치를 대가로 시간을 소비할 때* 발생하는 것을 고르십시오. 비동기 제품의 경우 보통 '앱 열기'보다는 '콘텐츠 기여'가 해당됩니다."
+- **퍼널의 너무 깊은 단계** ("purchase_completed") -> "그것은 전환 이벤트입니다 - 나중에 별도로 캡처할 예정입니다. 기본 참여 이벤트로는 전환하기 전, 제품을 사용 중일 때 발생하는 더 이른 단계의 이벤트가 무엇인가요?"
+- **모호함** ("interaction", "activity") -> "분석 도구에 기록되는 구체적인 이벤트 이름이 있나요? 반복 가능하도록 실제 이벤트 이름을 기록하고 싶습니다."
 
----
-
-## 4. Completion or Conversion Events
-
-**Opening question:** "Any conversion or completion events worth tracking - signups, upgrades, trial starts, purchases?"
-
-Optional section. 0-3 events is typical.
-
-**Apply the SMART bar** (see Overall Rules). Each conversion event should tie to a decision: if `trial_started` moves ±20%, what would the team do? If the answer is "nothing", the event is a vanity metric and shouldn't be in the pulse.
-
-**Anti-patterns and pushback:**
-
-- **Long list** ("we have 12 of them") -> "Pick the top 3 that move the business. The others can be queried ad-hoc when you want; the pulse keeps the top 3."
-- **Non-actionable conversion** ("email_opens", "logo_impressions") -> "If that number swings, what do we do? If the answer is 'nothing,' it's a vanity metric. What's a tighter signal further down the funnel?"
-
-**Capture:** List of 0-3 event names with one-line descriptions each.
+**캡처:** 이벤트 이름 그대로 (예: `message_sent`, `document_edited`, `ride_started`). 그리고 그것이 무엇을 의미하는지에 대한 한 줄 설명을 포함하십시오.
 
 ---
 
-## 5. Quality Scoring (optional, AI products)
+## 3. 가치 실현 이벤트 (Value-Realization Event)
 
-**Opening question:** "Is this an AI product where a conversation or session could be rated for quality? If yes, I'll sample up to 10 sessions per run and score each 1-5 on a dimension you define. Say no if this isn't applicable."
+**시작 질문:** "사용자가 실제로 가치를 얻었을 때, 즉 제품이 사용자가 원하던 결과를 제공했을 때 발생하는 이벤트는 무엇인가요?"
 
-If the user opts in, ask: "What dimension should sessions be scored on? (e.g., 'got to a useful answer', 'response was accurate', 'no hallucinations')."
+참여 이벤트와는 다릅니다. 참여는 "사용 중임"을 나타내고, 가치 실현은 "원하는 것을 얻었음"을 나타냅니다. 어떤 제품은 이 둘이 명확히 구분되지만(참여: `typed_in_box`; 가치: `got_useful_answer`), 어떤 제품은 동일한 이벤트일 수도 있습니다(참여: `ride_requested`; 가치: `ride_completed`).
 
-**Pushback:**
+**SMART 기준 적용.** 기준은 동일합니다(구체적, 측정 가능, 실행 가능, 관련성, 적시성). 가치 실현은 종종 시스템 이벤트가 아닌 사용자의 체감으로 나타나기 때문에 대리 측정치(proxy) 테스트가 특히 중요합니다.
 
-- **Vague dimension** ("quality", "goodness", "helpful", "good response") -> "Quality on what axis specifically? The dimension should be something a human could look at a transcript and judge consistently."
-- **Multiple dimensions** ("accurate AND actionable") -> "Start with one. You can add dimensions by editing the config later. Keeping it at one keeps the scores comparable across runs. Which matters more right now?"
-- **Reviewability test** - after the user names a dimension, apply this check silently: could two separate reviewers look at the same session and agree on the score? If no, push back once: "Let's tighten this - what would make a reviewer score this a 5 vs a 3? If you can name the distinction in one sentence, the dimension is tight enough." If the user can answer, capture it as a scoring note alongside the dimension. If they can't, flag the dimension `needs-review` and move on.
+**안티 패턴 및 개선 권고:**
 
-**Capture:** opt-in (yes/no), dimension (if opted in), scoring note (1 sentence distinguishing 5 from 3), scoring discipline reminder ("default to 4-5; reserve 1-3 for clear failures").
+- **실수로 참여 이벤트와 동일하게 설정** -> "앞서 말씀하신 참여 이벤트와 동일한가요? 그렇다면 괜찮습니다 - 어떤 제품은 하나의 이벤트가 둘 다를 커버하기도 하니까요. 확인하고 싶으신가요, 아니면 '이 사용자가 원하는 것을 얻었다'는 더 나중의 신호가 따로 있을까요?"
+- **수익 이벤트** ("purchase") -> "구매는 전환 이벤트입니다. 가치 실현 이벤트로는 결제 여부와 상관없이 사용자가 제품이 효과가 있었다고 느끼는 순간을 찾고 있습니다."
+- **이벤트가 아닌 감정으로 표현** ("팀이 정렬된 느낌을 받음", "결과를 신뢰함") -> "중요한 포인트지만 Pulse에서 감정을 직접 측정할 수는 없습니다. 이와 상관관계가 있는 대리 이벤트는 무엇일까요? 흔한 패턴: 완료 이벤트(워크플로우 종료), 첫 X까지의 시간(open에서 output까지의 시간), 짧은 기간 내 재방문율, 또는 복사/공유/내보내기 이벤트(결과물을 실제 작업으로 가져감). 그 감정에 가장 가까운 것을 하나 고르십시오."
+- **이름을 정할 수 없음** -> "알겠습니다. 별도의 이벤트가 없다면 대신할 수 있는 세션 또는 워크플로우 *완료* 이벤트가 있을까요? 예를 들어 '제품을 켠 목적을 달성하고 작업을 마침'과 같은 것입니다. 없다면 참여 이벤트를 가치 대리 측정치로 간주하고 설정에 기록하겠습니다."
 
----
-
-## 6. Data Sources
-
-**Opening framing:** "Now we wire up the connections needed to actually report on the events and metrics you've named. The goal is the smallest set of sources that covers everything above - one source can be enough. Let's walk through each metric."
-
-### 6.0 Build the metric-to-source list
-
-Compile the full list of signals that need a source:
-
-- The primary engagement event (section 2)
-- The value-realization event (section 3), if different from engagement
-- Each completion/conversion event (section 4)
-- Each key metric carried from the strategy doc, if strategy was seeded
-
-For each entry, ask one question: "Where does `{{event or metric}}` live? Name the tool (e.g. Mixpanel, PostHog, Amplitude, Stripe, internal DB) and how the agent would query it."
-
-The answer produces (tool name, query shape). If multiple entries land in the same tool, consolidate them into one source entry.
-
-**Persist per-strategy-metric source mapping.** For each strategy metric whose source differs from the default (`pulse_analytics_source` for analytics-class metrics, `pulse_payments_source` for revenue/payments-class metrics, etc.), record the override in `pulse_metric_sources` as a `metric=source` pair. Example: if `pulse_analytics_source` is `posthog` but `nps` is captured in Delighted, write `pulse_metric_sources: "nps=delighted"`. Strategy metrics whose source matches the class default do not need an entry. Without this mapping, multi-source setups silently lose the per-metric routing between runs.
-
-**Dual-source arbitration.** If a single signal could be answered from two different sources (e.g., both PostHog and a read-only DB replica have the search events), pick one as canonical and name it in the config. Ask: "Both `{{source A}}` and `{{source B}}` can cover this - which is the source of truth? The pulse queries one per signal so numbers stay consistent across runs." Capture the canonical source. The other tool may still be used for ad-hoc investigation but is not wired into the pulse.
-
-**If the user says "we don't have that instrumented yet"** (common for strategy-seeded metrics like retention or NPS): offer two off-ramps and let them pick.
-
-- **Defer** - append the metric name to `pulse_pending_metrics` (CSV). The metric renders as `no data` in each pulse report until instrumentation lands. Right call when the metric matters and the team will instrument it.
-- **Drop from pulse** - append the metric name to `pulse_excluded_metrics` (CSV). The metric stays in `STRATEGY.md` but the pulse skips it entirely. Right call when the metric is aspirational and won't have data any time soon.
-
-Do not silently skip. Every un-instrumented strategy metric must land in exactly one of `pulse_pending_metrics` (visible as `no data`) or `pulse_excluded_metrics` (omitted from the report).
-
-### 6.1 MCP nudge
-
-After each unique source is named, check MCP coverage:
-
-1. Call `search_mcp_registry` with the tool name to see if an official or community MCP exists. Do not guess from memory.
-2. If one exists and the user already has it connected (ask: "Is the `{{tool}}` MCP already connected?"), note `using MCP for {{tool}}` in the config.
-3. If one exists but the user hasn't connected it, suggest: "There's an MCP for `{{tool}}`. Connecting it is the fastest way to let the agent query on each run - I can call `suggest_connectors` to walk you through it, or we can skip and I'll note the source as `manual - agent will need credentials or another path`."
-4. If no MCP exists, capture `manual` and note what shape of query the agent should use (CLI, API, etc.).
-
-Do not set up MCP connections inside this interview - that's a separate flow. Just record which tools have MCP coverage and which do not.
-
-### 6.2 Database access (optional, read-only only)
-
-Ask explicitly: "Do you have a read-only database connection you'd like the agent to use for any signals that live in the DB? Read-only only - I will refuse a read-write connection."
-
-**Handling the answer:**
-
-- **"No" or "skip"** -> capture `database: not used` and move on. DB is entirely optional; many products report the pulse from analytics and tracing alone.
-- **"Yes, read-only"** (read replica, read-only user, row-level-security enforced) -> capture connection shape and which tables are available. Ask about cost: "For pulse queries, scans need to be cheap - what indexed columns are available, and are there any tables to avoid?"
-- **"Yes, but it's my prod credential"** or any indication the connection has write access -> refuse: "For safety the pulse will not query a database with write access, even read-only in intent. The options are: (a) set up a read-only replica or a read-only user, (b) skip the DB entirely - analytics usually covers the pulse. Which do you want?" Do not proceed until the user picks (a) with verified read-only scope or (b) skip. Do not capture a read-write connection under any framing.
-
-### 6.3 Consolidated source list
-
-When every signal has a source (or is marked "covered by analytics above"), summarize the source list back to the user: "Here's what we'll wire up: {{sources}}. Any source missing for a signal you care about?"
-
-Capture the final list in the config. A minimum of one source is acceptable.
-
-**Source-count check** - judge by ratio, not absolute count:
-
-- If the config has 3-4 metrics and every source covers a distinct one, 3-4 sources is the floor and not a warning. Accept without flagging.
-- If the config has 1-2 metrics spread across 4+ sources, the setup is over-instrumented - flag for review and ask: "We have {{N}} sources but only {{M}} metrics. Is there a single tool that could cover most of this?"
-- Above 5 sources regardless of metric count, flag for review. Lots of sources means lots of auth, latency, and failure modes on every run.
+**캡처:** 이벤트 이름 그대로, 또는 참고와 함께 `same-as-engagement`, 또는 참고와 함께 `not-defined`.
 
 ---
 
-## 7. System Performance
+## 4. 완료 또는 전환 이벤트 (Completion or Conversion Events)
 
-**Opening framing:** "The system performance portion of the pulse is pretty standard - most teams want the same thing: top errors with context, and latency percentiles. Unless you have strong opinions, I'll set up the recommended default."
+**시작 질문:** "가입, 업그레이드, 트라이얼 시작, 구매 등 추적할 만한 전환 또는 완료 이벤트가 있나요?"
 
-**Recommended default (confirm or override):**
+선택 섹션입니다. 보통 0-3개의 이벤트가 적당합니다.
 
-- **Top errors:** top 5 error signatures from the tracing tool, by count, descending. Each entry includes the signature and a one-line explanation of what it likely means.
-- **Latency:** p50, p95, p99 over the window, compared to the prior equal-length window.
-- **Tracing tool:** {{capture tool name if not already named in section 6}}
+**SMART 기준 적용** (전체 규칙 참조). 각 전환 이벤트는 의사결정과 연결되어야 합니다: 만약 `trial_started` 수치가 ±20% 변한다면 팀은 무엇을 할까요? 답변이 "아무것도 안 함"이라면 그 이벤트는 허수 지표이며 Pulse에 포함되어서는 안 됩니다.
 
-Ask one confirmation question: "Keep the recommended setup, or customize?"
+**안티 패턴 및 개선 권고:**
 
-- **Keep** -> capture defaults.
-- **Customize** -> ask what they want to change. Common adjustments: "top 3 instead of 5", "skip latency", "add a specific error signature to always surface". Accept and record.
+- **너무 긴 목록** ("12개 정도 있어요") -> "비즈니스에 가장 큰 영향을 주는 상위 3개를 고르십시오. 나머지는 필요할 때 임시로 쿼리할 수 있습니다. Pulse는 상위 3개만 유지합니다."
+- **실행 불가능한 전환** ("email_opens", "logo_impressions") -> "그 수치가 변동될 때 우리가 무엇을 할까요? 답변이 '아무것도 없다'면 그것은 허수 지표입니다. 퍼널의 더 하단에 있는 더 명확한 신호는 무엇인가요?"
 
-If no tracing tool was named in section 6, ask: "What tool do you use for application tracing and errors? (e.g., Datadog, Sentry, Honeycomb, New Relic.) Skip if you don't have one - I'll omit the system performance section from the report." Skipping is fine - the pulse will just report usage and followups in that case.
-
-**Capture:** tool name (or "none"), top-error count (default 5), latency opt (default on).
+**캡처:** 0-3개의 이벤트 이름 목록과 각각에 대한 한 줄 설명.
 
 ---
 
-## 8. Default Lookback Window
+## 5. 품질 점수 측정 (선택 사항, AI 제품 전용)
 
-**Opening question:** "What should the default lookback window be when no time window is specified? Common: 24h for daily ops, 7d for weekly review, 1h for launches."
+**시작 질문:** "이 제품이 대화나 세션의 품질을 평가할 수 있는 AI 제품인가요? 그렇다면 매 실행마다 최대 10개의 세션을 샘플링하여 사용자가 정의한 차원에 따라 1-5점 사이의 점수를 매기겠습니다. 해당되지 않는다면 '아니오'라고 말씀해 주세요."
 
-Capture: single default (e.g., `24h`).
+사용자가 동의하면 질문하십시오: "세션을 어떤 차원에서 평가해야 할까요? (예: '유용한 답변을 얻었는가', '응답이 정확했는가', '환각(hallucination)이 없는가')."
 
----
+**개선 권고:**
 
-## 9. Scheduling Recommendation
+- **모호한 차원** ("품질", "좋음", "도움됨", "좋은 응답") -> "구체적으로 어떤 축에서의 품질인가요? 차원은 사람이 트랜스크립트를 보고 일관되게 판단할 수 있는 것이어야 합니다."
+- **여러 차원 혼합** ("정확하고 실행 가능함") -> "일단 하나로 시작하십시오. 나중에 설정을 편집하여 차원을 추가할 수 있습니다. 하나로 유지하면 실행 간 점수 비교가 용이합니다. 지금 당장 더 중요한 것은 무엇인가요?"
+- **검토 가능성 테스트** - 사용자가 차원을 정하면 내부적으로 체크하십시오: 서로 다른 두 명의 검토자가 동일한 세션을 보고 점수에 합의할 수 있는가? 아니라면 한 번 더 권고하십시오: "좀 더 명확히 해봅시다 - 검토자가 5점과 3점을 구분하는 기준은 무엇일까요? 그 차이를 한 문장으로 설명할 수 있다면 차원이 충분히 구체적인 것입니다." 사용자가 답변할 수 있다면 차원과 함께 채점 노트로 캡처하십시오. 답변하지 못한다면 해당 차원을 `needs-review`로 표시하고 넘어가십시오.
 
-After the config is written and shown to the user, make a scheduling offer before handing back to Phase 2.
-
-**Opening framing:** "Pulses are most useful on a cadence - a report once a day (or once a week) catches drift you'd miss otherwise. Want me to set up a recurring run?"
-
-**Ask one question:**
-
-- "Yes, daily" - at a time they pick
-- "Yes, weekly" - day + time they pick
-- "Not now - I'll run it manually"
-- "Later - remind me after a few manual runs"
-
-**Handling the answer:**
-
-- **Yes (daily or weekly)** -> "I'll hand this to the `schedule` skill. Confirm the time/day and it'll set up the recurring job." Do not schedule inline - hand off to the `schedule` skill explicitly, which is the single source of truth for recurring tasks. On Claude Code, this uses the Routines feature.
-- **Not now** -> capture `schedule: manual` in the config. No nag.
-- **Later** -> capture `schedule: ask-again-after-3-runs` in the config. The SKILL.md Phase 3 logic re-surfaces the offer after 3 manual runs.
-
-Skipping this entirely is fine - the skill does not require a schedule to function. But recommending one is the right default because the value of pulse compounds through the saved-reports timeline; one-off runs lose most of that value.
-
-**Capture:** `schedule: daily | weekly | manual | ask-again-after-3-runs` plus time/day if applicable.
+**캡처:** 동의 여부 (yes/no), 차원 (동의한 경우), 채점 노트 (5점과 3점을 구분하는 1문장), 채점 원칙 리마인더 ("기본 4-5점; 명백한 실패 시 1-3점 부여").
 
 ---
 
-## Config File Shape
+## 6. 데이터 소스 (Data Sources)
 
-After the interview completes, merge a `pulse_*` block into `<repo-root>/.compound-engineering/config.local.yaml`. Resolve the repo root with `git rev-parse --show-toplevel`. Preserve any non-pulse keys that already exist in the file (e.g., `work_delegate_*`); only add or update `pulse_*` keys.
+**시작 프레임:** "이제 앞서 정한 이벤트와 지표를 실제로 보고하는 데 필요한 연결을 설정합니다. 목표는 위의 모든 항목을 커버하는 최소한의 소스 세트를 구성하는 것입니다 - 하나의 소스로도 충분할 수 있습니다. 각 지표를 하나씩 살펴봅시다."
 
-If the file does not yet exist, create the directory and file. If `.compound-engineering/config.local.yaml` is not already covered by `.gitignore`, offer to add the entry before writing.
+### 6.0 지표-소스 매핑 목록 작성
 
-The pulse block uses these flat keys (matches the `work_delegate_*` precedent for consistency):
+소스가 필요한 전체 신호 목록을 정리하십시오:
+
+- 기본 참여 이벤트 (섹션 2)
+- 가치 실현 이벤트 (섹션 3, 참여 이벤트와 다른 경우)
+- 각 완료/전환 이벤트 (섹션 4)
+- 전략 문서에서 가져온 각 주요 지표 (전략 데이터가 있는 경우)
+
+각 항목에 대해 질문하십시오: "`{{event or metric}}` 데이터는 어디에 있나요? 도구 이름(예: Mixpanel, PostHog, Amplitude, Stripe, 내부 DB)과 에이전트가 이를 쿼리하는 방법을 말씀해 주세요."
+
+답변을 통해 (도구 이름, 쿼리 형태)를 도출합니다. 여러 항목이 동일한 도구에 있다면 하나의 소스 항목으로 통합하십시오.
+
+**전략 지표별 소스 매핑 유지.** 기본값(`pulse_analytics_source`(분석용), `pulse_payments_source`(결제용) 등)과 소스가 다른 전략 지표의 경우, `pulse_metric_sources`에 `metric=source` 쌍으로 기록하십시오. 예: `pulse_analytics_source`가 `posthog`이지만 `nps`는 Delighted에서 캡처된다면, `pulse_metric_sources: "nps=delighted"`라고 기록합니다. 기본값과 일치하는 전략 지표는 기록할 필요 없습니다. 이 매핑이 없으면 멀티 소스 설정에서 실행 간 지표별 라우팅 정보를 잃게 됩니다.
+
+**이중 소스 중재.** 하나의 신호를 두 소스에서 모두 확인할 수 있는 경우 (예: PostHog와 읽기 전용 DB 복제본 모두에 검색 이벤트가 있는 경우), 하나를 기준(canonical)으로 정하고 설정에 기록하십시오. 질문하십시오: "`{{source A}}`와 `{{source B}}` 모두에서 확인 가능합니다 - 어느 것을 신뢰할 수 있는 단일 소스(Source of Truth)로 할까요? 수치가 일관되게 유지되도록 Pulse는 신호당 하나의 소스만 쿼리합니다." 기준 소스를 캡처하십시오. 다른 도구는 임시 조사에 사용될 수는 있지만 Pulse에는 연결되지 않습니다.
+
+**사용자가 "아직 계측(instrumentation)되지 않았습니다"라고 하는 경우** (리텐션이나 NPS 같은 전략 지표에서 흔히 발생): 두 가지 대안을 제시하고 선택하게 하십시오.
+
+- **보류 (Defer)** - 지표 이름을 `pulse_pending_metrics` (CSV)에 추가합니다. 계측이 완료될 때까지 Pulse 리포트에서 `데이터 없음`으로 표시됩니다. 지표가 중요하고 팀이 곧 계측할 계획인 경우에 적합합니다.
+- **Pulse에서 제외 (Drop from pulse)** - 지표 이름을 `pulse_excluded_metrics` (CSV)에 추가합니다. 지표는 `STRATEGY.md`에 유지되지만 Pulse 리포트에서는 완전히 생략됩니다. 지표가 이상적일 뿐 당분간 데이터가 없을 것으로 예상되는 경우에 적합합니다.
+
+그냥 건너뛰지 마십시오. 계측되지 않은 모든 전략 지표는 `pulse_pending_metrics` (`데이터 없음`으로 표시) 또는 `pulse_excluded_metrics` (리포트에서 제외) 중 하나에 반드시 포함되어야 합니다.
+
+### 6.1 MCP 유도
+
+각 고유 소스가 명명된 후, MCP 지원 여부를 확인하십시오:
+
+1. `search_mcp_registry`를 도구 이름으로 호출하여 공식 또는 커뮤니티 MCP가 존재하는지 확인하십시오. 기억에 의존하지 마십시오.
+2. 존재하고 사용자가 이미 연결했다면 (질문: "`{{tool}}` MCP가 이미 연결되어 있나요?"), 설정에 `using MCP for {{tool}}`이라고 기록하십시오.
+3. 존재하지만 사용자가 연결하지 않았다면 제안하십시오: "`{{tool}}`용 MCP가 있습니다. 이를 연결하는 것이 매 실행마다 에이전트가 쿼리할 수 있게 하는 가장 빠른 방법입니다 - `suggest_connectors`를 호출하여 안내해 드릴 수도 있고, 아니면 건너뛰고 소스를 `manual - 에이전트에게 자격 증명이나 다른 경로가 필요함`으로 기록할 수도 있습니다."
+4. MCP가 없다면 `manual`로 기록하고 에이전트가 사용해야 할 쿼리 형태(CLI, API 등)를 메모하십시오.
+
+이 인터뷰 내에서 MCP 연결을 설정하지 마십시오 - 그것은 별도의 플로우입니다. 단지 어떤 도구가 MCP 지원을 받는지 여부만 기록하십시오.
+
+### 6.2 데이터베이스 액세스 (선택 사항, 읽기 전용 전용)
+
+명시적으로 질문하십시오: "DB에 있는 신호를 위해 에이전트가 사용할 읽기 전용 데이터베이스 연결이 있나요? 읽기 전용이어야 합니다 - 읽기-쓰기 연결은 거부하겠습니다."
+
+**답변 처리:**
+
+- **"아니오" 또는 "건너뜀"** -> `database: not used`로 캡처하고 넘어갑니다. DB는 선택 사항입니다. 많은 제품이 분석 및 트레이싱 도구만으로 Pulse를 구성합니다.
+- **"예, 읽기 전용입니다"** (읽기 복제본, 읽기 전용 사용자, 행 수준 보안 적용 등) -> 연결 형태와 사용 가능한 테이블을 캡처하십시오. 비용에 대해 질문하십시오: "Pulse 쿼리를 위해 스캔 비용이 저렴해야 합니다 - 사용 가능한 인덱스 컬럼은 무엇이며, 피해야 할 테이블이 있나요?"
+- **"예, 하지만 프로덕션 자격 증명입니다"** 또는 연결에 쓰기 권한이 있다는 징후가 있는 경우 -> 거부하십시오: "안전을 위해 Pulse는 쓰기 권한이 있는 데이터베이스에는 쿼리하지 않습니다. 옵션은 다음과 같습니다: (a) 읽기 전용 복제본이나 읽기 전용 사용자를 설정하거나, (b) DB를 아예 건너뛰는 것입니다 (보통 분석 도구로 충분합니다). 어느 쪽을 원하시나요?" 사용자가 (a) 검증된 읽기 전용 범위를 선택하거나 (b) 건너뛰기를 선택할 때까지 진행하지 마십시오. 어떤 경우에도 읽기-쓰기 연결을 캡처하지 마십시오.
+
+### 6.3 통합 소스 목록
+
+모든 신호에 소스가 지정되면(또는 "위의 분석 도구에서 커버됨"으로 표시되면), 사용자에게 소스 목록을 요약해 주십시오: "다음 소스들을 연결하겠습니다: {{sources}}. 중요하게 생각하시는 신호 중 소스가 빠진 것이 있나요?"
+
+최종 목록을 설정에 캡처하십시오. 최소 하나 이상의 소스가 필요합니다.
+
+**소스 개수 체크** - 절대적 개수가 아닌 비율로 판단하십시오:
+
+- 설정에 3-4개의 지표가 있고 각 소스가 고유한 지표를 커버한다면, 3-4개의 소스는 적정 수준이며 경고 대상이 아닙니다. 플래그 없이 수락하십시오.
+- 설정에 1-2개의 지표만 있는데 소스가 4개 이상이라면, 과도한 계측 상태입니다 - 검토 플래그를 표시하고 질문하십시오: "지표는 {{M}}개인데 소스는 {{N}}개입니다. 대부분을 커버할 수 있는 단일 도구가 있을까요?"
+- 지표 개수와 상관없이 소스가 5개를 초과하면 검토 플래그를 표시하십시오. 소스가 많으면 매 실행마다 인증, 지연 시간, 실패 가능성이 높아집니다.
+
+---
+
+## 7. 시스템 성능 (System Performance)
+
+**시작 프레임:** "Pulse의 시스템 성능 부분은 꽤 표준적입니다. 대부분의 팀이 컨텍스트가 포함된 주요 오류와 지연 시간 백분위수를 원합니다. 특별한 의견이 없으시다면 권장 기본 설정으로 구성하겠습니다."
+
+**권장 기본 설정 (확인 또는 수정):**
+
+- **주요 오류:** 트레이싱 도구에서 횟수 기준 상위 5개 오류 시그니처 (내림차순). 각 항목에는 시그니처와 발생 원인에 대한 한 줄 설명이 포함됩니다.
+- **지연 시간:** 기간 내 p50, p95, p99 수치 및 이전 동일 기간 대비 비교.
+- **트레이싱 도구:** {{섹션 6에서 명명되지 않았다면 도구 이름 캡처}}
+
+확인 질문을 하나 하십시오: "권장 설정을 유지할까요, 아니면 커스터마이징할까요?"
+
+- **유지** -> 기본값 캡처.
+- **커스터마이징** -> 변경하고 싶은 내용을 물어보십시오. 흔한 요청: "상위 5개 대신 3개", "지연 시간 제외", "항상 노출할 특정 오류 시그니처 추가". 수락하고 기록하십시오.
+
+섹션 6에서 트레이싱 도구가 언급되지 않았다면 질문하십시오: "애플리케이션 트레이싱 및 오류 추적에 어떤 도구를 사용하시나요? (예: Datadog, Sentry, Honeycomb, New Relic.) 없다면 건너뛰어도 됩니다 - 이 경우 리포트에서 시스템 성능 섹션은 생략됩니다." 건너뛰어도 괜찮습니다 - 이 경우 Pulse는 사용량과 후속 조치만 보고합니다.
+
+**캡처:** 도구 이름 (또는 "none"), 주요 오류 개수 (기본 5개), 지연 시간 포함 여부 (기본 true).
+
+---
+
+## 8. 기본 조회 기간 (Default Lookback Window)
+
+**시작 질문:** "시간 범위를 지정하지 않았을 때 기본 조회 기간은 얼마로 할까요? 보통 일일 운영은 24h, 주간 리뷰는 7d, 런칭 시에는 1h를 사용합니다."
+
+**캡처:** 단일 기본값 (예: `24h`).
+
+---
+
+## 9. 스케줄링 제안
+
+설정 내용이 작성되어 사용자에게 보여진 후, Phase 2로 넘어가기 전에 스케줄링 제안을 하십시오.
+
+**시작 프레임:** "Pulse는 정기적으로 실행할 때 가장 유용합니다 - 하루에 한 번 (또는 일주일에 한 번) 리포트를 받으면 놓치기 쉬운 변화를 포착할 수 있습니다. 반복 실행을 설정할까요?"
+
+**선택지 제시:**
+
+- "예, 매일" - 선택한 시간
+- "예, 매주" - 선택한 요일 및 시간
+- "아니오 - 직접 수동으로 실행하겠습니다"
+- "나중에 - 수동으로 몇 번 실행해 본 뒤에 다시 물어봐 주세요"
+
+**답변 처리:**
+
+- **예 (매일 또는 매주)** -> "`schedule` 스킬에 전달하겠습니다. 시간/요일을 확인해 주시면 반복 작업이 설정됩니다." 직접 스케줄링하지 말고, 반복 작업의 단일 소스인 `schedule` 스킬에 명시적으로 전달하십시오. Claude Code의 경우, 이는 Routines 기능을 사용합니다.
+- **아니오** -> 설정에 `schedule: manual`로 기록합니다. 더 이상 묻지 않습니다.
+- **나중에** -> 설정에 `schedule: ask-again-after-3-runs`로 기록합니다. `SKILL.md` Phase 3 로직에서 수동 실행 3회 후 다시 제안합니다.
+
+이 단계를 완전히 건너뛰어도 괜찮습니다 - 스킬이 작동하는 데 스케줄이 필수적인 것은 아닙니다. 하지만 리포트 타임라인이 쌓여야 Pulse의 가치가 커지기 때문에 스케줄링을 권장하는 것이 좋은 기본값입니다.
+
+**캡처:** `schedule: daily | weekly | manual | ask-again-after-3-runs` 및 해당되는 경우 시간/요일.
+
+---
+
+## 설정 파일 형태 (Config File Shape)
+
+인터뷰가 완료되면 `pulse_*` 블록을 `<repo-root>/.compound-engineering/config.local.yaml`에 병합하십시오. 리포지토리 루트는 `git rev-parse --show-toplevel`로 확인합니다. 파일에 이미 존재하는 다른 키(예: `work_delegate_*`)는 보존하고 `pulse_*` 키만 추가하거나 업데이트하십시오.
+
+파일이 아직 없다면 디렉토리와 파일을 생성하십시오. `.compound-engineering/config.local.yaml`이 아직 `.gitignore`에 등록되지 않았다면, 파일 작성 전 등록을 제안하십시오.
+
+Pulse 블록은 다음 플랫 키를 사용합니다 (일관성을 위해 `work_delegate_*` 전례를 따름):
 
 ~~~yaml
 # --- Product pulse ---
 
 pulse_product_name: "{{product_name}}"
-pulse_lookback_default: {{24h | 7d | 1h | other}}    # default 24h if omitted
+pulse_lookback_default: {{24h | 7d | 1h | other}}    # 생략 시 기본값 24h
 pulse_primary_event: "{{event_name}}"
-pulse_value_event: "{{event_name}}"                  # may equal pulse_primary_event; omit if not defined
-pulse_completion_events: "{{event,event,event}}"     # comma-separated, 0-3 events; omit if none
-pulse_quality_scoring: {{true | false}}              # AI products only; default false
-pulse_quality_dimension: "{{dimension}}"             # only meaningful when pulse_quality_scoring is true
+pulse_value_event: "{{event_name}}"                  # pulse_primary_event와 같을 수 있음; 정의되지 않으면 생략
+pulse_completion_events: "{{event,event,event}}"     # 쉼표로 구분, 0-3개 이벤트; 없으면 생략
+pulse_quality_scoring: {{true | false}}              # AI 제품 전용; 기본값 false
+pulse_quality_dimension: "{{dimension}}"             # pulse_quality_scoring이 true일 때만 의미 있음
 pulse_analytics_source: {{posthog | mixpanel | custom | omit}}
 pulse_tracing_source: {{sentry | datadog | custom | omit}}
-pulse_payments_source: {{stripe | custom | omit}}    # omit if not used
-pulse_db_enabled: {{true | false}}                   # default false; read-only DB access only
-pulse_metric_sources: "{{metric=source,metric=source}}"  # strategy-metric -> source overrides; omit metrics that use the class default (pulse_analytics_source for analytics-class, pulse_payments_source for revenue, etc.)
-pulse_pending_metrics: "{{metric,metric}}"           # strategy metrics deferred for instrumentation; render as 'no data'; omit if none
-pulse_excluded_metrics: "{{metric,metric}}"          # strategy metrics intentionally not in pulse; omit if none
+pulse_payments_source: {{stripe | custom | omit}}    # 사용하지 않으면 생략
+pulse_db_enabled: {{true | false}}                   # 기본값 false; 읽기 전용 DB 액세스만 가능
+pulse_metric_sources: "{{metric=source,metric=source}}"  # 전략 지표 -> 소스 오버라이드; 클래스 기본값을 사용하는 지표는 생략 (분석 지표는 pulse_analytics_source, 수익 지표는 pulse_payments_source 등)
+pulse_pending_metrics: "{{metric,metric}}"           # 계측 보류 중인 전략 지표; '데이터 없음'으로 렌더링; 없으면 생략
+pulse_excluded_metrics: "{{metric,metric}}"          # Pulse에서 의도적으로 제외된 전략 지표; 없으면 생략
 ~~~
 
-**Notes on what is NOT persisted in config:**
+**설정에 저장되지 않는 내용:**
 
-- **Strategy metrics carried forward**: surfaced in the report, not stored as config — they live in `STRATEGY.md` and are re-read each run from there.
-- **Per-source connection details** (URLs, API keys, query specifics): live with the user's MCP configuration, not in this config.
-- **Hardcoded operational settings** (15-minute trailing buffer, top-N error count, p50/p95/p99 latencies, "no PII in reports", "parallel analytics + tracing, serial DB"): these are skill behavior, not user config; they live in `SKILL.md` and stay constant.
-- **Schedule cadence**: handled by the `schedule` skill (or platform-native cron), not pulse config. The pulse skill only hands off; it does not own the cadence record.
-- **Tracing top-N count and latency on/off**: not configurable in this version. The report always includes top 5 errors and full p50/p95/p99 latency. Add config keys later if a real need surfaces.
+- **이월된 전략 지표 (Strategy metrics carried forward)**: 리포트에는 노출되지만 설정에는 저장되지 않습니다 - `STRATEGY.md`에 유지되며 매 실행 시마다 읽어옵니다.
+- **소스별 연결 세부 정보** (URL, API 키, 쿼리 상세): 이 설정이 아닌 사용자의 MCP 설정에 저장됩니다.
+- **하드코딩된 운영 설정** (15분 버퍼, 상위 N개 오류 개수, p50/p95/p99 지연 시간, "리포트 내 PII 제외", "분석 및 트레이싱 병렬 처리, DB 직렬 처리"): 이것들은 설정이 아닌 스킬의 동작 원리이므로 `SKILL.md`에 상수로 유지됩니다.
+- **스케줄 주기**: Pulse 설정이 아닌 `schedule` 스킬(또는 플랫폼 네이티브 크론)에서 처리합니다. Pulse 스킬은 전달만 할 뿐 주기를 관리하지 않습니다.
+- **트레이싱 상위 N개 개수 및 지연 시간 활성화 여부**: 이 버전에서는 설정 불가능합니다. 리포트는 항상 상위 5개 오류와 전체 p50/p95/p99 지연 시간을 포함합니다. 추후 필요성이 확인되면 설정 키를 추가하십시오.
 
-After writing, surface the resulting `pulse_*` block to the user in chat. Offer one round of edits. Then return to SKILL.md Phase 2.
+작성 후 결과물인 `pulse_*` 블록을 채팅을 통해 사용자에게 보여주십시오. 한 차례 수정을 허용한 뒤 `SKILL.md` Phase 2로 돌아가십시오.

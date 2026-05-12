@@ -1,303 +1,321 @@
 ---
 name: ce-optimize
-description: "Run metric-driven iterative optimization loops. Define a measurable goal, build measurement scaffolding, then run parallel experiments that try many approaches, measure each against hard gates and/or LLM-as-judge quality scores, keep improvements, and converge toward the best solution. Use when optimizing clustering quality, search relevance, build performance, prompt quality, or any measurable outcome that benefits from systematic experimentation. Inspired by Karpathy's autoresearch, generalized for multi-file code changes and non-ML domains."
-argument-hint: "[path to optimization spec YAML, or describe the optimization goal]"
+description: "지표 기반의 반복적 최적화 루프를 실행합니다. 측정 가능한 목표를 정의하고, 측정 스캐폴딩을 구축한 다음, 여러 접근 방식을 시도하는 병렬 실험을 실행합니다. 각 실험을 엄격한 게이트(hard gates) 및/또는 LLM-as-judge 품질 점수로 측정하고, 개선 사항을 유지하며 최선의 솔루션으로 수렴합니다. 클러스터링 품질, 검색 관련성, 빌드 성능, 프롬프트 품질 또는 체계적인 실험을 통해 이점을 얻을 수 있는 모든 측정 가능한 결과를 최적화할 때 사용합니다. Karpathy의 autoresearch에서 영감을 받았으며, 다중 파일 코드 변경 및 비 ML 도메인으로 일반화되었습니다."
+argument-hint: "[최적화 사양(spec) YAML 경로 또는 최적화 목표 설명]"
+allowed-tools:
+  - gem
 ---
 
-# Iterative Optimization Loop
+# 반복적 최적화 루프 (Iterative Optimization Loop)
 
-Run metric-driven iterative optimization. Define a goal, build measurement scaffolding, then run parallel experiments that converge toward the best solution.
+지표 기반의 반복적 최적화를 실행합니다. 목표를 정의하고, 측정 스캐폴딩을 구축한 다음, 최선의 솔루션으로 수렴하는 병렬 실험을 실행합니다.
 
-## Interaction Method
+## 상호작용 방식 (Interaction Method)
 
-Use the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to numbered options in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question.
+플랫폼의 블로킹 질문 도구를 사용하십시오: Claude Code의 `AskUserQuestion` (스키마가 로드되지 않은 경우 `select:AskUserQuestion`으로 `ToolSearch`를 먼저 호출), Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user` (`pi-ask-user` 확장 기능 필요). 스키마 로드가 필요해서가 아니라, 하네스에 블로킹 도구가 없거나 호출 오류(예: Codex 편집 모드)가 발생하는 경우에만 채팅의 번호 매기기 옵션으로 대체하십시오. 질문을 무시하고 넘어가서는 안 됩니다.
 
-## Input
+## 입력 (Input)
 
 <optimization_input> #$ARGUMENTS </optimization_input>
 
-If the input above is empty, ask: "What would you like to optimize? Describe the goal, or provide a path to an optimization spec YAML file."
+## 다중 에이전트 협업 (Multi-Agent Collaboration)
 
-## Optimization Spec Schema
+사용자의 입력(`$ARGUMENTS`) 내에 `--add <ai-이름>` 형태의 플래그가 포함되어 있는지 확인하십시오. 
+현재 지원되는 외부 AI 인터페이스는 `--add gemini` (또는 `--add gem`)입니다.
 
-Reference the spec schema for validation:
+만약 해당 플래그가 감지되면, 작업을 단독으로 확정하지 말고 다음 절차를 따르십시오:
+1. **의도 파악:** 플래그를 제외한 나머지 문자열을 실제 지시사항으로 간주합니다.
+2. **초안 작성:** 본인(주 에이전트)의 지식과 코드베이스 컨텍스트를 바탕으로 작업의 초기 뼈대나 접근법을 생각합니다.
+3. **MCP 협업 호출:** `gem` 도구를 호출하여 외부 Gemini 에이전트에게 조언이나 검토를 구합니다.
+   - 호출 시 전달할 메시지 예시: "나는 현재 이 작업에 대한 초안을 세우고 있어. 내 초안은 [초안 요약]이야. 이 접근 방식의 기술적 타당성을 검토하고 누락된 에지 케이스나 더 나은 패턴을 조언해줄 수 있어?"
+4. **결과 통합:** `gem` 도구가 반환한 피드백을 당신의 최종 결과물에 통합(Synthesis)합니다. 
+5. **명시적 표시:** 최종 산출물의 상단 또는 설명 부분에 "이 결과물은 Gemini와의 협업을 통해 검토 및 보완되었습니다."라는 문구를 추가하십시오.
+
+이 협업 절차를 염두에 두고 아래의 본래 스킬 워크플로우를 진행하십시오.
+
+
+위 입력이 비어 있으면 다음과 같이 질문하십시오: "무엇을 최적화하시겠습니까? 목표를 설명하거나 최적화 사양(spec) YAML 파일의 경로를 제공해 주세요."
+
+## 최적화 사양 스키마 (Optimization Spec Schema)
+
+유효성 검사를 위해 다음 스키마를 참조하십시오:
 
 `references/optimize-spec-schema.yaml`
 
-## Experiment Log Schema
+## 실험 로그 스키마 (Experiment Log Schema)
 
-Reference the experiment log schema for state management:
+상태 관리를 위해 다음 실험 로그 스키마를 참조하십시오:
 
 `references/experiment-log-schema.yaml`
 
-## Quick Start
+## 빠른 시작 (Quick Start)
 
-For a first run, optimize for signal and safety, not maximum throughput:
+첫 실행 시에는 최대 처리량이 아닌 신호(signal)와 안전을 위해 최적화하십시오:
 
-- Start from `references/example-hard-spec.yaml` when the metric is objective and cheap to measure
-- Use `references/example-judge-spec.yaml` only when actual quality requires semantic judgment
-- Prefer `execution.mode: serial` and `execution.max_concurrent: 1`
-- Cap the first run with `stopping.max_iterations: 4` and `stopping.max_hours: 1`
-- Avoid new dependencies until the baseline and measurement harness are trusted
-- For judge mode, start with `sample_size: 10`, `batch_size: 5`, and `max_total_cost_usd: 5`
+- 지표가 객관적이고 측정 비용이 저렴한 경우 `references/example-hard-spec.yaml`에서 시작하십시오.
+- 실제 품질에 시맨틱 판단이 필요한 경우에만 `references/example-judge-spec.yaml`을 사용하십시오.
+- `execution.mode: serial` 및 `execution.max_concurrent: 1`을 권장합니다.
+- 첫 실행은 `stopping.max_iterations: 4` 및 `stopping.max_hours: 1`로 제한하십시오.
+- 베이스라인과 측정 하네스를 신뢰할 수 있을 때까지 새로운 종속성 추가를 피하십시오.
+- judge 모드의 경우 `sample_size: 10`, `batch_size: 5`, `max_total_cost_usd: 5`로 시작하십시오.
 
-For a friendly overview of what this skill is for, when to use hard metrics vs LLM-as-judge, and example kickoff prompts, see:
+이 스킬의 용도, 하드 지표(hard metrics)와 LLM-as-judge를 사용하는 시기, 예시 킥오프 프롬프트에 대한 친절한 개요는 다음을 참조하십시오:
 
 `references/usage-guide.md`
 
 ---
 
-## Persistence Discipline
+## 지속성 원칙 (Persistence Discipline)
 
-**CRITICAL: The experiment log on disk is the single source of truth. The conversation context is NOT durable storage. Results that exist only in the conversation WILL be lost.**
+**중요: 디스크의 실험 로그가 유일한 진실의 원천(single source of truth)입니다. 대화 컨텍스트는 영구 저장소가 아닙니다. 대화에만 존재하는 결과는 손실됩니다.**
 
-The files under `.context/compound-engineering/ce-optimize/<spec-name>/` are local scratch state. They are ignored by git, so they survive local resumes on the same machine but are not preserved by commits, branches, or pushes unless the user exports them separately.
+`.context/compound-engineering/ce-optimize/<spec-name>/` 아래의 파일들은 로컬 임시 상태입니다. 이 파일들은 git에서 무시되므로 동일한 머신에서의 로컬 재개 시에는 유지되지만, 사용자가 별도로 내보내지 않는 한 커밋, 브랜치 또는 푸시를 통해 보존되지 않습니다.
 
-This skill runs for hours. Context windows compact, sessions crash, and agents restart. Every piece of state that matters MUST live on disk, not in the agent's memory.
+이 스킬은 몇 시간 동안 실행될 수 있습니다. 컨텍스트 창은 압축되고, 세션은 충돌하며, 에이전트는 재시작됩니다. 중요한 모든 상태는 에이전트의 메모리가 아닌 디스크에 있어야 합니다.
 
-**If you produce a results table in the conversation without writing those results to disk first, you have a bug.** The conversation is for the user's benefit. The experiment log file is for durability.
+**결과를 디스크에 먼저 기록하지 않고 대화에 결과 테이블을 생성한다면, 그것은 버그입니다.** 대화는 사용자의 편의를 위한 것입니다. 실험 로그 파일은 지속성을 위한 것입니다.
 
-### Core Rules
+### 핵심 규칙
 
-1. **Write each experiment result to disk IMMEDIATELY after measurement** — not after the batch, not after evaluation, IMMEDIATELY. Append the experiment entry to the experiment log file the moment its metrics are known, before evaluating the next experiment. This is the #1 crash-safety rule.
+1. **측정 직후 각 실험 결과를 디스크에 즉시 기록하십시오.** 배치가 끝난 후나 평가 후가 아니라, 지표가 확인되는 즉시 다음 실험을 평가하기 전에 실험 로그 파일에 실험 항목을 추가하십시오. 이것이 가장 중요한 충돌 안전 규칙입니다.
 
-2. **VERIFY every critical write** — after writing the experiment log, read the file back and confirm the entry is present. This catches silent write failures. Do not proceed to the next experiment until verification passes.
+2. **모든 중요한 쓰기 작업을 확인(VERIFY)하십시오.** 실험 로그를 쓴 후, 파일을 다시 읽어 항목이 있는지 확인하십시오. 이를 통해 보이지 않는 쓰기 실패를 감지할 수 있습니다. 확인이 통과될 때까지 다음 실험으로 진행하지 마십시오.
 
-3. **Re-read from disk at every phase boundary and before every decision** — never trust in-memory state across phase transitions, batch boundaries, or after any operation that might have taken significant time. Re-read the experiment log and strategy digest from disk.
+3. **단계 경계마다, 그리고 모든 결정 전에는 디스크에서 다시 읽으십시오.** 단계 전환, 배치 경계 또는 상당한 시간이 소요되었을 수 있는 작업 후에는 메모리 내 상태를 신뢰하지 마십시오. 디스크에서 실험 로그와 전략 요약(strategy digest)을 다시 읽으십시오.
 
-4. **The experiment log is append-only during Phase 3** — never rewrite the full file. Append new experiment entries. Update the `best` section in place only when a new best is found. This prevents data loss if a write is interrupted.
+4. **실험 로그는 Phase 3 동안 추가 전용(append-only)입니다.** 전체 파일을 다시 쓰지 마십시오. 새로운 실험 항목을 추가하십시오. 새로운 최적값이 발견된 경우에만 `best` 섹션을 제자리에서 업데이트하십시오. 이는 쓰기가 중단될 경우 데이터 손실을 방지합니다.
 
-5. **Per-experiment result markers for crash recovery** — each experiment writes a `result.yaml` marker in its worktree immediately after measurement. On resume, scan for these markers to recover experiments that were measured but not yet logged.
+5. **충돌 복구를 위한 실험별 결과 마커.** 각 실험은 측정 직후 워크트리에 `result.yaml` 마커를 기록합니다. 재개 시 이 마커들을 검색하여 측정되었지만 아직 로그에 기록되지 않은 실험을 복구하십시오.
 
-6. **Strategy digest is written after every batch, before generating new hypotheses** — the agent reads the digest (not its memory) when deciding what to try next.
+6. **전략 요약은 매 배치 후, 새로운 가설을 생성하기 전에 기록됩니다.** 에이전트는 다음에 무엇을 시도할지 결정할 때 자신의 메모리가 아닌 요약본(digest)을 읽습니다.
 
-7. **Never present results to the user without writing them to disk first** — the pattern is: measure -> write to disk -> verify -> THEN show the user. Not the reverse.
+7. **디스크에 먼저 기록하기 전에는 결과를 사용자에게 제시하지 마십시오.** 패턴은 다음과 같습니다: 측정 -> 디스크 기록 -> 확인 -> 그 후 사용자에게 표시. 반대로 하지 마십시오.
 
-### Mandatory Disk Checkpoints
+### 필수 디스크 체크포인트 (Mandatory Disk Checkpoints)
 
-These are non-negotiable write-then-verify steps. At each checkpoint, the agent MUST write the specified file and then read it back to confirm the write succeeded.
+이는 협상의 여지가 없는 '쓰기 후 확인' 단계입니다. 각 체크포인트에서 에이전트는 지정된 파일을 쓰고 다시 읽어서 쓰기가 성공했는지 확인해야 합니다.
 
-| Checkpoint | File Written | Phase |
+| 체크포인트 | 기록되는 파일 | 단계 |
 |---|---|---|
-| CP-0: Spec saved | `spec.yaml` | Phase 0, after user approval |
-| CP-1: Baseline recorded | `experiment-log.yaml` (initial with baseline) | Phase 1, after baseline measurement |
-| CP-2: Hypothesis backlog saved | `experiment-log.yaml` (hypothesis_backlog section) | Phase 2, after hypothesis generation |
-| CP-3: Each experiment result | `experiment-log.yaml` (append experiment entry) | Phase 3.3, immediately after each measurement |
-| CP-4: Batch summary | `experiment-log.yaml` (outcomes + best) + `strategy-digest.md` | Phase 3.5, after batch evaluation |
-| CP-5: Final summary | `experiment-log.yaml` (final state) | Phase 4, at wrap-up |
+| CP-0: 사양 저장 | `spec.yaml` | Phase 0, 사용자 승인 후 |
+| CP-1: 베이스라인 기록 | `experiment-log.yaml` (베이스라인 포함 초기화) | Phase 1, 베이스라인 측정 후 |
+| CP-2: 가설 백로그 저장 | `experiment-log.yaml` (hypothesis_backlog 섹션) | Phase 2, 가설 생성 후 |
+| CP-3: 각 실험 결과 | `experiment-log.yaml` (실험 항목 추가) | Phase 3.3, 각 측정 직후 |
+| CP-4: 배치 요약 | `experiment-log.yaml` (결과 + 최적값) + `strategy-digest.md` | Phase 3.5, 배치 평가 후 |
+| CP-5: 최종 요약 | `experiment-log.yaml` (최종 상태) | Phase 4, 마무리 시 |
 
-**Format of a verification step:**
-1. Write the file using the native file-write tool
-2. Read the file back using the native file-read tool
-3. Confirm the expected content is present
-4. If verification fails, retry the write. If it fails twice, alert the user.
+**확인 단계 형식:**
+1. 기본 파일 쓰기 도구를 사용하여 파일을 기록합니다.
+2. 기본 파일 읽기 도구를 사용하여 파일을 다시 읽습니다.
+3. 예상되는 내용이 있는지 확인합니다.
+4. 확인이 실패하면 쓰기를 다시 시도합니다. 두 번 실패하면 사용자에게 알립니다.
 
-### File Locations (all under `.context/compound-engineering/ce-optimize/<spec-name>/`)
+### 파일 위치 (모두 `.context/compound-engineering/ce-optimize/<spec-name>/` 아래)
 
-| File | Purpose | Written When |
+| 파일 | 용도 | 기록 시점 |
 |------|---------|-------------|
-| `spec.yaml` | Optimization spec (immutable during run) | Phase 0 (CP-0) |
-| `experiment-log.yaml` | Full history of all experiments | Initialized at CP-1, appended at CP-3, updated at CP-4 |
-| `strategy-digest.md` | Compressed learnings for hypothesis generation | Written at CP-4 after each batch |
-| `<worktree>/result.yaml` | Per-experiment crash-recovery marker | Immediately after measurement, before CP-3 |
+| `spec.yaml` | 최적화 사양 (실행 중 변경 불가) | Phase 0 (CP-0) |
+| `experiment-log.yaml` | 모든 실험의 전체 기록 | CP-1에서 초기화, CP-3에서 추가, CP-4에서 업데이트 |
+| `strategy-digest.md` | 가설 생성을 위한 압축된 학습 내용 | 매 배치 후 CP-4에서 기록 |
+| `<worktree>/result.yaml` | 실험별 충돌 복구 마커 | 측정 직후, CP-3 이전 |
 
-### On Resume
+### 재개 시 (On Resume)
 
-When Phase 0.4 detects an existing run:
-1. Read the experiment log from disk — this is the ground truth
-2. Scan worktree directories for `result.yaml` markers not yet in the log
-3. Recover any measured-but-unlogged experiments
-4. Continue from where the log left off
+Phase 0.4에서 기존 실행을 감지한 경우:
+1. 디스크에서 실험 로그를 읽습니다. 이것이 기본 진실입니다.
+2. 워크트리 디렉토리에서 아직 로그에 없는 `result.yaml` 마커를 검색합니다.
+3. 측정되었지만 로그에 기록되지 않은 실험을 복구합니다.
+4. 로그가 중단된 지점부터 계속합니다.
 
 ---
 
-## Phase 0: Setup
+## Phase 0: 설정 (Setup)
 
-### 0.1 Determine Input Type
+### 0.1 입력 유형 결정
 
-Check whether the input is:
-- **A spec file path** (ends in `.yaml` or `.yml`): read and validate it
-- **A description of the optimization goal**: help the user create a spec interactively
+입력이 다음 중 무엇인지 확인하십시오:
+- **사양 파일 경로** (`.yaml` 또는 `.yml`로 끝남): 읽고 유효성을 검사합니다.
+- **최적화 목표 설명**: 사용자가 대화식으로 사양을 생성하도록 돕습니다.
 
-### 0.2 Load or Create Spec
+### 0.2 사양 로드 또는 생성
 
-**If spec file provided:**
-1. Read the YAML spec file. The orchestrating agent parses YAML natively -- no shell script parsing.
-2. Validate against `references/optimize-spec-schema.yaml`:
-   - All required fields present
-   - `name` is lowercase kebab-case and safe to use in git refs / worktree paths
-   - `metric.primary.type` is `hard` or `judge`
-   - If type is `judge`, `metric.judge` section exists with `rubric` and `scoring`
-   - At least one degenerate gate defined
-   - `measurement.command` is non-empty
-   - `scope.mutable` and `scope.immutable` each have at least one entry
-   - Gate check operators are valid (`>=`, `<=`, `>`, `<`, `==`, `!=`)
-   - `execution.max_concurrent` is at least 1
-   - `execution.max_concurrent` does not exceed 6 when backend is `worktree`
-3. If validation fails, report errors and ask the user to fix them
+**사양 파일이 제공된 경우:**
+1. YAML 사양 파일을 읽습니다. 오케스트레이션 에이전트는 YAML을 직접 파싱합니다.
+2. `references/optimize-spec-schema.yaml`에 따라 유효성을 검사합니다:
+   - 모든 필수 필드 존재 여부
+   - `name`이 소문자 kebab-case이며 git 참조 / 워크트리 경로에 사용하기 안전한지 확인
+   - `metric.primary.type`이 `hard` 또는 `judge`인지 확인
+   - 타입이 `judge`인 경우 `metric.judge` 섹션에 `rubric` 및 `scoring`이 존재하는지 확인
+   - 최소 하나 이상의 퇴행 게이트(degenerate gate) 정의 여부
+   - `measurement.command`가 비어 있지 않은지 확인
+   - `scope.mutable` 및 `scope.immutable`에 각각 최소 하나 이상의 항목이 있는지 확인
+   - 게이트 체크 연산자가 유효한지 확인 (`>=`, `<=`, `>`, `<`, `==`, `!=`)
+   - `execution.max_concurrent`가 1 이상인지 확인
+   - 백엔드가 `worktree`인 경우 `execution.max_concurrent`가 6을 초과하지 않는지 확인
+3. 유효성 검사에 실패하면 오류를 보고하고 사용자에게 수정을 요청합니다.
 
-**If description provided:**
-1. Analyze the project to understand what can be measured
-2. **Detect whether the optimization target is qualitative or quantitative** — this determines `type: hard` vs `type: judge` and is the single most important spec decision:
+**설명이 제공된 경우:**
+1. 프로젝트를 분석하여 무엇을 측정할 수 있는지 파악합니다.
+2. **최적화 대상이 정성적인지 정량적인지 감지합니다.** 이는 `type: hard` 대 `type: judge`를 결정하며 가장 중요한 사양 결정 사항입니다.
 
-   **Use `type: hard`** when:
-   - The metric is a scalar number with a clear "better" direction
-   - The metric is objectively measurable (build time, test pass rate, latency, memory usage)
-   - No human judgment is needed to evaluate "is this result actually good?"
-   - Examples: reduce build time, increase test coverage, reduce API latency, decrease bundle size
+   **`type: hard`를 사용하는 경우:**
+   - 지표가 명확한 "개선" 방향을 가진 스칼라 숫자인 경우
+   - 지표가 객관적으로 측정 가능한 경우 (빌드 시간, 테스트 통과율, 지연 시간, 메모리 사용량)
+   - "이 결과가 실제로 좋은가?"를 평가하는 데 인간의 판단이 필요하지 않은 경우
+   - 예: 빌드 시간 단축, 테스트 커버리지 증가, API 지연 시간 감소, 번들 크기 감소
 
-   **Use `type: judge`** when:
-   - The quality of the output requires semantic understanding to evaluate
-   - A human reviewer would need to look at the results to say "this is better"
-   - Proxy metrics exist but can mislead (e.g., "more clusters" does not mean "better clusters")
-   - The optimization could produce degenerate solutions that look good on paper
-   - Examples: clustering quality, search relevance, summarization quality, code readability, UX copy, recommendation relevance
+   **`type: judge`를 사용하는 경우:**
+   - 결과의 품질을 평가하기 위해 시맨틱한 이해가 필요한 경우
+   - 인간 리뷰어가 결과를 보고 "이것이 더 낫다"고 말해야 하는 경우
+   - 프록시 지표가 존재하지만 오해의 소지가 있는 경우 (예: "더 많은 클러스터"가 반드시 "더 나은 클러스터"를 의미하지는 않음)
+   - 최적화 결과가 지표상으로는 좋아 보이지만 실제로는 퇴행적인(degenerate) 솔루션일 수 있는 경우
+   - 예: 클러스터링 품질, 검색 관련성, 요약 품질, 코드 가독성, UX 문구, 추천 관련성
 
-   **IMPORTANT**: If the target is qualitative, **strongly recommend `type: judge`**. Explain that hard metrics alone will optimize proxy numbers without checking actual quality. Show the user the three-tier approach:
-   - **Degenerate gates** (hard, cheap, fast): catch obviously broken solutions — e.g., "all items in 1 cluster" or "0% coverage". Run first. If gates fail, skip the expensive judge step.
-   - **LLM-as-judge** (the actual optimization target): sample outputs, score them against a rubric, aggregate. This is what the loop optimizes.
-   - **Diagnostics** (logged, not gated): distribution stats, counts, timing — useful for understanding WHY a judge score changed.
+   **중요**: 대상이 정성적인 경우 **`type: judge`를 강력히 권장**하십시오. 하드 지표만으로는 실제 품질을 확인하지 않고 프록시 숫자만 최적화하게 될 것이라고 설명하십시오. 다음의 3단계 접근 방식을 사용자에게 보여주십시오:
+   - **퇴행 게이트 (Degenerate gates)** (하드, 저렴, 신속): 명백히 망가진 솔루션을 걸러냅니다. 예: "모든 항목이 1개 클러스터에 있음" 또는 "커버리지 0%". 먼저 실행하며, 게이트가 실패하면 비용이 많이 드는 judge 단계를 건너뜁니다.
+   - **LLM-as-judge** (실제 최적화 목표): 결과물을 샘플링하고 루브릭(rubric)에 따라 점수를 매기고 집계합니다. 루프가 최적화하는 핵심 요소입니다.
+   - **진단 (Diagnostics)** (로그 기록, 게이트 미적용): 분포 통계, 카운트, 타이밍 등 - judge 점수가 왜 변했는지 이해하는 데 유용합니다.
 
-   If the user insists on `type: hard` for a qualitative target, proceed but warn that the results may optimize a misleading proxy.
+   사용자가 정성적 대상에 대해 `type: hard`를 고집하는 경우 진행하되, 결과가 오해의 소지가 있는 프록시를 최적화할 수 있다고 경고하십시오.
 
-3. **Design the sampling strategy** (for `type: judge`):
+3. **샘플링 전략 설계** (`type: judge`용):
 
-   Guide the user through defining stratified sampling. The key question is: "What parts of the output space do you need to check quality on?"
+   사용자가 층화 추출(stratified sampling)을 정의하도록 안내하십시오. 핵심 질문은 "품질을 확인해야 하는 결과 공간의 부분은 어디인가?"입니다.
 
-   Walk through these questions:
-   - **What does one "item" look like?** (a cluster, a search result page, a summary, etc.)
-   - **What are the natural size/quality strata?** (e.g., large clusters vs small clusters vs singletons)
-   - **Where are quality failures most likely?** (e.g., very large clusters may be degenerate merges; singletons may be missed groupings)
-   - **What total sample size balances cost vs signal?** (default: 30 items, adjust based on output volume)
+   다음 질문들을 검토하십시오:
+   - **하나의 "항목(item)"은 어떤 모습인가요?** (클러스터, 검색 결과 페이지, 요약 등)
+   - **자연스러운 크기/품질 계층(strata)은 무엇인가요?** (예: 대형 클러스터 대 소형 클러스터 대 싱글톤)
+   - **품질 실패가 발생하기 가장 쉬운 지점은 어디인가요?** (예: 매우 큰 클러스터는 퇴행적인 병합일 수 있고, 싱글톤은 놓친 그룹화일 수 있음)
+   - **비용과 신호의 균형을 맞추는 전체 샘플 크기는 얼마인가요?** (기본값: 30개 항목, 출력 볼륨에 따라 조정)
 
-   Example stratified sampling for clustering:
+   클러스터링을 위한 층화 추출 예시:
    ```yaml
    stratification:
-     - bucket: "top_by_size"     # largest clusters — check for degenerate mega-clusters
+     - bucket: "top_by_size"     # 가장 큰 클러스터 — 퇴행적인 거대 클러스터 확인
        count: 10
-     - bucket: "mid_range"       # middle of non-solo cluster size range — representative quality
+     - bucket: "mid_range"       # 중간 크기의 클러스터 — 대표적인 품질 확인
        count: 10
-     - bucket: "small_clusters"  # clusters with 2-3 items — check if connections are real
+     - bucket: "small_clusters"  # 2-3개 항목의 클러스터 — 연결이 실제인지 확인
        count: 10
-   singleton_sample: 15          # singletons — check for false negatives (items that should cluster)
+   singleton_sample: 15          # 싱글톤 — 위양성(그룹화되어야 할 항목) 확인
    ```
 
-   The sampling strategy is domain-specific. For search relevance, strata might be "top-3 results", "results 4-10", "tail results". For summarization, strata might be "short documents", "long documents", "multi-topic documents".
+   샘플링 전략은 도메인에 따라 다릅니다. 검색 관련성의 경우 계층은 "상위 3개 결과", "4-10위 결과", "꼬리(tail) 결과"가 될 수 있습니다. 요약의 경우 "짧은 문서", "긴 문서", "다중 주제 문서"가 될 수 있습니다.
 
-   **Singleton evaluation is critical when the goal involves coverage** — sampling singletons with the singleton rubric checks whether the system is missing obvious groupings.
+   **싱글톤 평가는 목표에 커버리지가 포함될 때 매우 중요합니다.** 싱글톤 루브릭을 사용한 싱글톤 샘플링은 시스템이 명백한 그룹화를 놓치고 있는지 확인합니다.
 
-4. **Design the rubric** (for `type: judge`):
+4. **루브릭(Rubric) 설계** (`type: judge`용):
 
-   Help the user define the scoring rubric. A good rubric:
-   - Has a 1-5 scale (or similar) with concrete descriptions for each level
-   - Includes supplementary fields that help diagnose issues (e.g., `distinct_topics`, `outlier_count`)
-   - Is specific enough that two judges would give similar scores
-   - Does NOT assume bigger/more is better — "3 items per cluster average" is not inherently good or bad
+   사용자가 채점 루브릭을 정의하도록 돕습니다. 좋은 루브릭은 다음을 갖춥니다:
+   - 각 레벨에 대한 구체적인 설명이 있는 1-5점 척도 (또는 유사한 척도)
+   - 문제 진단에 도움이 되는 보충 필드 포함 (예: `distinct_topics`, `outlier_count`)
+   - 두 명의 평가자가 유사한 점수를 줄 수 있을 만큼 구체적임
+   - 크거나 많은 것이 무조건 좋다고 가정하지 않음 - "클러스터당 평균 3개 항목"은 그 자체로 좋거나 나쁜 것이 아님
 
-   Example for clustering:
+   클러스터링 예시:
    ```yaml
    rubric: |
-     Rate this cluster 1-5:
-     - 5: All items clearly about the same issue/feature
-     - 4: Strong theme, minor outliers
-     - 3: Related but covers 2-3 sub-topics that could reasonably be split
-     - 2: Weak connection — items share superficial similarity only
-     - 1: Unrelated items grouped together
-     Also report: distinct_topics (integer), outlier_count (integer)
+     이 클러스터를 1-5점으로 평가하십시오:
+     - 5: 모든 항목이 동일한 이슈/기능에 대해 명확하게 설명함
+     - 4: 테마가 강하지만 사소한 이상치(outlier)가 있음
+     - 3: 관련이 있지만 합리적으로 분리될 수 있는 2-3개의 하위 주제를 다룸
+     - 2: 연결이 약함 — 항목들이 표면적인 유사성만 공유함
+     - 1: 관련 없는 항목들이 함께 그룹화됨
+     추가 보고: distinct_topics (정수), outlier_count (정수)
    ```
 
-5. Guide the user through the remaining spec fields:
-   - What degenerate cases should be rejected? (gates — e.g., "solo_pct <= 0.95" catches all-singletons, "max_cluster_size <= 500" catches mega-clusters)
-   - What command runs the measurement?
-   - What files can be modified? What is immutable?
-   - Any constraints or dependencies?
-   - If this is the first run: recommend `execution.mode: serial`, `execution.max_concurrent: 1`, `stopping.max_iterations: 4`, and `stopping.max_hours: 1`
-   - If `type: judge`: recommend `sample_size: 10`, `batch_size: 5`, and `max_total_cost_usd: 5` until the rubric and harness are trusted
-6. Write the spec to `.context/compound-engineering/ce-optimize/<spec-name>/spec.yaml`
-7. Present the spec to the user for approval before proceeding
+5. 나머지 사양 필드에 대해 사용자를 안내합니다:
+   - 어떤 퇴행적인 경우를 거부해야 합니까? (게이트 - 예: "solo_pct <= 0.95"는 모든 것이 싱글톤인 경우를 감지, "max_cluster_size <= 500"은 거대 클러스터를 감지)
+   - 어떤 명령어로 측정을 실행합니까?
+   - 어떤 파일을 수정할 수 있습니까? 수정 불가능한 파일은 무엇입니까?
+   - 제약 조건이나 종속성이 있습니까?
+   - 첫 실행인 경우: `execution.mode: serial`, `execution.max_concurrent: 1`, `stopping.max_iterations: 4`, `stopping.max_hours: 1`을 권장합니다.
+   - `type: judge`인 경우: 루브릭과 하네스를 신뢰할 수 있을 때까지 `sample_size: 10`, `batch_size: 5`, `max_total_cost_usd: 5`를 권장합니다.
+6. 사양을 `.context/compound-engineering/ce-optimize/<spec-name>/spec.yaml`에 기록합니다.
+7. 진행하기 전에 사용자에게 사양을 제시하고 승인을 받습니다.
 
-### 0.3 Search Prior Learnings
+### 0.3 이전 학습 내용 검색
 
-Dispatch `ce-learnings-researcher` to search for prior optimization work on similar topics. If relevant learnings exist, incorporate them into the approach.
+`ce-learnings-researcher`를 파견하여 유사한 주제에 대한 이전 최적화 작업을 검색합니다. 관련 학습 내용이 있으면 접근 방식에 통합합니다.
 
-### 0.4 Run Identity Detection
+### 0.4 실행 정체성 감지 (Run Identity Detection)
 
-Check if `optimize/<spec-name>` branch already exists:
+`optimize/<spec-name>` 브랜치가 이미 존재하는지 확인합니다:
 
 ```bash
 git rev-parse --verify "optimize/<spec-name>" 2>/dev/null
 ```
 
-**If branch exists**, check for an existing experiment log at `.context/compound-engineering/ce-optimize/<spec-name>/experiment-log.yaml`.
+**브랜치가 존재하는 경우**, `.context/compound-engineering/ce-optimize/<spec-name>/experiment-log.yaml`에 기존 실험 로그가 있는지 확인합니다.
 
-Present the user with a choice via the platform question tool:
-- **Resume**: read ALL state from the experiment log on disk (do not rely on any in-memory context from a prior session). Recover any measured-but-unlogged experiments by scanning worktree directories for `result.yaml` markers. Continue from the last iteration number in the log.
-- **Fresh start**: archive the old branch to `optimize-archive/<spec-name>/archived-<timestamp>`, clear the experiment log, start from scratch
+플랫폼 질문 도구를 통해 사용자에게 선택지를 제시합니다:
+- **재개 (Resume)**: 디스크의 실험 로그에서 모든 상태를 읽습니다 (이전 세션의 메모리 내 컨텍스트에 의존하지 마십시오). 워크트리 디렉토리에서 `result.yaml` 마커를 검색하여 측정되었지만 로그에 기록되지 않은 실험을 복구합니다. 로그의 마지막 반복 번호부터 계속합니다.
+- **새로 시작 (Fresh start)**: 기존 브랜치를 `optimize-archive/<spec-name>/archived-<timestamp>`로 아카이브하고, 실험 로그를 비우고 처음부터 시작합니다.
 
-### 0.5 Create Optimization Branch and Scratch Space
+### 0.5 최적화 브랜치 및 작업 공간 생성
 
 ```bash
-git checkout -b "optimize/<spec-name>"  # or switch to existing if resuming
+git checkout -b "optimize/<spec-name>"  # 재개하는 경우 기존 브랜치로 전환
 ```
 
-Create scratch directory:
+작업 디렉토리를 생성합니다:
 ```bash
 mkdir -p .context/compound-engineering/ce-optimize/<spec-name>/
 ```
 
 ---
 
-## Phase 1: Measurement Scaffolding
+## Phase 1: 측정 스캐폴딩 (Measurement Scaffolding)
 
-**This phase is a HARD GATE. The user must approve baseline and parallel readiness before Phase 2.**
+**이 단계는 엄격한 게이트(HARD GATE)입니다. 사용자는 Phase 2로 넘어가기 전에 베이스라인과 병렬 실행 준비 상태를 승인해야 합니다.**
 
-### 1.1 Clean-Tree Gate
+### 1.1 깨끗한 트리 게이트 (Clean-Tree Gate)
 
-Verify no uncommitted changes to files within `scope.mutable` or `scope.immutable`:
+`scope.mutable` 또는 `scope.immutable` 내의 파일에 커밋되지 않은 변경 사항이 없는지 확인합니다:
 
 ```bash
 git status --porcelain
 ```
 
-Filter the output against the scope paths. If any in-scope files have uncommitted changes:
-- Report which files are dirty
-- Ask the user to commit or stash before proceeding
-- Do NOT continue until the working tree is clean for in-scope files
+출력 결과를 스코프 경로와 비교하여 필터링합니다. 스코프 내 파일에 커밋되지 않은 변경 사항이 있는 경우:
+- 어떤 파일이 더러운(dirty) 상태인지 보고합니다.
+- 진행하기 전에 커밋하거나 스태시(stash)하도록 사용자에게 요청합니다.
+- 스코프 내 파일에 대해 작업 트리가 깨끗해질 때까지 계속하지 마십시오.
 
-### 1.2 Build or Validate Measurement Harness
+### 1.2 측정 하네스 구축 또는 유효성 검사
 
-**If user provides a measurement harness** (the `measurement.command` already exists):
-1. Run it once via the measurement script:
+**사용자가 측정 하네스를 제공한 경우** (`measurement.command`가 이미 존재하는 경우):
+1. 측정 스크립트를 통해 한 번 실행합니다:
    ```bash
    bash scripts/measure.sh "<measurement.command>" <timeout_seconds> "<measurement.working_directory or .>"
    ```
-2. Validate the JSON output:
-   - Contains keys for all degenerate gate metric names
-   - Contains keys for all diagnostic metric names
-   - Values are numeric or boolean as expected
-3. If validation fails, report what is missing and ask the user to fix the harness
+2. JSON 출력을 검증합니다:
+   - 모든 퇴행 게이트 지표 이름에 대한 키가 포함되어 있는지 확인
+   - 모든 진단 지표 이름에 대한 키가 포함되어 있는지 확인
+   - 값이 예상대로 숫자 또는 불리언인지 확인
+3. 유효성 검사에 실패하면 누락된 내용을 보고하고 사용자에게 하네스 수정을 요청합니다.
 
-**If agent must build the harness:**
-1. Analyze the codebase to understand the current approach and what should be measured
-2. Build an evaluation script (e.g., `evaluate.py`, `evaluate.sh`, or equivalent)
-3. Add the evaluation script path to `scope.immutable` -- the experiment agent must not modify it
-4. Run it once and validate the output
-5. Present the harness and its output to the user for review
+**에이전트가 하네스를 구축해야 하는 경우:**
+1. 코드베이스를 분석하여 현재 접근 방식과 측정해야 할 항목을 파악합니다.
+2. 평가 스크립트(예: `evaluate.py`, `evaluate.sh` 등)를 작성합니다.
+3. 평가 스크립트 경로를 `scope.immutable`에 추가합니다. 실험 에이전트는 이를 수정해서는 안 됩니다.
+4. 한 번 실행하고 출력을 검증합니다.
+5. 하네스와 그 출력을 사용자에게 검토용으로 제시합니다.
 
-### 1.3 Establish Baseline
+### 1.3 베이스라인 수립
 
-Run the measurement harness on the current code.
+현재 코드에서 측정 하네스를 실행합니다.
 
-**If stability mode is `repeat`:**
-1. Run the harness `repeat_count` times
-2. Aggregate results using the configured aggregation method (median, mean, min, max)
-3. Calculate variance across runs
-4. If variance exceeds `noise_threshold`, warn the user and suggest increasing `repeat_count`
+**안정성 모드가 `repeat`인 경우:**
+1. 하네스를 `repeat_count` 횟수만큼 실행합니다.
+2. 구성된 집계 방법(중앙값, 평균, 최소값, 최대값)을 사용하여 결과를 집계합니다.
+3. 실행 간의 분산을 계산합니다.
+4. 분산이 `noise_threshold`를 초과하면 사용자에게 경고하고 `repeat_count`를 늘릴 것을 제안합니다.
 
-Record the baseline in the experiment log:
+실험 로그에 베이스라인을 기록합니다:
 ```yaml
 baseline:
-  timestamp: "<current ISO 8601 timestamp>"
+  timestamp: "<현재 ISO 8601 타임스탬프>"
   gates:
     <gate_name>: <value>
     ...
@@ -306,109 +324,109 @@ baseline:
     ...
 ```
 
-If primary type is `judge`, also run the judge evaluation on baseline output to establish the starting judge score.
+기본 타입이 `judge`인 경우, 베이스라인 출력에 대해 judge 평가를 실행하여 시작 judge 점수를 수립합니다.
 
-### 1.4 Parallelism Readiness Probe
+### 1.4 병렬 실행 준비도 조사 (Parallelism Readiness Probe)
 
-Run the parallelism probe script:
+병렬 조사 스크립트를 실행합니다:
 ```bash
 bash scripts/parallel-probe.sh "<project_directory>" "<measurement.command>" "<measurement.working_directory>" <shared_files...>
 ```
 
-Read the JSON output. Present any blockers to the user with suggested mitigations. Treat the probe as intentionally narrow: it should inspect the measurement command, the measurement working directory, and explicitly declared shared files, not the entire repository.
+JSON 출력을 읽습니다. 차단 요소(blockers)가 있으면 제안된 완화책과 함께 사용자에게 제시합니다. 조사는 의도적으로 좁은 범위로 처리해야 합니다. 전체 저장소가 아니라 측정 명령어, 측정 작업 디렉토리, 명시적으로 선언된 공유 파일들을 검사해야 합니다.
 
-### 1.5 Worktree Budget Check
+### 1.5 워크트리 할당량 확인
 
-Count existing worktrees:
+기존 워크트리 개수를 확인합니다:
 ```bash
 bash scripts/experiment-worktree.sh count
 ```
 
-If count + `execution.max_concurrent` would exceed 12:
-- Warn the user
-- Suggest cleaning up existing worktrees or reducing `max_concurrent`
-- Do NOT block -- the user may proceed at their own risk
+개수 + `execution.max_concurrent`가 12를 초과하는 경우:
+- 사용자에게 경고합니다.
+- 기존 워크트리를 정리하거나 `max_concurrent`를 줄일 것을 제안합니다.
+- 차단하지는 마십시오. 사용자는 자신의 책임 하에 진행할 수 있습니다.
 
-### 1.6 Write Baseline to Disk (CP-1)
+### 1.6 베이스라인을 디스크에 기록 (CP-1)
 
-**MANDATORY CHECKPOINT.** Before presenting results to the user, write the initial experiment log with baseline metrics to disk:
+**필수 체크포인트.** 사용자에게 결과를 제시하기 전에 베이스라인 지표가 포함된 초기 실험 로그를 디스크에 기록하십시오:
 
-1. Create the experiment log file at `.context/compound-engineering/ce-optimize/<spec-name>/experiment-log.yaml`
-2. Include all required top-level sections from `references/experiment-log-schema.yaml`: `spec`, `run_id`, `started_at`, `baseline`, `experiments`, and `best`
-3. Seed `experiments` as an empty array and seed `best` from the baseline snapshot (use `iteration: 0`, baseline metrics, and baseline judge scores if present) so later phases have a valid current-best state to compare against
-4. Optionally seed `hypothesis_backlog: []` here as well so the log shape is stable before Phase 2 populates it
-5. **Verify**: read the file back and confirm the required sections are present and the baseline values match
-6. Only THEN present results to the user
+1. `.context/compound-engineering/ce-optimize/<spec-name>/experiment-log.yaml`에 실험 로그 파일을 생성합니다.
+2. `references/experiment-log-schema.yaml`의 모든 필수 최상위 섹션을 포함합니다: `spec`, `run_id`, `started_at`, `baseline`, `experiments`, `best`.
+3. `experiments`를 빈 배열로 초기화하고, `best`를 베이스라인 스냅샷으로 초기화합니다 (이후 단계에서 현재 최고 상태와 비교할 수 있도록 `iteration: 0`, 베이스라인 지표, 베이스라인 judge 점수 포함).
+4. 선택적으로 `hypothesis_backlog: []`도 여기서 초기화하여 Phase 2에서 채워지기 전에 로그 형태를 안정화합니다.
+5. **확인**: 파일을 다시 읽어 필수 섹션이 있는지, 베이스라인 값이 일치하는지 확인합니다.
+6. 그 후에만 사용자에게 결과를 제시합니다.
 
-### 1.7 User Approval Gate
+### 1.7 사용자 승인 게이트
 
-Present to the user via the platform question tool:
+플랫폼 질문 도구를 통해 사용자에게 다음 내용을 제시합니다:
 
-- **Baseline metrics**: all gate values, diagnostic values, and judge scores (if applicable)
-- **Experiment log location**: show the file path so the user knows where results are saved
-- **Parallel readiness**: probe results, any blockers, mitigations applied
-- **Clean-tree status**: confirmed clean
-- **Worktree budget**: current count and projected usage
-- **Judge budget**: estimated per-experiment judge cost and configured `max_total_cost_usd` cap (or an explicit note that spend is uncapped)
+- **베이스라인 지표**: 모든 게이트 값, 진단 값, judge 점수 (해당하는 경우)
+- **실험 로그 위치**: 결과가 저장되는 파일 경로를 보여주어 사용자가 알 수 있게 합니다.
+- **병렬 준비도**: 조사 결과, 차단 요소, 적용된 완화책
+- **깨끗한 트리 상태**: 깨끗함 확인됨
+- **워크트리 할당량**: 현재 개수 및 예상 사용량
+- **Judge 예산**: 실험당 예상 judge 비용 및 구성된 `max_total_cost_usd` 한도 (또는 지출 제한 없음 명시)
 
-**Options:**
-1. **Proceed** -- approve baseline and parallel config, move to Phase 2
-2. **Adjust spec** -- modify spec settings before proceeding
-3. **Fix issues** -- user needs to resolve blockers first
+**옵션:**
+1. **진행 (Proceed)** -- 베이스라인 및 병렬 구성을 승인하고 Phase 2로 이동
+2. **사양 조정 (Adjust spec)** -- 진행하기 전에 사양 설정 수정
+3. **문제 해결 (Fix issues)** -- 사용자가 차단 요소를 먼저 해결해야 함
 
-Do NOT proceed to Phase 2 until the user explicitly approves.
+사용자가 명시적으로 승인할 때까지 Phase 2로 진행하지 마십시오.
 
-If primary type is `judge` and `max_total_cost_usd` is null, call that out as uncapped spend and require explicit approval before proceeding.
+기본 타입이 `judge`이고 `max_total_cost_usd`가 null인 경우, 지출 제한이 없음을 알리고 진행 전 명시적인 승인을 요청하십시오.
 
-**State re-read:** After gate approval, re-read the spec and baseline from disk. Do not carry stale in-memory values forward.
+**상태 다시 읽기**: 게이트 승인 후, 디스크에서 사양과 베이스라인을 다시 읽으십시오. 오래된 메모리 내 값을 그대로 가져가지 마십시오.
 
 ---
 
-## Phase 2: Hypothesis Generation
+## Phase 2: 가설 생성 (Hypothesis Generation)
 
-### 2.1 Analyze Current Approach
+### 2.1 현재 접근 방식 분석
 
-Read the code within `scope.mutable` to understand:
-- The current implementation approach
-- Obvious improvement opportunities
-- Constraints and dependencies between components
+`scope.mutable` 내의 코드를 읽어 다음을 파악합니다:
+- 현재 구현 방식
+- 명백한 개선 기회
+- 컴포넌트 간의 제약 조건 및 종속성
 
-Optionally dispatch `ce-repo-research-analyst` for deeper codebase analysis if the scope is large or unfamiliar.
+범위가 크거나 익숙하지 않은 경우 더 깊은 코드베이스 분석을 위해 `ce-repo-research-analyst`를 파견할 수 있습니다.
 
-### 2.2 Generate Hypothesis List
+### 2.2 가설 목록 생성
 
-Generate an initial set of hypotheses. Each hypothesis should have:
-- **Description**: what to try
-- **Category**: one of the standard categories (signal-extraction, graph-signals, embedding, algorithm, preprocessing, parameter-tuning, architecture, data-handling) or a domain-specific category
-- **Priority**: high, medium, or low based on expected impact and feasibility
-- **Required dependencies**: any new packages or tools needed
+초기 가설 세트를 생성합니다. 각 가설은 다음을 포함해야 합니다:
+- **설명 (Description)**: 시도해 볼 내용
+- **카테고리 (Category)**: 표준 카테고리 중 하나 (signal-extraction, graph-signals, embedding, algorithm, preprocessing, parameter-tuning, architecture, data-handling) 또는 도메인별 카테고리
+- **우선순위 (Priority)**: 예상되는 영향과 실현 가능성에 따라 high, medium, low 중 하나
+- **필요한 종속성 (Required dependencies)**: 새로 필요한 패키지나 도구
 
-Include user-provided hypotheses if any were given as input.
+입력으로 제공된 사용자의 가설이 있다면 포함하십시오.
 
-Aim for 10-30 hypotheses in the initial backlog. More can be generated during the loop based on learnings.
+초기 백로그에는 10-30개의 가설을 목표로 합니다. 루프 진행 중 학습 내용에 따라 더 많은 가설을 생성할 수 있습니다.
 
-### 2.3 Dependency Pre-Approval
+### 2.3 종속성 사전 승인
 
-Collect all unique new dependencies across all hypotheses.
+모든 가설에 걸쳐 고유한 새 종속성 목록을 수집합니다.
 
-If any hypotheses require new dependencies:
-1. Present the full dependency list to the user via the platform question tool
-2. Ask for bulk approval
-3. Mark each hypothesis's `dep_status` as `approved` or `needs_approval`
+새 종속성이 필요한 가설이 있는 경우:
+1. 플랫폼 질문 도구를 통해 사용자에게 전체 종속성 목록을 제시합니다.
+2. 일괄 승인을 요청합니다.
+3. 각 가설의 `dep_status`를 `approved` 또는 `needs_approval`로 표시합니다.
 
-Hypotheses with unapproved dependencies remain in the backlog but are skipped during batch selection. They are re-presented at wrap-up for potential approval.
+승인되지 않은 종속성이 있는 가설은 백로그에 남지만 배치 선택 시 제외됩니다. 마무리 단계에서 다시 제시되어 승인 여부를 묻습니다.
 
-### 2.4 Record Hypothesis Backlog (CP-2)
+### 2.4 가설 백로그 기록 (CP-2)
 
-**MANDATORY CHECKPOINT.** Write the initial backlog to the experiment log file and verify:
+**필수 체크포인트.** 초기 백로그를 실험 로그 파일에 쓰고 확인합니다:
 ```yaml
 hypothesis_backlog:
-  - description: "Remove template boilerplate before embedding"
+  - description: "임베딩 전에 템플릿 보일러플레이트 제거"
     category: "signal-extraction"
     priority: high
     dep_status: approved
     required_deps: []
-  - description: "Try HDBSCAN clustering algorithm"
+  - description: "HDBSCAN 클러스터링 알고리즘 시도"
     category: "algorithm"
     priority: medium
     dep_status: needs_approval
@@ -417,243 +435,243 @@ hypothesis_backlog:
 
 ---
 
-## Phase 3: Optimization Loop
+## Phase 3: 최적화 루프 (Optimization Loop)
 
-This phase repeats in batches until a stopping criterion is met.
+이 단계는 중단 기준이 충족될 때까지 배치(batch) 단위로 반복됩니다.
 
-### 3.1 Batch Selection
+### 3.1 배치 선택 (Batch Selection)
 
-Select hypotheses for this batch:
-- Build a runnable backlog by excluding hypotheses with `dep_status: needs_approval`
-- If `execution.mode` is `serial`, force `batch_size = 1`
-- Otherwise, `batch_size = min(runnable_backlog_size, execution.max_concurrent)`
-- Prefer diversity: select from different categories when possible
-- Within a category, select by priority (high first)
+이 배치에서 실행할 가설을 선택합니다:
+- `dep_status: needs_approval`인 가설을 제외하여 실행 가능한 백로그를 구축합니다.
+- `execution.mode`가 `serial`인 경우 `batch_size = 1`로 강제합니다.
+- 그렇지 않은 경우 `batch_size = min(runnable_backlog_size, execution.max_concurrent)`입니다.
+- 다양성을 선호하십시오: 가능한 경우 서로 다른 카테고리에서 선택합니다.
+- 카테고리 내에서는 우선순위에 따라 선택합니다 (high 우선).
 
-If the backlog is empty and no new hypotheses can be generated, proceed to Phase 4 (wrap-up).
-If the backlog is non-empty but no runnable hypotheses remain because everything needs approval or is otherwise blocked, proceed to Phase 4 so the user can approve dependencies instead of spinning forever.
+백로그가 비어 있고 새로운 가설을 생성할 수 없는 경우 Phase 4(마무리)로 진행합니다.
+백로그가 비어 있지 않지만 모든 것이 승인이 필요하거나 차단되어 실행 가능한 가설이 없는 경우, 사용자가 계속 기다리지 않도록 Phase 4로 진행하여 종속성 승인을 받게 합니다.
 
-### 3.2 Dispatch Experiments
+### 3.2 실험 파견 (Dispatch Experiments)
 
-For each hypothesis in the batch, dispatch according to `execution.mode`. In `serial` mode, run exactly one experiment to completion before selecting the next hypothesis. In `parallel` mode, dispatch the full batch concurrently.
+배치의 각 가설에 대해 `execution.mode`에 따라 파견합니다. `serial` 모드에서는 다음 가설을 선택하기 전에 정확히 하나의 실험을 완료할 때까지 실행합니다. `parallel` 모드에서는 전체 배치를 동시에 파견합니다.
 
-**Worktree backend:**
-1. Create experiment worktree:
+**워크트리 백엔드:**
+1. 실험 워크트리를 생성합니다:
    ```bash
-   WORKTREE_PATH=$(bash scripts/experiment-worktree.sh create "<spec_name>" <exp_index> "optimize/<spec_name>" <shared_files...>)  # creates optimize-exp/<spec_name>/exp-<NNN>
+   WORKTREE_PATH=$(bash scripts/experiment-worktree.sh create "<spec_name>" <exp_index> "optimize/<spec_name>" <shared_files...>)  # optimize-exp/<spec_name>/exp-<NNN> 생성
    ```
-2. Apply port parameterization if configured (set env vars for the measurement script)
-3. Fill the experiment prompt template (`references/experiment-prompt-template.md`) with:
-   - Iteration number, spec name
-   - Hypothesis description and category
-   - Current best and baseline metrics
-   - Mutable and immutable scope
-   - Constraints and approved dependencies
-   - Rolling window of last 10 experiments (concise summaries)
-4. Dispatch a subagent with the filled prompt, working in the experiment worktree
+2. 구성된 경우 포트 파라미터화를 적용합니다 (측정 스크립트를 위한 환경 변수 설정).
+3. 실험 프롬프트 템플릿(`references/experiment-prompt-template.md`)을 다음 내용으로 채웁니다:
+   - 반복 번호, 사양 이름
+   - 가설 설명 및 카테고리
+   - 현재 최적 및 베이스라인 지표
+   - 수정 가능(mutable) 및 수정 불가능(immutable) 스코프
+   - 제약 조건 및 승인된 종속성
+   - 최근 10개 실험의 롤링 윈도우 (간략한 요약)
+4. 채워진 프롬프트를 사용하여 실험 워크트리에서 작업할 서브에이전트를 파견합니다.
 
-**Codex backend:**
-1. Check environment guard -- do NOT delegate if already inside a Codex sandbox:
+**Codex 백엔드:**
+1. 환경 가드를 확인합니다 — 이미 Codex 샌드박스 내부인 경우 파견하지 마십시오:
    ```bash
-   # If these exist, we're already in Codex -- fall back to subagent
+   # 이것들이 존재하면 이미 Codex 내부임 — 서브에이전트로 대체
    test -n "${CODEX_SANDBOX:-}" || test -n "${CODEX_SESSION_ID:-}" || test ! -w .git
    ```
-2. Fill the experiment prompt template
-3. Write the filled prompt to a temp file
-4. Dispatch via Codex:
+2. 실험 프롬프트 템플릿을 채웁니다.
+3. 채워진 프롬프트를 임시 파일에 씁니다.
+4. Codex를 통해 파견합니다:
    ```bash
    cat /tmp/optimize-exp-XXXXX.txt | codex exec --skip-git-repo-check - 2>&1
    ```
-5. Security posture: use the user's selection (ask once per session if not set in spec)
+5. 보안 태세: 사용자의 선택을 사용합니다 (사양에 설정되지 않은 경우 세션당 한 번 질문).
 
-### 3.3 Collect and Persist Results
+### 3.3 결과 수집 및 보존 (Collect and Persist Results)
 
-Process experiments as they complete — do NOT wait for the entire batch to finish before writing results.
+실험이 완료되는 대로 처리하십시오 — 전체 배치가 끝날 때까지 기다렸다가 결과를 쓰지 마십시오.
 
-For each completed experiment, **immediately**:
+각각의 완료된 실험에 대해 **즉시**:
 
-1. **Run measurement** in the experiment's worktree:
+1. 실험의 워크트리에서 **측정을 실행**합니다:
    ```bash
    bash scripts/measure.sh "<measurement.command>" <timeout_seconds> "<worktree_path>/<measurement.working_directory or .>" <env_vars...>
    ```
-   - If stability mode is `repeat`, run the measurement harness `repeat_count` times in that working directory and aggregate the results exactly as in Phase 1 before evaluating gates or ranking the experiment.
-   - Use the aggregated metrics as the experiment's score; if variance exceeds `noise_threshold`, record that in learnings so the operator knows the result is noisy.
+   - 안정성 모드가 `repeat`인 경우, 해당 작업 디렉토리에서 측정 하네스를 `repeat_count`만큼 실행하고 게이트 평가나 실험 순위를 매기기 전에 Phase 1과 동일하게 결과를 집계합니다.
+   - 집계된 지표를 실험의 점수로 사용합니다. 분산이 `noise_threshold`를 초과하면 운영자가 결과에 노이즈가 있음을 알 수 있도록 학습 내용에 기록합니다.
 
-2. **Write crash-recovery marker** — immediately after measurement, write `result.yaml` in the experiment worktree containing the raw metrics. This ensures the measurement is recoverable even if the agent crashes before updating the main log.
+2. **충돌 복구 마커 기록** — 측정 직후 실험 워크트리에 원본 지표가 포함된 `result.yaml`을 기록합니다. 이는 메인 로그를 업데이트하기 전에 에이전트가 충돌하더라도 측정을 복구할 수 있게 합니다.
 
-3. **Read raw JSON output** from the measurement script
+3. 측정 스크립트로부터 **원본 JSON 출력**을 읽습니다.
 
-4. **Evaluate degenerate gates**:
-   - For each gate in `metric.degenerate_gates`, parse the operator and threshold
-   - Compare the metric value against the threshold
-   - If ANY gate fails: mark outcome as `degenerate`, skip judge evaluation, save money
+4. **퇴행 게이트 평가**:
+   - `metric.degenerate_gates`의 각 게이트에 대해 연산자와 임계값을 파싱합니다.
+   - 지표 값을 임계값과 비교합니다.
+   - 하나라도 게이트가 실패하면: 결과를 `degenerate`로 표시하고, 비용 절감을 위해 judge 평가를 건너뜁니다.
 
-5. **If gates pass AND primary type is `judge`**:
-   - Read the experiment's output (cluster assignments, search results, etc.)
-   - Apply stratified sampling per `metric.judge.stratification` config (using `sample_seed`)
-   - Group samples into batches of `metric.judge.batch_size`
-   - Fill the judge prompt template (`references/judge-prompt-template.md`) for each batch
-   - Dispatch `ceil(sample_size / batch_size)` parallel judge sub-agents
-   - Each sub-agent returns structured JSON scores
-   - Aggregate scores: compute the configured primary judge field from `metric.judge.scoring.primary` (which should match `metric.primary.name`) plus any `scoring.secondary` values
-   - If `singleton_sample > 0`: also dispatch singleton evaluation sub-agents
+5. **게이트가 통과하고 기본 타입이 `judge`인 경우**:
+   - 실험의 결과물(클러스터 할당, 검색 결과 등)을 읽습니다.
+   - `metric.judge.stratification` 구성에 따라 층화 추출을 적용합니다 (`sample_seed` 사용).
+   - 샘플을 `metric.judge.batch_size` 크기의 배치로 그룹화합니다.
+   - 각 배치에 대해 judge 프롬프트 템플릿(`references/judge-prompt-template.md`)을 채웁니다.
+   - `ceil(sample_size / batch_size)`개의 병렬 judge 서브에이전트를 파견합니다.
+   - 각 서브에이전트는 구조화된 JSON 점수를 반환합니다.
+   - 점수 집계: `metric.judge.scoring.primary`(`metric.primary.name`과 일치해야 함)와 모든 `scoring.secondary` 값을 계산합니다.
+   - `singleton_sample > 0`인 경우: 싱글톤 평가 서브에이전트도 파견합니다.
 
-6. **If gates pass AND primary type is `hard`**:
-   - Use the metric value directly from the measurement output
+6. **게이트가 통과하고 기본 타입이 `hard`인 경우**:
+   - 측정 출력의 지표 값을 직접 사용합니다.
 
-7. **IMMEDIATELY append to experiment log on disk (CP-3)** — do not defer this to batch evaluation. Write the experiment entry (iteration, hypothesis, outcome, metrics, learnings) to `.context/compound-engineering/ce-optimize/<spec-name>/experiment-log.yaml` right now. Use the transitional outcome `measured` once the experiment has valid metrics but has not yet been compared to the current best. Update the outcome to `kept`, `reverted`, or another terminal state in the evaluation step, but the raw metrics are on disk and safe from context compaction.
+7. **디스크의 실험 로그에 즉시 추가 (CP-3)** — 이를 배치 평가까지 미루지 마십시오. 지금 바로 실험 항목(반복, 가설, 결과, 지표, 학습 내용)을 `.context/compound-engineering/ce-optimize/<spec-name>/experiment-log.yaml`에 기록하십시오. 실험에 유효한 지표는 있지만 아직 최적값과 비교되지 않은 경우 과도기적 결과인 `measured`를 사용하십시오. 평가 단계에서 결과를 `kept`, `reverted` 또는 다른 최종 상태로 업데이트하되, 원본 지표는 디스크에 안전하게 기록되어 컨텍스트 압축으로부터 보호되어야 합니다.
 
-8. **VERIFY the write (CP-3 verification)** — read the experiment log back from disk and confirm the entry just written is present. If verification fails, retry the write. Do NOT proceed to the next experiment until this entry is confirmed on disk.
+8. **쓰기 확인 (CP-3 verification)** — 디스크에서 실험 로그를 다시 읽어 방금 기록한 항목이 있는지 확인합니다. 확인이 실패하면 쓰기를 다시 시도합니다. 이 항목이 디스크에서 확인될 때까지 다음 실험으로 진행하지 마십시오.
 
-**Why immediately + verify?** The agent's context window is NOT a durable store. Context compaction, session crashes, and restarts are expected during long runs. If results only exist in the agent's memory, they are lost. Karpathy's autoresearch writes to `results.tsv` after every single experiment — this skill must do the same with the experiment log. The verification step catches silent write failures that would otherwise lose data.
+**왜 즉시 기록하고 확인하나요?** 에이전트의 컨텍스트 창은 영구적인 저장소가 아닙니다. 장시간 실행 중에는 컨텍스트 압축, 세션 충돌, 재시작이 발생할 수 있습니다. 결과가 에이전트의 메모리에만 존재한다면 손실됩니다. Karpathy의 autoresearch는 매 실험마다 `results.tsv`에 기록합니다. 이 스킬도 실험 로그에 동일하게 수행해야 합니다. 확인 단계는 데이터 손실을 초래할 수 있는 보이지 않는 쓰기 실패를 감지합니다.
 
-### 3.4 Evaluate Batch
+### 3.4 배치 평가 (Evaluate Batch)
 
-After all experiments in the batch have been measured:
+배치의 모든 실험 측정이 완료된 후:
 
-1. **Rank** experiments by primary metric improvement:
-   - For hard metrics: compare to the current best using `metric.primary.direction` (`maximize` means higher is better, `minimize` means lower is better), and require the absolute improvement to exceed `measurement.stability.noise_threshold` before treating it as a real win
-   - For judge metrics: compare the configured primary judge score (`metric.judge.scoring.primary` / `metric.primary.name`) to the current best, and require it to exceed `minimum_improvement`
+1. 기본 지표 개선도에 따라 실험의 **순위**를 매깁니다:
+   - 하드 지표의 경우: `metric.primary.direction`(`maximize`는 높을수록 좋음, `minimize`는 낮을수록 좋음)을 사용하여 현재 최고값과 비교하고, 절대적인 개선도가 `measurement.stability.noise_threshold`를 초과해야 실제 승리로 간주합니다.
+   - Judge 지표의 경우: 구성된 기본 judge 점수(`metric.judge.scoring.primary` / `metric.primary.name`)를 현재 최고값과 비교하고, `minimum_improvement`를 초과해야 합니다.
 
-2. **Identify the best experiment** that passes all gates and improves the primary metric
+2. 모든 게이트를 통과하고 기본 지표를 가장 많이 개선한 **최선의 실험**을 식별합니다.
 
-3. **If best improves on current best: KEEP**
-   - Commit the experiment branch first so the winning diff exists as a real commit before any merge or cherry-pick
-   - Include only mutable-scope changes in that commit; if no eligible diff remains, treat the experiment as non-improving and revert it
-   - Merge the committed experiment branch into the optimization branch
-   - Use the message `optimize(<spec-name>): <hypothesis description>` for the experiment commit
-   - After the merge succeeds, clean up the winner's experiment worktree and branch; the integrated commit on the optimization branch is the durable artifact
-   - This is now the new baseline for subsequent batches
+3. **최선이 현재 최고보다 개선된 경우: 유지(KEEP)**
+   - 실험 브랜치를 먼저 커밋하여 승리한 diff가 머지나 체리픽 전에 실제 커밋으로 존재하게 합니다.
+   - 해당 커밋에는 수정 가능(mutable) 스코프의 변경 사항만 포함합니다. 적격한 diff가 남지 않은 경우 개선되지 않은 것으로 간주하고 되돌립니다.
+   - 커밋된 실험 브랜치를 최적화 브랜치에 머지합니다.
+   - 실험 커밋 메시지로 `optimize(<spec-name>): <가설 설명>`을 사용합니다.
+   - 머지가 성공하면 승리한 실험의 워크트리와 브랜치를 정리합니다. 최적화 브랜치에 통합된 커밋이 영구적인 결과물입니다.
+   - 이것이 이제 이후 배치의 새로운 베이스라인이 됩니다.
 
-4. **Check file-disjoint runners-up** (up to `max_runner_up_merges_per_batch`):
-   - For each runner-up that also improved, check file-level disjointness with the kept experiment
-   - **File-level disjointness**: two experiments are disjoint if they modified completely different files. Same file = overlapping, even if different lines.
-   - If disjoint: cherry-pick the runner-up onto the new baseline, re-run full measurement
-   - If combined measurement is strictly better: keep the cherry-pick (outcome: `runner_up_kept`), then clean up that runner-up's experiment worktree and branch
-   - Otherwise: revert the cherry-pick, log as "promising alone but neutral/harmful in combination" (outcome: `runner_up_reverted`), then clean up the runner-up's experiment worktree and branch
-   - Stop after first failed combination
+4. **파일이 겹치지 않는 준우승 실험 확인** (`max_runner_up_merges_per_batch`까지):
+   - 개선을 보인 각 준우승 실험에 대해 유지된(kept) 실험과 파일 수준의 비중복성을 확인합니다.
+   - **파일 수준 비중복성**: 두 실험이 완전히 다른 파일을 수정한 경우 비중복으로 간주합니다. 같은 파일인 경우 서로 다른 라인이더라도 중복으로 간주합니다.
+   - 비중복인 경우: 준우승 실험을 새로운 베이스라인에 체리픽하고 전체 측정을 다시 실행합니다.
+   - 결합된 측정이 명확하게 더 나은 경우: 체리픽을 유지하고(결과: `runner_up_kept`), 해당 준우승 실험의 워크트리와 브랜치를 정리합니다.
+   - 그렇지 않은 경우: 체리픽을 되돌리고 "단독으로는 유망하지만 결합 시 중립적이거나 해로움"으로 기록합니다(결과: `runner_up_reverted`). 그 후 준우승 실험의 워크트리와 브랜치를 정리합니다.
+   - 첫 번째 결합 실패 후 중단합니다.
 
-5. **Handle deferred deps**: experiments that need unapproved dependencies get outcome `deferred_needs_approval`
+5. **지연된 종속성 처리**: 승인되지 않은 종속성이 필요한 실험은 결과 `deferred_needs_approval`을 부여합니다.
 
-6. **Revert all others**: cleanup worktrees, log as `reverted`
+6. **나머지 모두 되돌리기**: 워크트리를 정리하고 결과를 `reverted`로 기록합니다.
 
-### 3.5 Update State (CP-4)
+### 3.5 상태 업데이트 (CP-4)
 
-**MANDATORY CHECKPOINT.** By this point, individual experiment results are already on disk (written in step 3.3). This step updates aggregate state and verifies.
+**필수 체크포인트.** 이 시점에서 개별 실험 결과는 이미 디스크에 기록되어 있습니다(3.3단계). 이 단계는 집계 상태를 업데이트하고 확인합니다.
 
-1. **Re-read the experiment log from disk** — do not trust in-memory state. The log is the source of truth.
+1. **디스크에서 실험 로그를 다시 읽습니다.** 메모리 내 상태를 신뢰하지 마십시오. 로그가 진실의 원천입니다.
 
-2. **Finalize outcomes** — update experiment entries from step 3.4 evaluation (mark `kept`, `reverted`, `runner_up_kept`, etc.). Write these outcome updates to disk immediately.
+2. **결과 확정** — 3.4단계 평가에 따라 실험 항목을 업데이트합니다(`kept`, `reverted`, `runner_up_kept` 등 표시). 이 업데이트 내용을 즉시 디스크에 기록합니다.
 
-3. **Update the `best` section** in the experiment log if a new best was found. Write to disk.
+3. **`best` 섹션 업데이트** — 새로운 최적값이 발견된 경우 실험 로그의 `best` 섹션을 업데이트하고 디스크에 기록합니다.
 
-4. **Write strategy digest** to `.context/compound-engineering/ce-optimize/<spec-name>/strategy-digest.md`:
-   - Categories tried so far (with success/failure counts)
-   - Key learnings from this batch and overall
-   - Exploration frontier: what categories and approaches remain untried
-   - Current best metrics and improvement from baseline
+4. **전략 요약 기록** — `.context/compound-engineering/ce-optimize/<spec-name>/strategy-digest.md`에 다음 내용을 기록합니다:
+   - 지금까지 시도한 카테고리 (성공/실패 횟수 포함)
+   - 이번 배치 및 전체에서의 핵심 학습 내용
+   - 탐색 프런티어(Exploration frontier): 아직 시도하지 않은 카테고리와 접근 방식
+   - 현재 최고 지표 및 베이스라인 대비 개선도
 
-5. **Generate new hypotheses** based on learnings:
-   - Re-read the strategy digest from disk (not from memory)
-   - Read the rolling window (last 10 experiments from the log on disk)
-   - Do NOT read the full experiment log -- use the digest for broad context
-   - Add new hypotheses to the backlog and write the updated backlog to disk
+5. **학습 내용 기반 새 가설 생성**:
+   - 디스크에서 전략 요약(digest)을 다시 읽습니다 (메모리가 아님).
+   - 롤링 윈도우(디스크 로그의 마지막 10개 실험)를 읽습니다.
+   - 실험 로그 전체를 읽지 마십시오 — 넓은 맥락을 위해 요약본(digest)을 사용하십시오.
+   - 백로그에 새 가설을 추가하고 업데이트된 백로그를 디스크에 기록합니다.
 
-6. **Write updated hypothesis backlog to disk** — the backlog section of the experiment log must reflect newly added hypotheses and removed (tested) ones.
+6. **업데이트된 가설 백로그를 디스크에 기록** — 실험 로그의 백로그 섹션은 새로 추가된 가설과 테스트된(제거된) 가설을 반영해야 합니다.
 
-**CP-4 Verification:** Read the experiment log back from disk. Confirm: (a) all experiment outcomes from this batch are finalized, (b) the `best` section reflects the current best, (c) the hypothesis backlog is updated. Read `strategy-digest.md` back and confirm it exists. Only THEN proceed to the next batch or stopping criteria check.
+**CP-4 확인:** 디스크에서 실험 로그를 다시 읽습니다. 다음을 확인하십시오: (a) 이번 배치의 모든 실험 결과가 확정됨, (b) `best` 섹션이 현재 최고치를 반영함, (c) 가설 백로그가 업데이트됨. `strategy-digest.md`를 다시 읽어 존재하는지 확인합니다. 그 후에만 다음 배치나 중단 기준 확인으로 진행합니다.
 
-**Checkpoint: at this point, all state for this batch is on disk. If the agent crashes and restarts, it can resume from the experiment log without loss.**
+**체크포인트: 이 시점에서 이번 배치의 모든 상태가 디스크에 있습니다. 에이전트가 충돌 후 재시작하더라도 실험 로그를 통해 데이터 손실 없이 재개할 수 있습니다.**
 
-### 3.6 Check Stopping Criteria
+### 3.6 중단 기준 확인
 
-Stop the loop if ANY of these are true:
-- **Target reached**: `stopping.target_reached` is true, `metric.primary.target` is set, and the primary metric reaches that target according to `metric.primary.direction` (`>=` for `maximize`, `<=` for `minimize`)
-- **Max iterations**: total experiments run >= `stopping.max_iterations`
-- **Max hours**: wall-clock time since Phase 3 start >= `stopping.max_hours`
-- **Judge budget exhausted**: cumulative judge spend >= `metric.judge.max_total_cost_usd` (if set)
-- **Plateau**: no improvement for `stopping.plateau_iterations` consecutive experiments
-- **Manual stop**: user interrupts (save state and proceed to Phase 4)
-- **Empty backlog**: no hypotheses remain and no new ones can be generated
+다음 중 하나라도 참이면 루프를 중단합니다:
+- **목표 도달**: `stopping.target_reached`가 true이고, `metric.primary.target`이 설정되었으며, 기본 지표가 `metric.primary.direction`(`maximize`인 경우 `>=`, `minimize`인 경우 `<=`)에 따라 목표에 도달함
+- **최대 반복 횟수**: 실행된 총 실험 수 >= `stopping.max_iterations`
+- **최대 시간**: Phase 3 시작 후 경과 시간 >= `stopping.max_hours`
+- **Judge 예산 소진**: 누적 judge 지출 >= `metric.judge.max_total_cost_usd` (설정된 경우)
+- **정체 (Plateau)**: `stopping.plateau_iterations` 횟수만큼 연속된 실험에서 개선이 없음
+- **수동 중단**: 사용자 개입 (상태를 저장하고 Phase 4로 진행)
+- **백로그 비어 있음**: 남은 가설이 없고 새로운 가설을 생성할 수 없음
 
-If no stopping criterion is met, proceed to the next batch (step 3.1).
+중단 기준이 충족되지 않으면 다음 배치(3.1단계)로 진행합니다.
 
-### 3.7 Cross-Cutting Concerns
+### 3.7 교차 이슈 (Cross-Cutting Concerns)
 
-**Codex failure cascade**: Track consecutive Codex delegation failures. After 3 consecutive failures, auto-disable Codex for remaining experiments and fall back to subagent dispatch. Log the switch.
+**Codex 실패 연쇄**: 연속된 Codex 파견 실패를 추적합니다. 3회 연속 실패 시 남은 실험에 대해 Codex를 자동으로 비활성화하고 서브에이전트 파견으로 대체합니다. 전환 내용을 로그에 기록합니다.
 
-**Error handling**: If an experiment's measurement command crashes, times out, or produces malformed output:
-- Log as outcome `error` or `timeout` with the error message
-- Revert the experiment (cleanup worktree)
-- The loop continues with remaining experiments in the batch
+**오류 처리**: 실험의 측정 명령어가 충돌하거나, 타임아웃되거나, 잘못된 형식의 출력을 생성하는 경우:
+- 오류 메시지와 함께 결과를 `error` 또는 `timeout`으로 기록합니다.
+- 실험을 되돌립니다 (워크트리 정리).
+- 배치의 나머지 실험과 함께 루프를 계속합니다.
 
-**Progress reporting**: After each batch, report:
-- Batch N of estimated M (based on backlog size)
-- Experiments run this batch and total
-- Current best metric and improvement from baseline
-- Cumulative judge cost (if applicable)
+**진행 상황 보고**: 매 배치 후 다음 내용을 보고합니다:
+- 총 예상 배치 M개 중 배치 N번째 (백로그 크기 기반)
+- 이번 배치 및 총 실행 실험 수
+- 현재 최고 지표 및 베이스라인 대비 개선도
+- 누적 judge 비용 (해당하는 경우)
 
-**Crash recovery**: See Persistence Discipline section. Per-experiment `result.yaml` markers are written in step 3.3. Individual experiment results are appended to the log immediately in step 3.3. Batch-level state (outcomes, best, digest) is written in step 3.5. On resume (Phase 0.4), the log on disk is the ground truth — scan for any `result.yaml` markers not yet reflected in the log.
+**충돌 복구**: 지속성 원칙 섹션을 참조하십시오. 실험별 `result.yaml` 마커는 3.3단계에서 기록됩니다. 개별 실험 결과는 3.3단계에서 즉시 로그에 추가됩니다. 배치 수준 상태(결과, 최적값, 요약)는 3.5단계에서 기록됩니다. 재개 시(Phase 0.4) 디스크의 로그가 기본 진실이며, 아직 로그에 반영되지 않은 `result.yaml` 마커를 스캔합니다.
 
 ---
 
-## Phase 4: Wrap-Up
+## Phase 4: 마무리 (Wrap-Up)
 
-### 4.1 Present Deferred Hypotheses
+### 4.1 지연된 가설 제시
 
-If any hypotheses were deferred due to unapproved dependencies:
-1. List them with their dependency requirements
-2. Ask the user whether to approve, skip, or save for a future run
-3. If approved: add to backlog and offer to re-enter Phase 3 for one more round
+승인되지 않은 종속성으로 인해 지연된 가설이 있는 경우:
+1. 종속성 요구 사항과 함께 목록을 보여줍니다.
+2. 사용자에게 승인할지, 건너뛸지, 아니면 미래의 실행을 위해 저장할지 묻습니다.
+3. 승인된 경우: 백로그에 추가하고 한 라운드 더 Phase 3로 재진입할지 제안합니다.
 
-### 4.2 Summarize Results
+### 4.2 결과 요약
 
-Present a comprehensive summary:
+포괄적인 요약을 제시합니다:
 
 ```
-Optimization: <spec-name>
-Duration: <wall-clock time>
-Total experiments: <count>
-  Kept: <count> (including <runner_up_kept_count> runner-up merges)
-  Reverted: <count>
-  Degenerate: <count>
-  Errors: <count>
-  Deferred: <count>
+최적화: <spec-name>
+소요 시간: <실제 경과 시간>
+총 실험 수: <개수>
+  유지됨(Kept): <개수> (준우승 머지 <runner_up_kept_count>개 포함)
+  되돌림(Reverted): <개수>
+  퇴행적(Degenerate): <개수>
+  오류(Errors): <개수>
+  지연됨(Deferred): <개수>
 
-Baseline -> Final:
+베이스라인 -> 최종:
   <primary_metric>: <baseline_value> -> <final_value> (<delta>)
   <gate_metrics>: ...
   <diagnostics>: ...
 
-Judge cost: $<total_judge_cost_usd> (if applicable)
+Judge 비용: $<total_judge_cost_usd> (해당하는 경우)
 
-Key improvements:
-  1. <kept experiment 1 hypothesis> (+<delta>)
-  2. <kept experiment 2 hypothesis> (+<delta>)
+주요 개선 사항:
+  1. <유지된 실험 1 가설> (+<delta>)
+  2. <유지된 실험 2 가설> (+<delta>)
   ...
 ```
 
-### 4.3 Preserve and Offer Next Steps
+### 4.3 보존 및 다음 단계 제안
 
-The optimization branch (`optimize/<spec-name>`) is preserved with all commits from kept experiments.
-The experiment log and strategy digest remain in local `.context/...` scratch space for resume and audit on this machine only; they do not travel with the branch because `.context/` is gitignored.
+최적화 브랜치(`optimize/<spec-name>`)는 유지된 실험의 모든 커밋과 함께 보존됩니다.
+실험 로그와 전략 요약은 이 머신에서의 재개 및 감사를 위해 로컬 `.context/...` 작업 공간에 남습니다. `.context/`는 git에서 무시되므로 브랜치와 함께 이동하지 않습니다.
 
-Present post-completion options via the platform question tool:
+플랫폼 질문 도구를 통해 완료 후 옵션을 제시합니다:
 
-1. **Run `/ce-code-review`** on the cumulative diff (baseline to final). Load the `ce-code-review` skill with `mode:autofix` on the optimization branch.
-2. **Run `/ce-compound`** to document the winning strategy as an institutional learning.
-3. **Create PR** from the optimization branch to the default branch.
-4. **Continue** with more experiments: re-enter Phase 3 with the current state. State re-read first.
-5. **Done** -- leave the optimization branch for manual review.
+1. **`/ce-code-review` 실행**: 누적된 diff(베이스라인에서 최종까지)에 대해 실행합니다. 최적화 브랜치에서 `mode:autofix`로 `ce-code-review` 스킬을 로드합니다.
+2. **`/ce-compound` 실행**: 승리한 전략을 조직의 학습 내용으로 문서화합니다.
+3. **PR 생성**: 최적화 브랜치에서 기본 브랜치로 PR을 생성합니다.
+4. **계속하기**: 현재 상태에서 더 많은 실험을 진행합니다. Phase 3로 다시 진입하며, 먼저 상태를 다시 읽습니다.
+5. **완료**: 수동 검토를 위해 최적화 브랜치를 남겨둡니다.
 
-### 4.4 Cleanup
+### 4.4 정리 (Cleanup)
 
-Clean up scratch space:
+작업 공간을 정리합니다:
 ```bash
-# Keep the experiment log for local resume/audit on this machine
-# Remove temporary batch artifacts
+# 이 머신에서의 로컬 재개/감사를 위해 실험 로그는 유지합니다.
+# 임시 배치 결과물 제거
 rm -f .context/compound-engineering/ce-optimize/<spec-name>/strategy-digest.md
 ```
 
-Do NOT delete the experiment log if the user may resume locally or wants a local audit trail. If they need a durable shared artifact, summarize or export the results into a tracked path before cleanup.
-Do NOT delete experiment worktrees that are still being referenced.
+사용자가 로컬에서 재개할 수 있거나 로컬 감사 추적이 필요한 경우 실험 로그를 삭제하지 마십시오. 공유 가능한 영구적인 결과물이 필요한 경우, 정리 전에 결과를 추적 가능한 경로로 요약하거나 내보내십시오.
+여전히 참조되고 있는 실험 워크트리는 삭제하지 마십시오.

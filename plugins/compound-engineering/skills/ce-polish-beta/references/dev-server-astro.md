@@ -1,21 +1,21 @@
-# Astro dev-server recipe (auto-detect fallback)
+# Astro dev-server 레시피 (자동 감지 폴백)
 
-Loaded when `detect-project-type.sh` returns `astro` and there is no `.claude/launch.json` to consult.
+`detect-project-type.sh`가 `astro`를 반환하고 참고할 `.claude/launch.json`이 없을 때 로드됩니다.
 
-## Signature
+## 서명 (Signature)
 
-- `astro.config.js`, `astro.config.mjs`, or `astro.config.ts` exists
-- `package.json` contains an `astro` dependency
+- `astro.config.js`, `astro.config.mjs`, 또는 `astro.config.ts` 파일이 존재함
+- `package.json`에 `astro` 종속성이 포함되어 있음
 
-## Start command
+## 시작 명령
 
-Standard:
+표준:
 
 ```bash
 npm run dev
 ```
 
-The `dev` script in `package.json` typically wraps `astro dev`. Also valid (read `package.json` scripts to confirm which the project uses):
+`package.json`의 `dev` 스크립트는 일반적으로 `astro dev`를 래핑합니다. 다음 명령어도 유효합니다 (프로젝트가 사용하는 명령어를 확인하려면 `package.json` 스크립트를 읽으십시오):
 
 ```bash
 pnpm dev
@@ -23,17 +23,17 @@ yarn dev
 bun run dev
 ```
 
-Prefer the package manager indicated by the lockfile:
+락파일(lockfile)이 가리키는 패키지 매니저를 우선적으로 사용합니다:
 - `pnpm-lock.yaml` -> `pnpm dev`
 - `yarn.lock` -> `yarn dev`
 - `bun.lock` / `bun.lockb` -> `bun run dev`
-- `package-lock.json` or none -> `npm run dev`
+- `package-lock.json` 또는 없음 -> `npm run dev`
 
-## Port
+## 포트 (Port)
 
-Default: `4321`. Astro respects `--port <port>` and the `server.port` field in `astro.config.*`. Overrides follow the cascade in `references/dev-server-detection.md`.
+기본값: `4321`. Astro는 `--port <port>` 플래그와 `astro.config.*`의 `server.port` 필드를 준수합니다. 오버라이드 규칙은 `references/dev-server-detection.md`의 연쇄(cascade) 규칙을 따릅니다.
 
-## Stub generation
+## 스텁 생성 (Stub generation)
 
 ```json
 {
@@ -49,10 +49,10 @@ Default: `4321`. Astro respects `--port <port>` and the `server.port` field in `
 }
 ```
 
-Substitute the resolved package manager (`npm` / `pnpm` / `yarn` / `bun`) and port.
+결정된 패키지 매니저 (`npm` / `pnpm` / `yarn` / `bun`)와 포트로 대체하십시오.
 
-## Common gotchas
+## 일반적인 주의 사항
 
-- **SSR vs SSG:** `astro dev` runs identically for both output modes; the difference only matters at build time. Polish does not need to distinguish between them.
-- **Astro config takes precedence over Vite config:** Astro uses Vite under the hood but ships its own config file. The `astro` type takes precedence over `vite` when both `astro.config.*` and `vite.config.*` exist. This is rare -- Astro projects do not usually have a separate Vite config file.
-- **Dev toolbar (Astro 4+):** Astro 4+ includes a dev toolbar that adds overlay UI in the browser. It does not affect port binding or URL routing -- polish can ignore it.
+- **SSR vs SSG:** `astro dev`는 두 출력 모드 모두에서 동일하게 실행됩니다. 차이는 빌드 시점에만 중요합니다. Polish는 이를 구분할 필요가 없습니다.
+- **Astro 설정이 Vite 설정보다 우선함:** Astro는 내부적으로 Vite를 사용하지만 자체 설정 파일을 제공합니다. `astro.config.*`와 `vite.config.*`가 모두 존재할 경우 `astro` 유형이 `vite`보다 우선합니다. 이는 드문 경우이며, Astro 프로젝트는 보통 별도의 Vite 설정 파일을 가지지 않습니다.
+- **개발 툴바 (Astro 4+):** Astro 4 이상에는 브라우저에 UI를 오버레이하는 개발 툴바가 포함되어 있습니다. 이는 포트 바인딩이나 URL 라우팅에 영향을 주지 않으므로 polish는 이를 무시해도 됩니다.

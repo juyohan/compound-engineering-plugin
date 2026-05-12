@@ -1,105 +1,106 @@
-# Plan Handoff
+# 플랜 핸드오프 (Plan Handoff)
 
-This file contains post-plan-writing instructions: document review, post-generation options, and issue creation. Load it after the plan file has been written and the confidence check (5.3.1-5.3.7) is complete.
+이 파일은 플랜 작성 이후의 지침을 포함합니다: 문서 검토, 생성 후 옵션, 그리고 이슈 생성. 플랜 파일이 작성되고 신뢰도 체크(5.3.1 ~ 5.3.7)가 완료된 후에 이 파일을 로드하십시오.
 
-## 5.3.8 Document Review
+## 5.3.8 문서 검토 (Document Review)
 
-After the confidence check (and any deepening), run the `ce-doc-review` skill with `mode:headless` on the plan file. Pass `mode:headless <plan-path>` as the skill arguments. When this step is reached, it is mandatory — do not skip it because the confidence check already ran. The two tools catch different classes of issues.
+신뢰도 체크(및 모든 심화 작업)가 끝난 후, 플랜 파일에 대해 `mode:headless`로 `ce-doc-review` 스킬을 실행하십시오. 스킬 인자로 `mode:headless <plan-path>`를 전달하십시오. 이 단계에 도달하면 반드시 실행해야 하며, 신뢰도 체크가 이미 실행되었다는 이유로 건너뛰지 마십시오. 두 도구는 서로 다른 종류의 문제를 잡아냅니다.
 
-Headless is the default at this phase because most users want to start work after planning, not adjudicate every reviewer concern up front. Headless applies `safe_auto` fixes silently and returns structured findings text — no walkthrough, no per-finding routing, no blocking prompts. The post-generation menu (see 5.4) offers `Run deeper doc review` as a first-class option so users can opt into the full interactive walkthrough when they want it.
+이 단계에서는 대부분의 사용자가 플래닝 직후에 작업을 시작하고 싶어 하며, 리뷰어의 모든 우려 사항을 일일이 판단하고 싶어 하지 않기 때문에 `headless`가 기본값입니다. `headless` 모드는 `safe_auto` 수정을 말없이 적용하고 구조화된 발견 사항 텍스트를 반환합니다. 이 모드에서는 가이드(walkthrough)나 발견 사항별 라우팅, 차단형 프롬프트가 없습니다. 생성 후 메뉴(5.4 참조)에서 `Run deeper doc review`를 일급 옵션으로 제공하므로, 사용자가 원할 때 전체 대화형 가이드를 선택할 수 있습니다.
 
-The confidence check and ce-doc-review are complementary:
-- The confidence check strengthens rationale, sequencing, risk treatment, and grounding
-- Document-review checks coherence, feasibility, scope alignment, and surfaces role-specific issues
+신뢰도 체크와 ce-doc-review는 서로 보완적입니다:
+- 신뢰도 체크는 근거, 순서, 리스크 처리 및 기반을 강화합니다.
+- 문서 검토는 일관성, 실행 가능성, 범위 정렬을 확인하고 역할별 이슈를 표면화합니다.
 
-Capture the headless envelope so it can drive the contextual summary above the post-generation menu:
-- The number of fixes auto-applied
-- The count of remaining findings, broken out by user-facing bucket (proposed fixes, decisions, FYI observations)
-- The severity breakdown of decisions and proposed fixes (specifically the P0/P1 count, since those benefit from explicit user attention)
+생성 후 메뉴 상단의 문맥 요약을 위해 headless 결과(envelope)를 캡처하십시오:
+- 자동으로 적용된 수정 사항의 수
+- 사용자 대면 버킷별로 분류된 남은 발견 사항 수 (제안된 수정, 결정, FYI 관찰 사항)
+- 결정 및 제안된 수정 사항의 심각도 분류 (특히 P0/P1 수. 이는 사용자의 명시적인 주의가 유익하기 때문입니다)
 
-When ce-doc-review returns "Review complete", proceed to Final Checks.
+ce-doc-review가 "Review complete"를 반환하면 최종 체크로 진행하십시오.
 
-**Pipeline mode:** Pipeline runs (LFG or any `disable-model-invocation` context) also run `ce-doc-review` with `mode:headless` and the plan path — the headless mode is identical to the interactive default at this phase. No further routing is offered in pipeline mode; the caller decides what to do with the returned findings. Address any P0/P1 findings before returning control to the caller.
+**파이프라인 모드:** 파이프라인 실행(LFG 또는 모든 `disable-model-invocation` 컨텍스트)에서도 플랜 경로와 함께 `mode:headless`로 `ce-doc-review`를 실행합니다. headless 모드는 이 단계의 대화형 기본값과 동일합니다. 파이프라인 모드에서는 추가적인 라우팅이 제공되지 않으며, 호출자가 반환된 발견 사항을 어떻게 처리할지 결정합니다. 호출자에게 제어권을 반환하기 전에 모든 P0/P1 발견 사항을 처리하십시오.
 
-## 5.3.9 Final Checks and Cleanup
+## 5.3.9 최종 체크 및 정리
 
-Before proceeding to post-generation options:
-- Confirm the plan is stronger in specific ways, not merely longer
-- Confirm the planning boundary is intact
-- Confirm origin decisions were preserved when an origin document exists
+생성 후 옵션으로 진행하기 전에 다음을 수행하십시오:
+- 플랜이 단순히 길어진 것이 아니라 구체적인 방식으로 더 강력해졌는지 확인하십시오.
+- 플래닝 경계가 온전한지 확인하십시오.
+- 기원(origin) 문서가 존재하는 경우 기원의 결정 사항이 보존되었는지 확인하십시오.
 
-If artifact-backed mode was used:
-- Clean up the temporary scratch directory after the plan is safely updated
-- If cleanup is not practical on the current platform, note where the artifacts were left
+아티팩트 기반 모드가 사용된 경우:
+- 플랜이 안전하게 업데이트된 후 임시 스크래치 디렉토리를 정리하십시오.
+- 현재 플랫폼에서 정리가 실용적이지 않은 경우 아티팩트가 어디에 남겨졌는지 기록하십시오.
 
-## 5.4 Post-Generation Options
+## 5.4 생성 후 옵션 (Post-Generation Options)
 
-**Pipeline mode:** If invoked from an automated workflow such as LFG or any `disable-model-invocation` context, skip the interactive menu below and return control to the caller immediately. The plan file has already been written, the confidence check has already run, and ce-doc-review has already run — the caller (e.g., lfg) determines the next step.
+**파이프라인 모드:** LFG와 같은 자동화된 워크플로우 또는 모든 `disable-model-invocation` 컨텍스트에서 호출된 경우, 아래의 대화형 메뉴를 건너뛰고 즉시 호출자에게 제어권을 반환하십시오. 플랜 파일은 이미 작성되었고, 신뢰도 체크와 ce-doc-review도 이미 실행되었습니다. 다음 단계는 호출자(예: lfg)가 결정합니다.
 
-**Path format:** Use absolute paths for chat-output file references — relative paths are not auto-linked as clickable in most terminals.
+**경로 형식:** 채팅 출력의 파일 참조에는 절대 경로를 사용하십시오. 대부분의 터미널에서 상대 경로는 클릭 가능한 링크로 자동 연결되지 않습니다.
 
-**Summary line above the menu (always):** Print a single concise line summarizing the headless review state — e.g., `Doc review applied 3 fixes. 2 decisions, 1 proposed fix, 4 FYI observations remain (1 at P1).` When no fixes were applied and no findings remain, print `Doc review clean — no fixes needed.` This line establishes what the autofix pass did so the user has the context to choose between the menu options below.
+**메뉴 상단 요약 라인 (항상 표시):** headless 검토 상태를 요약하는 간결한 한 줄을 출력하십시오. 예: `문서 검토 결과 3개의 수정 사항이 적용되었습니다. 2개의 결정, 1개의 제안된 수정, 4개의 FYI 관찰 사항이 남아 있습니다 (1개의 P1 포함).` 적용된 수정 사항이 없고 남은 발견 사항도 없는 경우 `문서 검토 결과 깨끗합니다 — 수정이 필요하지 않습니다.`라고 출력하십시오. 이 라인은 자동 수정 패스가 수행한 작업을 명시하여 사용자가 아래의 메뉴 옵션 중에서 선택할 수 있는 컨텍스트를 제공합니다.
 
-**Question:** "Plan ready at `<absolute path to plan>`. What would you like to do next?"
+**질문:** "`<absolute path to plan>`에 플랜이 준비되었습니다. 다음 중 무엇을 하시겠습니까?"
 
-**Options:**
-1. **Start `/ce-work`** (recommended) - Begin implementing this plan in the current session
-2. **Run deeper doc review** - Walk through the remaining findings interactively (full ce-doc-review walkthrough)
-3. **Create Issue** - Create a tracked issue from this plan in your configured issue tracker (GitHub or Linear)
-4. **Open in Proof (web app) — review and comment to iterate with the agent** - Open the doc in Every's Proof editor, iterate with the agent via comments, or copy a link to share with others
-5. **Done for now** - Pause; the plan file is saved and can be resumed later
+**옵션:**
+1. **`/ce-work` 시작** (권장) - 현재 세션에서 이 플랜의 구현을 시작합니다.
+2. **상세 문서 검토 실행 (Run deeper doc review)** - 남은 발견 사항들을 대화형으로 훑어봅니다 (전체 ce-doc-review 가이드 실행).
+3. **이슈 생성** - 구성된 이슈 트래커(GitHub 또는 Linear)에 이 플랜으로부터 추적 가능한 이슈를 생성합니다.
+4. **Proof(웹 앱)에서 열기 — 에이전트와 함께 검토하고 댓글로 반복 작업** - Every의 Proof 에디터에서 문서를 열고, 에이전트와 댓글로 반복 작업을 하거나 공유 링크를 복사합니다.
+5. **일단 종료** - 중단합니다. 플랜 파일은 저장되었으며 나중에 재개할 수 있습니다.
 
-**Menu rendering:** The menu has 5 options, which exceeds the `AskUserQuestion` 4-option cap. Per the AGENTS.md narrow exception for legitimate option overflow, render this menu as a numbered list in chat with the hint "Pick a number or describe what you want." rather than trimming to fit the cap. Each option is a distinct destination/workflow and none are removable without losing real user choice (deeper review, issue creation, Proof, ce-work, and pause are each separately requested in practice). On platforms where blocking question tools have no option cap (e.g., Codex `request_user_input`, Pi `ask_user`), use the platform's blocking tool with all 5 options. When the platform's blocking tool is unavailable or errors (e.g., Codex edit modes where `request_user_input` is not exposed, or `ask_user` returns no match), fall back to the same numbered-list-in-chat rendering with the "Pick a number or describe what you want." hint — the same fallback the `AskUserQuestion` overflow path uses. Never silently skip the question.
+**메뉴 렌더링:** 메뉴에는 5개의 옵션이 있으며, 이는 `AskUserQuestion`의 4개 옵션 제한을 초과합니다. AGENTS.md의 정당한 옵션 초과에 대한 좁은 예외 조항에 따라, 이 메뉴를 4개로 줄이는 대신 "번호를 고르거나 원하는 작업을 설명해 주세요."라는 힌트와 함께 채팅에 번호 매겨진 목록으로 렌더링하십시오. 각 옵션은 별개의 목적지/워크플로우이며 상세 검토, 이슈 생성, Proof, ce-work, 중단 중 어느 것도 실제 사용자 선택권을 잃지 않고는 제거할 수 없습니다. 옵션 제한이 없는 플랫폼(예: Codex `request_user_input`, Pi `ask_user`)에서는 모든 5개 옵션과 함께 플랫폼의 차단형 도구를 사용하십시오. 플랫폼의 차단형 도구를 사용할 수 없거나 오류가 발생하는 경우에도 동일하게 "번호를 고르거나 원하는 작업을 설명해 주세요." 힌트와 함께 채팅의 번호 매겨진 목록으로 대체하십시오. 절대 말없이 질문을 건너뛰지 마십시오.
 
-**Hide `Run deeper doc review` when no actionable findings remain.** Show option 2 only when the headless envelope reports `proposed_fixes_count + decisions_count > 0` — i.e., at least one `gated_auto` or `manual` finding at confidence anchor `75` or `100`. Drop the option in any other case, including FYI-only state. FYI observations (anchor `50`) do not enter `ce-doc-review`'s interactive routing question or walkthrough — that flow is gated to actionable findings — so a `Run deeper doc review` option that only has FYIs to show is a dead-end: ce-doc-review would re-dispatch the persona team, find the same FYIs, skip the routing question, and fall through to the terminal question with nothing to walk through. The user paid the dispatch cost for no engagement surface. When option 2 is dropped, the menu becomes 4 options (1, 3, 4, 5 above), falls back to `AskUserQuestion` on Claude Code, and renumbers 1-4 in display so users see a clean sequence. The summary line above the menu still names the FYI count when present (`Doc review applied 3 fixes. 2 FYI observations remain.`) so the user sees what was found, even though there is no menu action attached to it — the FYIs are visible in the headless envelope text the menu rendered alongside.
+**실행 가능한 발견 사항이 남지 않은 경우 `Run deeper doc review`를 숨기십시오.** headless 결과에서 `proposed_fixes_count + decisions_count > 0`일 때, 즉 신뢰도 앵커 `75` 또는 `100`인 `gated_auto` 또는 `manual` 발견 사항이 하나라도 있을 때만 2번 옵션을 표시하십시오. FYI 전용 상태를 포함하여 그 외의 모든 경우에는 해당 옵션을 제외하십시오. FYI 관찰 사항(앵커 `50`)은 ce-doc-review의 대화형 라우팅 질문이나 가이드에 진입하지 않으므로(해당 흐름은 실행 가능한 발견 사항으로 제한됨), FYI만 있는 상태에서 `Run deeper doc review` 옵션을 제공하는 것은 막다른 길입니다. 사용자는 참여할 수 있는 인터페이스 없이 에이전트 발송 비용만 지불하게 됩니다. 2번 옵션이 제외되면 메뉴는 4개의 옵션(위의 1, 3, 4, 5)이 되며, Claude Code에서는 `AskUserQuestion`으로 대체되고 표시되는 번호는 1-4로 재조정됩니다. 메뉴 상단의 요약 라인은 메뉴 작업과 연결되지 않더라도 FYI 수가 있는 경우 이를 명시합니다 (`문서 검토 결과 3개의 수정 사항이 적용되었습니다. 2개의 FYI 관찰 사항이 남아 있습니다.`). 사용자는 메뉴 옆에 렌더링된 headless 결과 텍스트를 통해 발견된 사항을 볼 수 있습니다.
 
-Based on selection (the bare per-option routing is also stated inline in the SKILL.md so it cannot be missed when this reference is not loaded; the elaborate sub-flows below are the reason this reference still exists):
-- **Start `/ce-work`** -> Invoke the `ce-work` skill via the platform's skill-invocation primitive (`Skill` in Claude Code, `Skill` in Codex, the equivalent on Gemini/Pi), passing the plan path as the skill argument. Do not merely tell the user to type `/ce-work` — fire the invocation now so the plan executes in this session.
-- **Run deeper doc review** -> Re-invoke the `ce-doc-review` skill on the plan path **without** `mode:headless` so the interactive routing question and walkthrough fire. The headless pass already applied `safe_auto` fixes and recorded its findings in the session, so the interactive pass picks up where headless stopped — its R29 suppression rule prevents prior-round Skipped/Deferred entries from re-raising. After it returns, re-render this menu with the refreshed counts so the user can pick what to do next.
-- **Create Issue** -> Follow the Issue Creation section below
-- **Open in Proof (web app) — review and comment to iterate with the agent** -> Load the `ce-proof` skill in HITL-review mode with:
-  - source file: `docs/plans/<plan_filename>.md`
-  - doc title: `Plan: <plan title from frontmatter>`
-  - identity: `ai:compound-engineering` / `Compound Engineering`
-  - recommended next step: `/ce-work` (shown in the ce-proof skill's final terminal output)
+선택에 따른 동작 (기본적인 옵션별 라우팅은 SKILL.md에도 인라인으로 기술되어 있어 이 참조가 로드되지 않더라도 누락되지 않습니다. 아래의 상세 서브 워크플로우 때문에 이 참조가 존재합니다):
+- **`/ce-work` 시작** -> 플랫폼의 스킬 호출 프리미티브(Claude Code의 `Skill`, Codex의 `Skill` 등)를 통해 `ce-work` 스킬을 호출하고 플랜 경로를 스킬 인자로 전달하십시오. 단순히 사용자에게 `/ce-work`를 입력하라고 말하지 말고, 지금 바로 호출을 실행하여 플랜이 이번 세션에서 실행되도록 하십시오.
+- **상세 문서 검토 실행** -> `mode:headless` **없이** 플랜 경로에 대해 `ce-doc-review` 스킬을 다시 호출하여 대화형 라우팅 질문과 가이드가 실행되게 하십시오. headless 패스가 이미 `safe_auto` 수정을 적용하고 발견 사항을 세션에 기록했으므로, 대화형 패스는 headless가 멈춘 지점부터 이어집니다. ce-doc-review의 R29 억제 규칙은 이전 라운드에서 건너뛰거나 미뤄진 항목이 다시 발생하는 것을 방지합니다. 반환된 후에는 갱신된 수치와 함께 이 메뉴를 다시 렌더링하여 사용자가 다음 작업을 선택할 수 있게 하십시오.
+- **이슈 생성** -> 아래의 이슈 생성 섹션을 따르십시오.
+- **Proof(웹 앱)에서 열기 — 에이전트와 함께 검토하고 댓글로 반복 작업** -> 다음 정보를 사용하여 HITL-review 모드로 `ce-proof` 스킬을 로드하십시오:
+  - 소스 파일: `docs/plans/<plan_filename>.md`
+  - 문서 제목: `Plan: <plan title from frontmatter>`
+  - 정체성(identity): `ai:compound-engineering` / `Compound Engineering`
+  - 권장 다음 단계: `/ce-work` (ce-proof 스킬의 최종 출력에 표시됨)
 
-  Follow `references/hitl-review.md` in the ce-proof skill. It uploads the plan, prompts the user for review in Proof's web UI, ingests each thread by reading it fresh and replying in-thread, applies agreed edits as tracked suggestions, and syncs the final markdown back to the plan file atomically on proceed.
+  ce-proof 스킬의 `references/hitl-review.md`를 따르십시오. 플랜을 업로드하고, Proof의 웹 UI에서 사용자에게 검토를 요청하며, 각 스레드를 새로 읽고 해당 스레드에서 응답하여 각 피드백을 수집합니다. 합의된 수정 사항을 추적된 제안 사항으로 적용하고, 진행(proceed) 시 최종 마크다운을 플랜 파일에 원자적으로 동기화합니다.
 
-  When the ce-proof skill returns:
-  - `status: proceeded` with `localSynced: true` -> the plan on disk now reflects the review. Re-run `ce-doc-review` on the updated plan before re-rendering the menu — HITL can materially rewrite the plan body, so the prior ce-doc-review pass no longer covers the current file and section 5.3.8 requires a review before any handoff option is offered. Then return to the post-generation options with the refreshed residual findings.
-  - `status: proceeded` with `localSynced: false` -> the reviewed version lives in Proof at `docUrl` but the local copy is stale. Offer to pull the Proof doc to `localPath` using the ce-proof skill's Pull workflow. If the pull happened, re-run `ce-doc-review` on the pulled file before re-rendering the options (same 5.3.8 rationale — the local plan was materially updated by the pull). If the pull was declined, include a one-line note above the menu that `<localPath>` is stale vs. Proof — otherwise `Start /ce-work` or `Create Issue` will silently use the pre-review copy.
-  - `status: done_for_now` -> the plan on disk may be stale if the user edited in Proof before leaving. Offer to pull the Proof doc to `localPath` so the local plan file stays in sync. If the pull happened, re-run `ce-doc-review` on the pulled file before re-rendering the options (same 5.3.8 rationale). If the pull was declined, include the stale-local note above the menu. `done_for_now` means the user stopped the HITL loop — it does not mean they ended the whole plan session; they may still want to start work or create an issue.
-  - `status: aborted` -> fall back to the options without changes.
+  ce-proof 스킬이 반환될 때:
+  - `status: proceeded` 및 `localSynced: true` -> 디스크의 플랜에 검토 내용이 반영되었습니다. 옵션 메뉴를 다시 렌더링하기 전에 업데이트된 플랜에 대해 `ce-doc-review`를 다시 실행하십시오. HITL은 플랜 본문을 실질적으로 다시 작성할 수 있으므로 이전의 ce-doc-review 패스는 더 이상 현재 파일을 커버하지 못하며, 5.3.8 섹션은 어떠한 핸드오프 옵션 제공 전에도 검토를 요구합니다. 그 후 갱신된 잔여 발견 사항과 함께 생성 후 옵션으로 돌아가십시오.
+  - `status: proceeded` 및 `localSynced: false` -> 검토된 버전이 Proof의 `docUrl`에 존재하지만 로컬 사본은 오래되었습니다. ce-proof 스킬의 Pull 워크플로우를 사용하여 Proof 문서를 `localPath`로 가져오겠다고 제안하십시오. 가져오기가 수행된 경우, 옵션을 다시 렌더링하기 전에 가져온 파일에 대해 `ce-doc-review`를 다시 실행하십시오 (위와 동일한 5.3.8 근거). 가져오기가 거절된 경우, 메뉴 상단에 `<localPath>`가 Proof 버전에 비해 오래되었다는 노트를 포함하십시오. 그렇지 않으면 `/ce-work` 시작 또는 이슈 생성이 검토 전 사본을 말없이 사용하게 됩니다.
+  - `status: done_for_now` -> 사용자가 떠나기 전에 Proof에서 편집했다면 디스크의 플랜이 오래되었을 수 있습니다. 로컬 플랜 파일이 동기화된 상태를 유지하도록 Proof 문서를 `localPath`로 가져오겠다고 제안하십시오. 가져오기가 수행된 경우 가져온 파일에 대해 `ce-doc-review`를 실행하십시오. 가져오기가 거절된 경우 오래된 로컬 사본 노트를 포함하십시오. `done_for_now`는 사용자가 HITL 루프를 멈췄다는 의미이지 전체 플랜 세션을 종료했다는 의미가 아닙니다. 여전히 작업을 시작하거나 이슈를 생성하고 싶을 수 있습니다.
+  - `status: aborted` -> 변경 사항 없이 옵션으로 돌아갑니다.
 
-  If the initial upload fails (network error, Proof API down), retry once after a short wait. If it still fails, tell the user the upload didn't succeed and briefly explain why, then return to the options — don't leave them wondering why the option did nothing.
-- **Done for now** -> Display a brief confirmation that the plan file is saved and end the turn. Do not start follow-up work without an explicit further user prompt.
-- **Free-form prompts that target the findings** (e.g., the user types "review", "walk through", "deep review" instead of picking a numbered option) -> route as if they had picked `Run deeper doc review`. Do not loop back to the menu without firing the deeper review.
-- **Other free-form input** -> Accept revisions to the plan and loop back to options.
+  초기 업로드가 실패하면 (네트워크 오류, Proof API 다운) 짧은 대기 후 한 번 더 시도하십시오. 그래도 실패하면 업로드에 성공하지 못했음을 사용자에게 알리고 이유를 간략히 설명한 후 옵션으로 돌아가십시오.
 
-## Issue Creation
+- **일단 종료** -> 플랜 파일이 저장되었음을 짧게 확인해주고 턴을 종료하십시오. 명시적인 추가 사용자 프롬프트 없이 후속 작업을 시작하지 마십시오.
+- **발견 사항을 타겟팅하는 자유 형식 프롬프트** (예: 사용자가 번호 대신 "review", "walk through", "deep review" 등을 입력함) -> `Run deeper doc review`를 선택한 것처럼 라우팅하십시오. 상세 검토를 실행하지 않고 메뉴로 다시 돌아가지 마십시오.
+- **기타 자유 형식 입력** -> 플랜에 대한 수정을 수락하고 옵션으로 돌아갑니다.
 
-When the user selects "Create Issue", detect their project tracker:
+## 이슈 생성
 
-1. Read `AGENTS.md` (or `CLAUDE.md` for compatibility) at the repo root and look for `project_tracker: github` or `project_tracker: linear`.
-2. If `project_tracker: github`:
+사용자가 "이슈 생성"을 선택하면 프로젝트 트래커를 감지하십시오:
+
+1. 저장소 루트의 `AGENTS.md` (또는 호환성을 위한 `CLAUDE.md`)를 읽고 `project_tracker: github` 또는 `project_tracker: linear`가 있는지 확인하십시오.
+2. `project_tracker: github`인 경우:
 
    ```bash
    gh issue create --title "<type>: <title>" --body-file <plan_path>
    ```
 
-3. If `project_tracker: linear`:
+3. `project_tracker: linear`인 경우:
 
    ```bash
    linear issue create --title "<title>" --description "$(cat <plan_path>)"
    ```
 
-4. If no tracker is configured, ask the user which tracker they use with the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to asking in chat only when no blocking tool exists or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip. Options: `GitHub`, `Linear`, `Skip`. Then:
-   - Proceed with the chosen tracker's command above
-   - Offer to persist the choice by adding `project_tracker: <value>` to `AGENTS.md`, where `<value>` is the lowercase tracker key (`github` or `linear`) — not the display label — so future runs match the detector in step 1 and skip this prompt
-   - If `Skip`, return to the options without creating an issue
+4. 트래커가 구성되지 않은 경우, 플랫폼의 차단형 질문 도구를 사용하여 사용자에게 어떤 트래커를 사용하는지 물어보십시오: Claude Code의 `AskUserQuestion`, Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user`. 차단형 도구가 없는 경우에만 채팅에서 물어보십시오. 절대 말없이 건너뛰지 마십시오. 옵션: `GitHub`, `Linear`, `건너뛰기`. 그런 다음:
+   - 선택한 트래커에 맞는 위의 명령어를 실행합니다.
+   - 향후 실행 시 이 질문을 건너뛸 수 있도록 `project_tracker: <value>`를 `AGENTS.md`에 추가하여 선택 사항을 유지하겠다고 제안하십시오. 여기서 `<value>`는 표시용 라벨이 아닌 소문자 키(`github` 또는 `linear`)입니다.
+   - `건너뛰기`인 경우 이슈 생성 없이 옵션으로 돌아갑니다.
 
-5. If the detected tracker's CLI is not installed or not authenticated, surface a clear error (e.g., "`gh` CLI not found — install it or create the issue manually") and return to the options.
+5. 감지된 트래커의 CLI가 설치되지 않았거나 인증되지 않은 경우, 명확한 오류를 표시하고 (예: "`gh` CLI를 찾을 수 없습니다 — 설치하거나 수동으로 이슈를 생성해 주세요") 옵션으로 돌아가십시오.
 
-After issue creation:
-- Display the issue URL
-- Ask whether to proceed to `/ce-work` using the platform's blocking question tool
+이슈 생성 후:
+- 이슈 URL을 표시합니다.
+- 플랫폼의 차단형 질문 도구를 사용하여 `/ce-work`로 진행할지 묻습니다.

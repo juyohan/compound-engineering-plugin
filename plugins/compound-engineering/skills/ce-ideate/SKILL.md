@@ -1,224 +1,242 @@
 ---
 name: ce-ideate
-description: "Generate and critically evaluate grounded ideas about a topic. Use when asking what to improve, requesting idea generation, exploring surprising directions, or wanting the AI to proactively suggest strong options before brainstorming one in depth. Triggers on phrases like 'what should I improve', 'give me ideas', 'ideate on X', 'surprise me', 'what would you change', or any request for AI-generated suggestions rather than refining the user's own idea."
-argument-hint: "[feature, focus area, or constraint]"
+description: "주제에 대해 근거 있는 아이디어를 생성하고 비판적으로 평가합니다. 무엇을 개선할지 묻거나, 아이디어 생성을 요청하거나, 놀라운 방향을 탐색하거나, 특정 주제를 깊이 브레인스토밍하기 전에 AI가 선제적으로 강력한 옵션을 제안하기를 원할 때 사용합니다. '무엇을 개선해야 할까', '아이디어 좀 줘', 'X에 대해 아이디어를 내봐', '나를 놀라게 해봐', '너라면 무엇을 바꿀 것 같아' 등의 구절이나 사용자의 아이디어를 다듬기보다 AI가 생성한 제안을 요청할 때 트리거됩니다."
+argument-hint: "[기능, 집중 영역 또는 제약 조건]"
+allowed-tools:
+  - gem
 ---
 
-# Generate Improvement Ideas
+# 개선 아이디어 생성 (Generate Improvement Ideas)
 
-**Note: The current year is 2026.** Use this when dating ideation documents and checking recent ideation artifacts.
+**참고: 현재 연도는 2026년입니다.** 아이디어 문서를 작성하거나 최근 아이디어 아티팩트를 확인할 때 이 날짜를 기준으로 하십시오.
 
-`ce-ideate` precedes `ce-brainstorm`.
+`ce-ideate`는 `ce-brainstorm`에 선행합니다.
 
-- `ce-ideate` answers: "What are the strongest ideas worth exploring?"
-- `ce-brainstorm` answers: "What exactly should one chosen idea mean?"
-- `ce-plan` answers: "How should it be built?"
+- `ce-ideate`는 "탐색할 가치가 있는 가장 강력한 아이디어는 무엇인가?"에 답합니다.
+- `ce-brainstorm`은 "선택된 하나의 아이디어가 정확히 무엇을 의미해야 하는가?"에 답합니다.
+- `ce-plan`은 "그것을 어떻게 구축해야 하는가?"에 답합니다.
 
-This workflow produces a ranked ideation artifact in `docs/ideation/`. It does **not** produce requirements, plans, or code.
+이 워크플로우는 `docs/ideation/`에 순위가 매겨진 아이디어 아티팩트를 생성합니다. 요구사항, 계획 또는 코드를 생성하지 **않습니다**.
 
-## Interaction Method
+## 상호작용 방법
 
-Use the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to numbered options in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question.
+플랫폼의 차단형 질문 도구를 사용하십시오: Claude Code의 `AskUserQuestion` (스키마가 로드되지 않은 경우 `ToolSearch`로 `select:AskUserQuestion` 먼저 호출), Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user` (`pi-ask-user` 확장 필요). 도구가 없거나 오류가 발생하는 경우에만 채팅 창에 옵션을 제시하십시오. 질문을 소리 없이 건너뛰지 마십시오.
 
-Ask one question at a time. Prefer concise single-select choices when natural options exist.
+한 번에 한 가지 질문만 하십시오. 자연스러운 옵션이 존재할 경우 간결한 단일 선택형을 선호하십시오.
 
-## Focus Hint
+## 집중 힌트 (Focus Hint)
 
 <focus_hint> #$ARGUMENTS </focus_hint>
 
-Interpret any provided argument as optional context. It may be:
+## 다중 에이전트 협업 (Multi-Agent Collaboration)
 
-- a concept such as `DX improvements`
-- a path such as `plugins/compound-engineering/skills/`
-- a constraint such as `low-complexity quick wins`
-- a volume hint such as `top 3`, `100 ideas`, or `raise the bar`
+사용자의 입력(`$ARGUMENTS`) 내에 `--add <ai-이름>` 형태의 플래그가 포함되어 있는지 확인하십시오. 
+현재 지원되는 외부 AI 인터페이스는 `--add gemini` (또는 `--add gem`)입니다.
 
-If no argument is provided, proceed with open-ended ideation.
+만약 해당 플래그가 감지되면, 작업을 단독으로 확정하지 말고 다음 절차를 따르십시오:
+1. **의도 파악:** 플래그를 제외한 나머지 문자열을 실제 지시사항으로 간주합니다.
+2. **초안 작성:** 본인(주 에이전트)의 지식과 코드베이스 컨텍스트를 바탕으로 작업의 초기 뼈대나 접근법을 생각합니다.
+3. **MCP 협업 호출:** `gem` 도구를 호출하여 외부 Gemini 에이전트에게 조언이나 검토를 구합니다.
+   - 호출 시 전달할 메시지 예시: "나는 현재 이 작업에 대한 초안을 세우고 있어. 내 초안은 [초안 요약]이야. 이 접근 방식의 기술적 타당성을 검토하고 누락된 에지 케이스나 더 나은 패턴을 조언해줄 수 있어?"
+4. **결과 통합:** `gem` 도구가 반환한 피드백을 당신의 최종 결과물에 통합(Synthesis)합니다. 
+5. **명시적 표시:** 최종 산출물의 상단 또는 설명 부분에 "이 결과물은 Gemini와의 협업을 통해 검토 및 보완되었습니다."라는 문구를 추가하십시오.
 
-## Core Principles
+이 협업 절차를 염두에 두고 아래의 본래 스킬 워크플로우를 진행하십시오.
 
-1. **Ground before ideating** - Scan the actual codebase first. Do not generate abstract product advice detached from the repository.
-2. **Generate many -> critique all -> explain survivors only** - The quality mechanism is explicit rejection with reasons, not optimistic ranking. Do not let extra process obscure this pattern.
-3. **Route action into brainstorming** - Ideation identifies promising directions; `ce-brainstorm` defines the selected one precisely enough for planning. Do not skip to planning from ideation output.
 
-## Execution Flow
+제공된 모든 인자를 선택적 문맥으로 해석하십시오. 이는 다음과 같을 수 있습니다:
 
-### Phase 0: Resume and Scope
+- `DX 개선`과 같은 개념
+- `plugins/compound-engineering/skills/`와 같은 경로
+- `낮은 복잡도의 빠른 승리(quick wins)`와 같은 제약 조건
+- `상위 3개`, `100가지 아이디어`, `기준 높이기`와 같은 분량 힌트
 
-#### 0.1 Check for Recent Ideation Work
+인자가 제공되지 않으면 열린 결말의 아이디어 생성을 진행합니다.
 
-Look in `docs/ideation/` for ideation documents created within the last 30 days.
+## 핵심 원칙
 
-Treat a prior ideation doc as relevant when:
-- the topic matches the requested focus
-- the path or subsystem overlaps the requested focus
-- the request is open-ended and there is an obvious recent open ideation doc
-- the issue-grounded status matches: do not offer to resume a non-issue ideation when the current argument indicates issue-tracker intent, or vice versa — treat these as distinct topics
+1. **아이디어를 내기 전에 토대를 다지십시오 (Ground before ideating)** - 먼저 실제 코드베이스를 스캔하십시오. 저장소와 동떨어진 추상적인 제품 조언을 생성하지 마십시오.
+2. **많이 생성 -> 모두 비판 -> 생존한 것만 설명** - 품질 메커니즘은 낙관적인 순위 매기기가 아니라 이유가 포함된 명시적인 거부입니다. 추가적인 프로세스가 이 패턴을 흐리지 않게 하십시오.
+3. **작업을 브레인스토밍으로 연결하십시오** - 아이디어 생성은 유망한 방향을 식별하며, `ce-brainstorm`은 선택된 방향을 계획 수립이 가능할 정도로 정밀하게 정의합니다. 아이디어 결과물에서 바로 계획 수립으로 넘어가지 마십시오.
 
-If a relevant doc exists, ask whether to:
-1. continue from it
-2. start fresh
+## 실행 흐름
 
-If continuing:
-- read the document
-- summarize what has already been explored
-- preserve previous idea statuses
-- update the existing file instead of creating a duplicate
+### 단계 0: 재개 및 범위 설정
 
-#### 0.2 Subject-Identification Gate
+#### 0.1 최근 아이디어 작업 확인
 
-Before classifying mode or dispatching any grounding, check whether the subject of ideation is identifiable. Every downstream agent — grounding and ideation — needs to know what it's working on. If the subject is ambiguous enough that reasonable sub-agents would diverge on what the topic even is (bare words like `improvements`, `ideas`, `birthday cakes`, `vacation destinations`), the output will be scattered.
+`docs/ideation/`에서 지난 30일 이내에 생성된 아이디어 문서를 찾습니다.
 
-**Questioning principles (apply in this phase and in 0.4):**
+다음 경우에 이전 아이디어 문서가 관련이 있다고 간주합니다:
+- 주제가 요청된 집중 영역과 일치함
+- 경로 또는 하위 시스템이 요청된 집중 영역과 겹침
+- 요청이 열려 있고 명백한 최근 미결 아이디어 문서가 있음
+- 이슈 기반(issue-grounded) 상태가 일치함: 현재 인자가 이슈 트래커 의도를 나타낼 때 비-이슈 아이디어를 재개하라고 제안하지 마십시오 (반대의 경우도 마찬가지). 이들은 서로 다른 주제로 취급합니다.
 
-- Questions exist only to supply what sub-agents need to operate: an identifiable subject (this phase) and enough context for the agent to say something specific about it (0.4, elsewhere modes only). Nothing else.
-- Never ask about solution direction, constraints, audience, tone, success criteria, or anything that characterizes the subject — those belong to `ce-brainstorm`.
-- Always keep "Surprise me" (letting the agent decide the focus) as a real option, not a fallback for when the user can't name a subject. Ideation is allowed to be greenfield by design.
-- Stop as soon as the subject is identifiable or the user has delegated to "Surprise me." More than 3 total questions across 0.2 and 0.4 is a smell that ideation is not the right workflow — consider suggesting `ce-brainstorm`.
+관련 문서가 존재하면 다음을 묻습니다:
+1. 해당 문서에서 계속 진행하기
+2. 새로 시작하기
 
-**Detection — issue-tracker intent (repo mode only; subject-identifying).**
+계속 진행하는 경우:
+- 문서를 읽습니다.
+- 이미 탐색된 내용을 요약합니다.
+- 이전 아이디어 상태를 보존합니다.
+- 중복 파일을 만드는 대신 기존 파일을 업데이트합니다.
 
-Issue-tracker intent requires an explicit reference to the tracker or to reports filed in it. Trigger only when the prompt uses phrases like `github issues`, `open issues`, `issue patterns`, `issue themes`, `what users are reporting`, or `bug reports` — the subject is "issues in the tracker." Proceed to 0.3 with issue-tracker intent flagged.
+#### 0.2 주제 식별 게이트
 
-Do NOT trigger on arguments that merely mention bugs as a focus: `bug in auth`, `fix the login issue`, `the signup bug`, `top 3 bugs in authentication` — these are focus hints on regular ideation, not requests to analyze the issue tracker. A bare `bugs` with no tracker phrasing is handled by the vagueness check below, not here.
+접지(grounding) 또는 아이디어 생성을 배치하기 전에, 아이디어의 대상이 식별 가능한지 확인하십시오. 모든 후속 에이전트 — 접지 및 아이디어 생성 에이전트 — 는 자신이 무엇에 대해 작업하고 있는지 알아야 합니다. 주제가 너무 모호하여 하위 에이전트들이 서로 다른 주제로 이해할 정도라면(`개선 사항`, `아이디어`, `생일 케이크`, `휴가지`와 같은 단어만 있는 경우), 결과물은 분산될 것입니다.
 
-When combined (e.g., `top 3 issue themes in authentication`, `biggest bug reports about checkout`): detect issue-tracker intent first, volume override in 0.5, remainder is the focus hint. The focus narrows which issues matter; the volume override controls survivor count.
+**질문 원칙 (이 단계와 0.4단계에서 적용):**
 
-**Detection — subject identifiability.**
+- 질문은 하위 에이전트가 작동하는 데 필요한 것, 즉 식별 가능한 주제(이 단계)와 해당 주제에 대해 구체적으로 말할 수 있는 충분한 문맥(0.4단계, elsewhere 모드 전용)을 제공하기 위해서만 존재합니다. 그 외의 목적은 없습니다.
+- 해결 방향, 제약 조건, 대상 청중, 톤, 성공 기준 또는 주제의 특성을 묻지 마십시오 — 이는 `ce-brainstorm`의 영역입니다.
+- "나를 놀라게 해줘(Surprise me)"(에이전트가 집중 영역을 결정하게 함) 옵션을 사용자가 주제를 정하지 못할 때의 폴백이 아니라 실제 옵션으로 항상 유지하십시오. 아이디어 생성은 설계상 신규 구축(greenfield)이 가능합니다.
+- 주제가 식별 가능해지거나 사용자가 "나를 놀라게 해줘"로 위임하면 즉시 중단하십시오. 0.2단계와 0.4단계를 통틀어 3개 이상의 질문을 하는 것은 아이디어 생성 워크플로우가 적절하지 않다는 신호입니다 — `ce-brainstorm`을 제안하는 것을 고려하십시오.
 
-The test: would a reader, seeing only this prompt, know what subject the agent should ideate on? Apply judgment to what the words *refer to*, not to their length or surface form.
+**감지 — 이슈 트래커 의도 (repo 모드 전용; 주제 식별용).**
 
-- **Vague — ask the scope question.** The prompt refers to a quality, category, or placeholder without naming a specific thing. Reasonable readers would pick different subjects. Illustrative cases: `improvements`, `ideas`, `things to fix`, `quick wins`, `what to build`, `bugs` (as the whole prompt, not as a topic like "bugs in auth"), an empty prompt. These are examples of the pattern, not a lookup table — recognize vagueness by what the words point to (a catch-all quality), not by matching specific words.
+이슈 트래커 의도는 트래커 또는 트래커에 제출된 보고서에 대한 명시적인 참조가 필요합니다. 프롬프트에서 `github issues`, `open issues`, `이슈 패턴`, `이슈 테마`, `사용자들이 무엇을 보고하고 있는가`, `버그 보고서` 등의 구절을 사용할 때만 트리거하십시오 — 이때 주제는 "트래커에 있는 이슈들"입니다. 이슈 트래커 의도를 플래그로 설정하고 0.3단계로 진행하십시오.
 
-- **Identifiable — proceed to 0.3.** The prompt names or plausibly names a specific subject: a feature, concept, document, subsystem, page, flow, or concrete topic. A reader would know where to direct thought even without knowing the domain. Illustrative cases: `authentication system`, `our sign-up page`, `browser sniff`, `dark mode`, `cache invalidation`, `a unicorn cake for my 7-year-old`, `plot ideas for a short story`.
+단순히 버그를 집중 영역으로 언급하는 인자(`auth의 버그`, `로그인 이슈 수정`, `가입 버그`, `인증 관련 상위 3개 버그`)에 대해서는 트리거하지 마십시오 — 이들은 일반적인 아이디어 생성의 집중 힌트이지 이슈 트래커 분석 요청이 아닙니다. 주제 없이 `버그`라고만 되어 있는 경우는 아래의 모호함 확인 단계에서 처리됩니다.
 
-**Key distinction:** vagueness is about what the words *refer to*, not phrase length. `browser sniff` is two words but plausibly names a feature, so it is identifiable. `quick wins` is two words but refers only to a quality, so it is vague. Do not treat short phrases as vague by default.
+조합된 경우(예: `인증 관련 상위 3개 이슈 테마`, `결제 관련 가장 큰 버그 보고서`): 이슈 트래커 의도를 먼저 감지하고, 0.5단계에서 분량 오버라이드를 처리하며, 나머지를 집중 힌트로 사용합니다. 집중 영역은 어떤 이슈가 중요한지를 좁히고, 분량 오버라이드는 최종 생존 아이디어 개수를 조절합니다.
 
-**Being inside a repo does not settle vagueness.** `improvements` in any repo is still scattered across DX, reliability, features, docs, tests, architecture. The repo provides material for grounding *after* a subject is settled, not the subject itself. Do not silently interpret a vague prompt as "about this repo" and proceed.
+**감지 — 주제 식별 가능성.**
 
-**Genuine ambiguity (repo mode).** When judgment leaves real doubt on a short phrase — it could be a named feature or a vague concept — a single cheap check settles it: Glob for the phrase in filenames, or Grep for it in README/docs. If it appears anywhere, treat as identifiable and proceed. If it has no repo footprint and still reads vaguely, ask the scope question.
+테스트 방법: 이 프롬프트만 보고 독자가 에이전트가 어떤 주제에 대해 아이디어를 내야 하는지 알 수 있는가? 단어의 형태가 아니라 단어가 *가리키는 대상*을 기준으로 판단하십시오.
 
-When in doubt otherwise, err toward asking — one question is trivial compared to dispatching ~9 agents on a scattered interpretation.
+- **모호함 — 범위 질문을 하십시오.** 프롬프트가 특정 대상을 명명하지 않고 품질, 카테고리 또는 플레이스홀더만 가리킵니다. 독자마다 서로 다른 주제를 고를 것입니다. 예시: `개선 사항`, `아이디어`, `수정할 것들`, `빠른 승리`, `무엇을 만들까`, `버그`("auth의 버그"와 같은 주제가 아닌 프롬프트 전체가 버그인 경우), 비어 있는 프롬프트. 이들은 패턴의 예시일 뿐이며, 단어 자체가 아니라 가리키는 대상(모든 것을 포함하는 품질)으로 모호함을 인식하십시오.
 
-**The scope question.**
+- **식별 가능함 — 0.3단계로 진행하십시오.** 프롬프트가 특정 주제(기능, 개념, 문서, 하위 시스템, 페이지, 흐름 또는 구체적인 토픽)를 명명하거나 이름일 가능성이 높습니다. 독자는 도메인을 모르더라도 사고를 어디로 향해야 할지 알 수 있습니다. 예시: `인증 시스템`, `우리의 가입 페이지`, `브라우저 감지`, `다크 모드`, `캐시 무효화`, `7살 아이를 위한 유니콘 케이크`, `단편 소설을 위한 줄거리 아이디어`.
 
-Use the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to numbered options in chat only when no blocking tool exists or the call errors — not because a schema load is required. Never silently skip.
+**핵심 구분:** 모호함은 구절의 길이가 아니라 단어가 *가리키는 대상*에 관한 것입니다. `브라우저 감지`는 두 단어이지만 기능을 명명할 가능성이 높으므로 식별 가능합니다. `빠른 승리`는 두 단어이지만 품질만을 가리키므로 모호합니다. 짧은 구절이라고 해서 무조건 모호한 것으로 취급하지 마십시오.
 
-- **Stem:** "What should the agent ideate about?"
-- **Options:**
-  - "Specify a subject the agent should ideate on"
-  - "Surprise me — let the agent decide what to focus on"
-  - "Cancel — let me rephrase"
+**저장소 내부에 있다고 해서 모호함이 해결되지는 않습니다.** 어느 저장소에서든 `개선 사항`은 DX, 안정성, 기능, 문서, 테스트, 아키텍처 등 여러 분야에 걸쳐 있습니다. 저장소는 주제가 결정된 *후에* 토대를 다지기 위한 재료를 제공하는 것이지, 그 자체가 주제인 것은 아닙니다. 모호한 프롬프트를 "이 저장소에 관한 것"으로 소리 없이 해석하여 진행하지 마십시오.
 
-Routing:
+**진정한 모호함 (repo 모드).** 짧은 구절이 명명된 기능인지 모호한 개념인지 판단하기 어려울 때, 하나의 간단한 확인으로 결정할 수 있습니다: 파일 이름에서 해당 구절을 Glob으로 찾거나, README/문서에서 Grep으로 찾으십시오. 어디에든 나타난다면 식별 가능한 것으로 간주하고 진행하십시오. 저장소에 흔적이 없고 여전히 모호하게 읽힌다면 범위 질문을 하십시오.
 
-- **Specify** → accept the user's follow-up as the subject. Re-apply the identifiability check once. If still ambiguous, ask once more with "Surprise me" still on the menu. Do not cascade toward specificity about *how* to solve — only about *what* the subject is.
-- **Surprise me** → mark the run as **surprise-me mode**. The agent will discover subjects from Phase 1 material rather than carry a user-specified subject. This is a first-class mode — it changes how Phase 1 scans and how Phase 2 sub-agents operate (see those phases). **Dispatch routing for surprise-me is deterministic:** if CWD is inside a git repo, route to repo-grounded (the codebase supplies substance); otherwise route to elsewhere-software and require Phase 0.4 to collect at least one piece of substance (URL, description, draft, or paste) before dispatching — "surprise me" outside a repo is only viable once the user has supplied something to surprise them about. Skip Decision 1/2 in Phase 0.3: with no user subject there is no prompt content to weigh, and surprise-me never routes to elsewhere-non-software (no way to infer naming/narrative/personal intent without a subject). The user can correct by interrupting and re-invoking with a named subject.
-- **Cancel** → exit cleanly. Narrate that the user can rephrase and re-invoke.
+그 외에 의심스러운 경우 질문하는 쪽을 선택하십시오 — 한 번의 질문은 모호한 해석으로 ~9개의 에이전트를 배치하는 것에 비해 사소한 비용입니다.
 
-#### 0.3 Mode Classification
+**범위 질문 (The scope question).**
 
-Classify the **subject of ideation** (settled in 0.2) into one of three modes for dispatch routing. A user inside any repo can ideate about something unrelated to that repo; a user in `/tmp` can ideate about code they hold in their head.
+플랫폼의 차단형 질문 도구를 사용하십시오: Claude Code의 `AskUserQuestion` (스키마가 로드되지 않은 경우 `ToolSearch`로 `select:AskUserQuestion` 먼저 호출), Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user` (`pi-ask-user` 확장 필요). 도구가 없거나 오류가 발생하는 경우에만 채팅 창에 옵션을 제시하십시오. 질문을 소리 없이 건너뛰지 마십시오.
 
-**Surprise-me short-circuit.** When Phase 0.2 routed to surprise-me mode, skip the two-decision classification below and use the deterministic rule stated in 0.2: repo-grounded when CWD is inside a git repo, elsewhere-software otherwise. The ambiguity-confirmation step at the end of this section also does not fire for surprise-me — there is no user subject to be ambiguous about. State the chosen mode in one sentence and proceed to 0.4.
+- **질문:** "에이전트가 무엇에 대해 아이디어를 내야 할까요?"
+- **옵션:**
+  - "에이전트가 아이디어를 낼 주제를 지정하겠습니다"
+  - "나를 놀라게 해줘 — 에이전트가 집중할 대상을 직접 결정하게 합니다"
+  - "취소 — 프롬프트를 다시 작성하겠습니다"
 
-For specified subjects, make two sequential binary decisions, enumerating negative signals at each:
+라우팅:
 
-**Decision 1 — repo-grounded vs elsewhere.** Weigh prompt content first, topic-repo coherence second, and CWD repo presence as supporting evidence only.
+- **직접 지정** → 사용자의 후속 답변을 주제로 받아들입니다. 식별 가능성 확인을 한 번 더 적용합니다. 여전히 모호하다면 "나를 놀라게 해줘" 옵션을 포함하여 한 번 더 질문하십시오. 어떻게 해결할지에 대한 구체적인 질문으로 이어지지 마십시오 — 오직 주제가 *무엇인지*에 대해서만 묻습니다.
+- **나를 놀라게 해줘** → 실행을 **서프라이즈(surprise-me) 모드**로 표시합니다. 에이전트는 사용자 지정 주제를 따르는 대신 단계 1의 자료에서 주제를 스스로 발견합니다. 이는 일급 모드(first-class mode)로, 단계 1의 스캔 방식과 단계 2의 하위 에이전트 작동 방식을 변경합니다 (해당 단계 참조). **서프라이즈 모드의 배치 라우팅은 결정론적입니다:** CWD가 git 저장소 내부이면 repo-grounded로 라우팅하고(코드베이스가 실질적인 재료를 제공함), 그렇지 않으면 elsewhere-software로 라우팅하며 배치를 위해 단계 0.4에서 최소 하나의 실질적인 재료(URL, 설명, 초안 또는 붙여넣기)를 수집해야 합니다 — 저장소 밖에서의 "나를 놀라게 해줘"는 사용자가 무언가를 제공해야만 가능합니다. 단계 0.3의 결정 1/2를 건너뜁니다: 사용자 주제가 없으면 가늠할 프롬프트 내용이 없고, 서프라이즈 모드는 결코 elsewhere-non-software로 라우팅되지 않습니다 (주제 없이는 명명/서사/개인적 의도를 유추할 방법이 없음). 사용자는 중단하고 주제를 명시하여 다시 호출함으로써 수정할 수 있습니다.
+- **취소** → 깔끔하게 종료합니다. 사용자가 프롬프트를 다시 작성하여 호출할 수 있음을 안내합니다.
 
-- Positive signals for **repo-grounded**: prompt references repo files, code, architecture, modules, tests, or workflows; topic is clearly bounded by the current codebase. Issue-tracker intent from 0.2 is always repo-grounded.
-- Negative signals (push toward **elsewhere**): prompt names things absent from the repo (pricing, naming, narrative, business model, personal decisions, brand, content, market positioning); topic is creative, business, or personal with no code surface.
+#### 0.3 모드 분류 (Mode Classification)
 
-**Decision 2 (only fires if Decision 1 = elsewhere) — software vs non-software.** Classify by whether the *subject* of ideation is a software artifact or system, not by where the individual ideas will eventually land. If the topic concerns a product, app, SaaS, web/mobile UI, feature, page, or service, it is **elsewhere-software** — even when the ideas themselves are about copy, UX, CRO, pricing, onboarding, visual design, or positioning *for that software product*. **Elsewhere-non-software** is reserved for topics with no software surface at all: company or brand naming (independent of product), narrative and creative writing, personal decisions, non-digital business strategy, physical-product design.
+0.2단계에서 결정된 **아이디어 주제**를 배치 라우팅을 위해 세 가지 모드 중 하나로 분류합니다. 저장소 내부의 사용자라도 해당 저장소와 무관한 주제로 아이디어를 낼 수 있고, `/tmp`에 있는 사용자라도 머릿속에 있는 코드에 대해 아이디어를 낼 수 있습니다.
 
-Sample classifications:
+**서프라이즈 모드 단축 경로.** 0.2단계에서 서프라이즈 모드로 라우팅된 경우, 아래의 두 가지 분류 결정을 건너뛰고 0.2단계에서 명시된 결정론적 규칙을 따릅니다: 저장소가 있는 CWD에서는 repo-grounded, 그렇지 않으면 elsewhere-software. 서프라이즈 모드에서는 아래의 모호함 확인 단계도 실행되지 않습니다 — 사용자 주제가 없기 때문에 모호함을 따질 수 없습니다. 결정된 모드를 한 문장으로 언급하고 0.4단계로 진행하십시오.
 
-- "Improve conversion on our sign-up page" → elsewhere-software (the subject is a page)
-- "Redesign the onboarding flow" → elsewhere-software (the subject is a flow)
-- "Pricing page A/B test ideas" → elsewhere-software (the subject is a page)
-- "Features to add to our note-taking app" → elsewhere-software
-- "Name my new coffee shop" → elsewhere-non-software (the subject is a brand)
-- "Plot ideas for a short story" → elsewhere-non-software (the subject is a narrative)
-- "Options for my next career move" → elsewhere-non-software (the subject is a personal decision)
+지정된 주제의 경우, 두 개의 순차적인 이진 결정을 내리고 각 단계에서 부정적인 신호를 열거하십시오:
 
-State the inferred approach in one sentence at the top, using plain language the user will recognize. Never print the internal taxonomy label (`repo-grounded`, `elsewhere-software`, `elsewhere-non-software`) to the user — those names are for routing only. Adapt the template below to the actual topic; pick a domain word from the topic itself (e.g., "landing page", "onboarding flow", "naming", "career decision") instead of a mode label.
+**결정 1 — repo-grounded vs elsewhere.** 프롬프트 내용을 우선적으로 고려하고, 주제와 저장소의 일관성을 두 번째로, CWD 저장소 존재 여부는 보조적인 증거로만 고려하십시오.
 
-- **Repo-grounded:** "Treating this as a topic in this codebase — about X."
-- **Elsewhere-software:** "Treating this as a product/software topic outside this repo — about X."
-- **Elsewhere-non-software:** "Treating this as a [naming | narrative | business | personal] topic — about X."
+- **repo-grounded**에 대한 긍정적 신호: 프롬프트가 저장소 파일, 코드, 아키텍처, 모듈, 테스트 또는 워크플로우를 참조함. 주제가 현재 코드베이스로 명확하게 국한됨. 0.2단계에서의 이슈 트래커 의도는 항상 repo-grounded입니다.
+- 부정적 신호 (**elsewhere**로 유도): 프롬프트가 저장소에 없는 내용(가격 책정, 명명, 서사, 비즈니스 모델, 개인적 결정, 브랜드, 콘텐츠, 시장 포지셔닝)을 명명함. 주제가 코드 표면이 없는 창의적, 비즈니스 또는 개인적인 것임.
 
-Do not prescribe correction phrases ("say X to switch"). State the inferred mode plainly and proceed. If the user disagrees, they will correct in their own words or interrupt to re-invoke — reclassify and re-run any affected routing when that happens.
+**결정 2 (결정 1이 elsewhere인 경우에만 실행) — software vs non-software.** 개별 아이디어가 결국 어디에 도달할지가 아니라, 아이디어의 **주제**가 소프트웨어 아티팩트인지 시스템인지에 따라 분류하십시오. 주제가 제품, 앱, SaaS, 웹/모바일 UI, 기능, 페이지 또는 서비스에 관한 것이라면, 해당 아이디어가 카피, UX, CRO, 가격 책정, 온보딩, 시각 디자인 또는 포지셔닝에 관한 것이라도 **elsewhere-software**입니다. **elsewhere-non-software**는 소프트웨어 표면이 전혀 없는 주제를 위해 예약됩니다: 회사 또는 브랜드 명명(제품과 무관), 서사 및 창작 글쓰기, 개인적 결정, 디지털이 아닌 비즈니스 전략, 물리적 제품 디자인.
 
-**Active confirmation on mode ambiguity.** Only fire when mode classification is genuinely ambiguous *after* 0.2 settled the subject — e.g., "our docs" could mean repo docs (repo-grounded) or public marketing docs (elsewhere-software). Most subjects settled in 0.2 classify cleanly here. When ambiguous, ask one confirmation question via the blocking tool with two self-contained labels naming the two candidate interpretations in plain language (e.g., "Treat as repo docs in this codebase" vs "Treat as public marketing docs") — never leak internal mode names. Otherwise the one-sentence inferred-mode statement is sufficient; do not ask.
+샘플 분류:
 
-**Routing rule (non-software mode).** When Decision 2 = non-software, still run Phase 1 Elsewhere-mode grounding (user-context synthesis + web-research by default; skip phrases honored). Learnings-researcher is skipped by default in this mode — the CWD's `docs/solutions/` rarely transfers to naming, narrative, personal, or non-digital business topics; see Phase 1 for the full rationale. Then load `references/universal-ideation.md` and follow it in place of Phase 2's software frame dispatch and the Phase 6 menu narrative. This load is non-optional — the file contains the domain-agnostic generation frames, critique rubric, and wrap-up menu that replace Phase 2 and the post-ideation menu for this mode, and none of those details live in this main body. Improvising from memory produces the wrong facilitation for non-software topics. Do not run the repo-specific codebase scan at any point. The §6.5 Proof Failure Ladder in `references/post-ideation-workflow.md` still applies — load and follow it whenever a Proof save (the elsewhere-mode default for Save and end) fails, so the local-save fallback path stays reachable in non-software elsewhere runs.
+- "우리의 가입 페이지의 전환율 개선" → elsewhere-software (주제가 페이지임)
+- "온보딩 흐름 재설계" → elsewhere-software (주제가 흐름임)
+- "가격 페이지 A/B 테스트 아이디어" → elsewhere-software (주제가 페이지임)
+- "우리의 메모 앱에 추가할 기능들" → elsewhere-software
+- "나의 새로운 커피숍 이름 짓기" → elsewhere-non-software (주제가 브랜드임)
+- "단편 소설을 위한 줄거리 아이디어" → elsewhere-non-software (주제가 서사임)
+- "나의 다음 커리어 이동을 위한 옵션들" → elsewhere-non-software (주제가 개인적 결정임)
 
-#### 0.4 Context-Substance Gate (Elsewhere Modes Only)
+사용자가 인식할 수 있는 평이한 언어로 추론된 접근 방식을 상단에 한 문장으로 기재하십시오. 내부 분류 라벨(`repo-grounded`, `elsewhere-software`, `elsewhere-non-software`)을 사용자에게 절대 출력하지 마십시오 — 이 이름들은 라우팅 전용입니다. 주제에서 도메인 단어(예: "랜딩 페이지", "온보딩 흐름", "명명", "커리어 결정")를 골라 모드 라벨 대신 사용하여 아래 템플릿을 실제 주제에 맞게 조정하십시오.
 
-Skip in repo mode — the repo provides the substance Phase 1 agents work from. In elsewhere modes (both software and non-software), Phase 1 agents depend on user-supplied context for substance. A bare prompt with no description, URL, or artifact leaves the user-context-synthesis agent with nothing to synthesize and weakens web research's relevance.
+- **Repo-grounded:** "이 코드베이스의 주제인 X에 대해 다룹니다."
+- **Elsewhere-software:** "이 저장소 외부의 제품/소프트웨어 주제인 X에 대해 다룹니다."
+- **Elsewhere-non-software:** "[명명 | 서사 | 비즈니스 | 개인적] 주제인 X에 대해 다룹니다."
 
-Apply the discrimination test: would swapping one piece of the user's stated context for a contrasting alternative materially change which ideas survive? If yes, context is load-bearing — proceed. If no, ask 1-3 narrowly chosen questions focused on **supplying substance, not characterizing the subject**:
+수정 문구("X라고 말해서 전환하십시오")를 지시하지 마십시오. 추론된 모드를 평이하게 서술하고 진행하십시오. 사용자가 동의하지 않는다면 자신의 말로 수정하거나 중단하고 다시 호출할 것입니다 — 그럴 경우 재분류하고 영향을 받는 라우팅을 다시 실행하십시오.
 
-- A URL or file to read
-- A brief description of the current state
-- A paste of an existing draft or brief
+**모드 모호성에 대한 능동적 확인.** 0.2단계에서 주제가 결정된 *후에도* 모드 분류가 진정으로 모호할 때만 실행하십시오 — 예: "우리의 문서"는 저장소 문서(repo-grounded)를 의미할 수도 있고 공개 마케팅 문서(elsewhere-software)를 의미할 수도 있습니다. 0.2단계에서 결정된 대부분의 주제는 여기서 깔끔하게 분류됩니다. 모호한 경우, 차단형 도구를 사용하여 내부 모드 이름을 노출하지 않고 평이한 언어로 된 두 개의 후보 해석 라벨(예: "이 코드베이스의 저장소 문서로 취급" vs "공개 마케팅 문서로 취급")로 확인 질문을 하나 하십시오. 그렇지 않으면 한 문장으로 된 추론된 모드 서술로 충분하며, 묻지 마십시오.
 
-Build on what the user already provided rather than starting from a template. Default to free-form questions; use single-select only when the answer space is small and discrete. After each answer, re-apply the test before asking another. Stop on dismissive responses ("idk just go") — treat genuine "no context" answers as real answers and note context is thin in the summary so Phase 2 can compensate with broader generation.
+**라우팅 규칙 (non-software 모드).** 결정 2가 non-software인 경우, 여전히 단계 1 Elsewhere 모드 접지(사용자 문맥 합성 + 웹 조사 기본; 건너뛰기 구절 존중)를 실행하십시오. Learnings-researcher는 이 모드에서 기본적으로 건너뜁니다 — CWD 저장소의 `docs/solutions/`에 있는 엔지니어링 패턴이 명명, 서사, 개인적 또는 디지털이 아닌 비즈니스 주제로 전이되는 경우는 거의 없습니다 (단계 1의 전체 근거 참조). 그 후 `references/universal-ideation.md`를 로드하고 단계 2의 소프트웨어 프레임 배치와 단계 6 메뉴 서사 대신 이를 따르십시오. 이 로드는 선택 사항이 아닙니다 — 해당 파일에는 단계 2와 아이디어 생성 후 메뉴를 대체하는 도메인 불가지론적 생성 프레임, 비판 루브릭 및 마무리 메뉴가 포함되어 있으며, 이러한 상세 내용은 본문에 존재하지 않습니다. 기억에 의존해 즉흥적으로 수행하면 non-software 주제에 적절하지 않은 조력을 제공하게 됩니다. 저장소 전용 코드베이스 스캔은 어떤 지점에서도 실행하지 마십시오. `references/post-ideation-workflow.md`의 §6.5 증거 저장 실패 사다리는 여전히 적용됩니다 — Proof 저장(elsewhere 모드의 기본값)이 실패할 때마다 이를 로드하고 따라가서 로컬 저장 폴백 경로가 유지되도록 하십시오.
 
-**Surprise-me exception.** When the run is in surprise-me mode and routed to elsewhere-software (per 0.2's deterministic routing for no-repo CWDs), at least one piece of substance is required — there is no subject AND no repo, so Phase 1 and 2 agents would have nothing to discover subjects from. Dismissive responses are not acceptable here; if the user still has no context after one ask, tell them the run needs a URL, description, or paste to proceed and end cleanly so they can re-invoke with material.
+#### 0.4 문맥-실체 게이트 (Context-Substance Gate, Elsewhere 모드 전용)
 
-When the user provides rich context up front (a paste, a brief, an existing draft, a URL), confirm understanding in one line and skip this step entirely.
+repo 모드에서는 건너뜁니다 — 단계 1 에이전트가 작업할 실체는 저장소가 제공합니다. elsewhere 모드(software 및 non-software 모두)에서 단계 1 에이전트는 사용자가 제공한 문맥에 실체를 의존합니다. 설명, URL 또는 아티팩트가 없는 단순한 프롬프트는 사용자 문맥 합성 에이전트에게 합성할 재료를 남기지 않으며 웹 조사의 관련성을 약화시킵니다.
 
-If this step materially changes the topic (not just adds context but shifts the subject), re-run 0.2 and 0.3 against the refined scope before dispatching Phase 1 — classify on what's actually being ideated on, not the scope at first read.
+변별 테스트를 적용하십시오: 사용자가 언급한 문맥 중 하나를 대조적인 대안으로 바꾸었을 때 어떤 아이디어가 살아남을지가 실질적으로 바뀝니까? 그렇다면 문맥이 비중을 갖는 것이므로 진행하십시오. 그렇지 않다면 **주제의 특성을 묻는 것이 아니라 실체를 보충하는 것**에 초점을 맞춘 1~3개의 좁은 질문을 하십시오:
 
-#### 0.5 Interpret Focus and Volume
+- 읽어야 할 URL 또는 파일
+- 현재 상태에 대한 간략한 설명
+- 기존 초안 또는 요약의 붙여넣기
 
-Infer two things from the argument and any intake so far:
+사용자가 이미 제공한 내용을 바탕으로 질문하고 템플릿에서 시작하지 마십시오. 기본적으로 자유 형식 질문을 사용하고, 답변 공간이 작고 이산적인 경우에만 단일 선택형을 사용하십시오. 매 답변 후 다시 테스트를 적용한 뒤 다음 질문을 할지 결정하십시오. 무관심한 응답("몰라 그냥 해")이 나오면 중단하십시오 — 진정한 "문맥 없음" 답변을 실제 답변으로 취급하고 요약에 문맥이 빈약함을 기록하여 단계 2에서 더 넓은 생성을 통해 보완하도록 하십시오.
 
-- **Focus context** — concept, path, constraint, or open-ended
-- **Volume override** — any hint that changes candidate or survivor counts
+**서프라이즈 모드 예외.** 실행이 서프라이즈 모드이고 elsewhere-software로 라우팅된 경우(0.2단계의 저장소 없는 CWD에 대한 결정론적 라우팅에 따라), 최소 하나의 실체적인 재료가 필요합니다 — 주제도 없고 저장소도 없다면 단계 1과 2 에이전트가 주제를 발견할 재료가 전혀 없기 때문입니다. 무관심한 응답은 여기선 허용되지 않습니다. 한 번의 요청 후에도 사용자가 문맥을 제공하지 않으면, 진행을 위해 URL, 설명 또는 붙여넣기가 필요함을 알리고 깔끔하게 종료하여 사용자가 재료와 함께 다시 호출할 수 있게 하십시오.
 
-Default volume:
-- each ideation sub-agent generates about 6-8 ideas (yielding ~36-48 raw ideas across 6 frames in the default path, or ~24-32 across 4 frames in issue-tracker mode; roughly 25-30 survivors after dedupe in the 6-frame path and fewer in the 4-frame path)
-- keep the top 5-7 survivors
+사용자가 처음에 풍부한 문맥(붙여넣기, 요약, 기존 초안, URL)을 제공한 경우, 이해했음을 한 줄로 확인하고 이 단계를 완전히 건너뛰십시오.
 
-Honor clear overrides such as:
-- `top 3`
-- `100 ideas`
-- `go deep`
-- `raise the bar`
+이 단계가 주제를 실질적으로 변경하는 경우(단순히 문맥을 추가하는 것이 아니라 주제 자체가 바뀌는 경우), 단계 1을 배치하기 전에 정제된 범위에 대해 0.2단계와 0.3단계를 다시 실행하십시오 — 처음 읽었을 때의 범위가 아니라 실제로 아이디어를 내고 있는 주제에 따라 분류하십시오.
 
-**Tactical scope detection.** Parse the focus hint (and any intake answers from 0.2 specify path) for tactical signals: `polish`, `typo`, `typos`, `quick wins`, `small improvements`, `cleanup`, `small fixes`. When present, lower the Phase 2 ambition floor — the user has explicitly opted into tactical scope. Default otherwise is step-function (see Phase 2 meeting-test floor).
+#### 0.5 집중 및 분량 해석
 
-Use reasonable interpretation rather than formal parsing.
+인자와 지금까지의 섭취 내용으로부터 두 가지를 유추하십시오:
 
-#### 0.6 Cost Transparency Notice
+- **집중 문맥 (Focus context)** — 개념, 경로, 제약 조건 또는 열린 결말
+- **분량 오버라이드 (Volume override)** — 후보 또는 생존 아이디어 개수를 변경하는 힌트
 
-Before dispatching Phase 1, surface the agent count for the inferred mode in one short line so multi-agent cost is not invisible. Compute the count from the actual dispatch decision: 1 grounding-context agent (codebase scan in repo mode; user-context synthesis in elsewhere) + 1 learnings (skip in elsewhere-non-software) + 1 web researcher + 6 ideation = baseline 9 in repo mode and elsewhere-software, 8 in elsewhere-non-software. When issue-tracker intent triggers (repo mode only): add 1 for the issue-intelligence agent and drop ideation from 6 to 4, for a net -1 (baseline 8). Add 1 if the user opted into Slack research. Subtract 1 if the user issued a web-research skip phrase or V15 reuse will fire. In **surprise-me mode**, agent count is the same but per-agent exploration is deeper — note "(surprise-me mode: deeper exploration per agent)" when active.
+기본 분량:
+- 각 아이디어 생성 하위 에이전트는 약 6-8개의 아이디어를 생성합니다 (기본 경로인 6개 프레임에서 총 ~36-48개의 가공되지 않은 아이디어, 또는 이슈 트래커 모드인 4개 프레임에서 ~24-32개가 생성됨. 6개 프레임 경로에서 중복 제거 후 약 25-30개의 생존 아이디어가 남고, 4개 프레임 경로에서는 그보다 적게 남습니다).
+- 상위 5-7개의 생존 아이디어를 유지합니다.
 
-Examples (defaults, no skips, no opt-ins):
+다음과 같은 명확한 오버라이드를 존중하십시오:
+- `상위 3개`
+- `100가지 아이디어`
+- `깊이 파기 (go deep)`
+- `기준 높이기 (raise the bar)`
 
-- **Repo mode, specified subject:** "Will dispatch ~9 agents: codebase scan + learnings + web research + 6 ideation sub-agents. Skip phrases: 'no external research', 'no slack'."
-- **Repo mode, surprise-me:** "Will dispatch ~9 agents (surprise-me mode: deeper exploration per agent): codebase scan + learnings + web research + 6 ideation sub-agents. Skip phrases: 'no external research', 'no slack'."
-- **Repo mode, issue-tracker intent:** "Will dispatch ~8 agents: codebase scan + learnings + web research + issue intelligence + 4 ideation sub-agents. Skip phrases: 'no external research', 'no slack'." Reflects the successful-theme path; if issue intelligence returns insufficient signal (see Phase 1), ideation falls back to 6 sub-agents and the total becomes ~9.
-- **Elsewhere-software:** "Will dispatch ~9 agents: context synthesis + learnings + web research + 6 ideation sub-agents. Skip phrases: 'no external research'."
-- **Elsewhere-non-software:** "Will dispatch ~8 agents: context synthesis + web research + 6 ideation sub-agents. Skip phrases: 'no external research'."
+**전술적 범위 감지.** 집중 힌트(및 0.2단계에서 경로를 지정한 섭취 답변)에서 전술적 신호를 파싱하십시오: `다듬기`, `오타`, `빠른 승리`, `작은 개선`, `정리`, `소소한 수정`. 이러한 신호가 있으면 단계 2의 야망 하한선을 낮추십시오 — 사용자가 전술적 범위를 명시적으로 선택한 것입니다. 기본 설정은 한 단계 도약(step-function)입니다 (단계 2 회의 테스트 하한선 참조).
 
-The line is informational; users do not need to acknowledge it.
+형식적인 파싱보다는 합리적인 해석을 사용하십시오.
 
-### Phase 1: Mode-Aware Grounding
+#### 0.6 비용 투명성 고지
 
-Before generating ideas, gather grounding. The dispatch set depends on the mode chosen in Phase 0.3. Web research runs in all modes (skip phrases honored). Learnings runs in repo mode and elsewhere-software, and is **skipped by default in elsewhere-non-software** — the CWD repo's `docs/solutions/` almost always contains engineering patterns that do not transfer to naming, narrative, personal, or non-digital business topics.
+단계 1을 배치하기 전에, 추론된 모드에 대한 에이전트 수를 짧은 한 줄로 표시하여 다중 에이전트 비용이 보이지 않게 하지 마십시오. 실제 배치 결정으로부터 에이전트 수를 계산하십시오: 접지 문맥 에이전트 1개(repo 모드에선 코드베이스 스캔; elsewhere에선 문맥 합성) + learnings 1개(elsewhere-non-software에선 제외) + 웹 리서처 1개 + 아이디어 생성 6개 = repo 모드와 elsewhere-software의 기준은 9개, elsewhere-non-software는 8개입니다. 이슈 트래커 의도가 트리거된 경우(repo 모드 전용): 이슈 인텔리전스 에이전트 1개를 추가하고 아이디어 생성을 6개에서 4개로 줄여 순 -1개(기준 8개)가 됩니다. 사용자가 Slack 조사를 선택한 경우 1개를 추가하십시오. 사용자가 웹 조사 건너뛰기 구절을 사용했거나 V15 재사용이 실행된 경우 1개를 빼십시오. **서프라이즈 모드**에서는 에이전트 수는 동일하지만 에이전트당 탐색 깊이가 더 깊어집니다 — 활성화된 경우 "(서프라이즈 모드: 에이전트당 더 깊은 탐색)"이라고 적으십시오.
 
-**Surprise-me grounding depth.** When Phase 0.2 routed to surprise-me mode, Phase 1 must produce richer material than specified mode — Phase 2 sub-agents will discover their own subjects from what Phase 1 returns, so texture matters:
+예시 (기본값, 건너뛰기 없음, 선택 옵션 없음):
 
-- **Repo mode surprise-me:** the codebase-scan sub-agent samples a few representative files per top-level area (not just reads the top-level layout + AGENTS.md), surfaces recent PR/commit activity as signal about what's actively being worked on, and — when issue intelligence runs — passes issue themes as first-class input rather than footnote. Keep the scan bounded: representative, not exhaustive.
-- **Elsewhere mode surprise-me:** user-context synthesis extracts themes, recurring language, tensions, and omissions from whatever the user supplied, rather than just restating it. Web research broadens beyond narrow prior-art for a single subject toward the domain's landscape.
-- Specified mode keeps the current shallower scan — the user's named subject anchors what's relevant, so broader exploration is unnecessary.
+- **Repo 모드, 지정된 주제:** "~9개의 에이전트를 배치합니다: 코드베이스 스캔 + learnings + 웹 조사 + 6개의 아이디어 생성 하위 에이전트. 건너뛰기 구절: '외부 조사 제외', 'slack 제외'."
+- **Repo 모드, 서프라이즈:** "~9개의 에이전트를 배치합니다 (서프라이즈 모드: 에이전트당 더 깊은 탐색): 코드베이스 스캔 + learnings + 웹 조사 + 6개의 아이디어 생성 하위 에이전트. 건너뛰기 구절: '외부 조사 제외', 'slack 제외'."
+- **Repo 모드, 이슈 트래커 의도:** "~8개의 에이전트를 배치합니다: 코드베이스 스캔 + learnings + 웹 조사 + 이슈 인텔리전스 + 4개의 아이디어 생성 하위 에이전트. 건너뛰기 구절: '외부 조사 제외', 'slack 제외'." 성공적인 테마 도출 경로를 반영합니다. 이슈 인텔리전스가 충분한 신호를 반환하지 못할 경우(단계 1 참조), 아이디어 생성은 6개 하위 에이전트로 폴백하며 총합은 ~9개가 됩니다.
+- **Elsewhere-software:** "~9개의 에이전트를 배치합니다: 문맥 합성 + learnings + 웹 조사 + 6개의 아이디어 생성 하위 에이전트. 건너뛰기 구절: '외부 조사 제외'."
+- **Elsewhere-non-software:** "~8개의 에이전트를 배치합니다: 문맥 합성 + 웹 조사 + 6개의 아이디어 생성 하위 에이전트. 건너뛰기 구절: '외부 조사 제외'."
 
-Generate a `<run-id>` once at the start of Phase 1 (8 hex chars). Reuse it for the V15 cache file (this phase) and the V17 checkpoints (Phases 2 and 4) so they share one per-run scratch directory.
+이 라인은 정보 제공용이며 사용자가 확인할 필요는 없습니다.
 
-**Pre-resolve the scratch directory path.** Scratch lives directly under `/tmp` (not under `$TMPDIR` and not under `.context/`). `$TMPDIR` on macOS resolves to an obscure per-user path like `/var/folders/64/.../T/` that is hostile for users who want to inspect checkpoints, copy them elsewhere, or reference them later — `/tmp` is universally accessible on macOS, Linux, and WSL, and the per-user isolation `$TMPDIR` provides is not valuable for ephemeral ideation scratch. Run one bash command to create the directory and capture its absolute path for downstream use.
+### 단계 1: 모드 인식 접지 (Mode-Aware Grounding)
+
+아이디어를 생성하기 전에 접지 자료를 수집합니다. 배치 세트는 0.3단계에서 선택된 모드에 따라 달라집니다. 웹 조사는 모든 모드에서 실행됩니다 (건너뛰기 구절 존중). Learnings는 repo 모드와 elsewhere-software에서 실행되며, **elsewhere-non-software에서는 기본적으로 건너뜁니다** — CWD 저장소의 `docs/solutions/`에는 명명, 서사, 개인적 또는 디지털이 아닌 비즈니스 주제로 전이되지 않는 엔지니어링 패턴이 대부분이기 때문입니다.
+
+**서프라이즈 모드 접지 깊이.** 0.2단계에서 서프라이즈 모드로 라우팅된 경우, 단계 1은 지정된 모드보다 더 풍부한 재료를 생성해야 합니다 — 단계 2 하위 에이전트들이 단계 1의 결과물에서 직접 주제를 발견해야 하므로 텍스처(texture)가 중요합니다:
+
+- **Repo 모드 서프라이즈:** 코드베이스 스캔 하위 에이전트가 각 최상위 영역별로 대표적인 파일 몇 개를 샘플링하고(단순히 최상위 레이아웃 + AGENTS.md만 읽는 것이 아님), 무엇이 활발하게 작업되고 있는지에 대한 신호로 최근 PR/커밋 활동을 표출하며, 이슈 인텔리전스가 실행될 때 이슈 테마를 단순한 각주가 아닌 일급 입력으로 전달합니다. 스캔은 철저하되 대표성을 띠는 수준으로 유지하십시오.
+- **Elsewhere 모드 서프라이즈:** 사용자 문맥 합성 에이전트가 단순히 내용을 재진술하는 대신 사용자가 제공한 모든 자료에서 테마, 반복되는 언어, 긴장 및 생략된 부분을 추출합니다. 웹 조사는 단일 주제에 대한 좁은 선행 사례를 넘어 해당 도메인의 지형으로 확장합니다.
+- 지정된 모드는 현재의 얕은 스캔을 유지합니다 — 사용자가 명명한 주제가 관련성의 기준이 되므로 더 넓은 탐색은 불필요합니다.
+
+단계 1 시작 시 `<run-id>`를 한 번 생성하십시오 (8자리 16진수). V15 캐시 파일(이 단계)과 V17 체크포인트(단계 2 및 4)에 이를 재사용하여 하나의 실행당 스크래치 디렉토리를 공유하게 하십시오.
+
+**스크래치 디렉토리 경로 사전 확인.** 스크래치는 `$TMPDIR` 아래나 `.context/` 아래가 아닌 `/tmp` 바로 아래에 위치합니다. macOS의 `$TMPDIR`은 `/var/folders/64/.../T/`와 같이 모호한 사용자별 경로로 해석되어 체크포인트를 검사하거나 다른 곳으로 복사하거나 나중에 참조하려는 사용자에게 친숙하지 않습니다. `/tmp`는 macOS, Linux, WSL에서 보편적으로 접근 가능하며, `$TMPDIR`이 제공하는 사용자별 격리는 일시적인 아이디어 생성 스크래치에는 가치가 없습니다. 배쉬 명령을 실행하여 디렉토리를 생성하고 이 실행을 위한 절대 경로를 캡처하십시오.
 
 ```bash
 SCRATCH_DIR="/tmp/compound-engineering/ce-ideate/<run-id>"
@@ -226,121 +244,121 @@ mkdir -p "$SCRATCH_DIR"
 echo "$SCRATCH_DIR"
 ```
 
-Use the echoed absolute path (`/tmp/compound-engineering/ce-ideate/<run-id>`) as `<scratch-dir>` for every subsequent checkpoint write and cache read in this run. The run directory is not deleted on Phase 6 completion — the V15 cache is session-scoped and reused across run-ids, and the checkpoints follow the cross-invocation-reusable convention of leaving session-scoped artifacts for later invocations to find.
+이후 이 실행에서의 모든 체크포인트 쓰기 및 캐시 읽기에 에코된 절대 경로(`/tmp/compound-engineering/ce-ideate/<run-id>`)를 `<scratch-dir>`로 사용하십시오. 실행 디렉토리는 단계 6 완료 시 삭제되지 않습니다 — V15 캐시는 세션 범위이며 run-id 간에 재사용되고, 체크포인트는 나중의 호출에서 찾을 수 있도록 세션 범위 아티팩트를 남겨두는 컨벤션을 따릅니다.
 
-Run grounding agents in parallel in the **foreground** (do not background — results are needed before Phase 2):
+접지 에이전트들을 **포그라운드**에서 병렬로 실행하십시오 (결과가 단계 2 전에 필요하므로 백그라운드로 실행하지 마십시오):
 
-**Repo mode dispatch:**
+**Repo 모드 배치:**
 
-1. **Quick context scan** — dispatch a general-purpose sub-agent using the platform's cheapest capable model (e.g., `model: "haiku"` in Claude Code) with this prompt:
+1. **빠른 문맥 스캔** — 플랫폼의 가장 저렴하고 유능한 모델(예: Claude Code의 ` haiku`)을 사용하여 다음 프롬프트로 범용 하위 에이전트를 배치합니다:
 
-   > Read the project's AGENTS.md (or CLAUDE.md only as compatibility fallback, then README.md if neither exists), then discover the top-level directory layout using the native file-search/glob tool (e.g., `Glob` with pattern `*` or `*/*` in Claude Code). Also read `STRATEGY.md` if it exists — it captures the product's target problem, approach, persona, metrics, and tracks. Return a concise summary (under 30 lines) covering:
-   > - project shape (language, framework, top-level directory layout)
-   > - notable patterns or conventions
-   > - obvious pain points or gaps
-   > - likely leverage points for improvement
-   > - product strategy summary, if `STRATEGY.md` was present — include the approach and active tracks verbatim so ideation can weight toward strategy-aligned directions
+   > 프로젝트의 AGENTS.md(호환성 폴백으로만 CLAUDE.md를 확인하고, 둘 다 없으면 README.md)를 읽은 후, 네이티브 파일 검색/glob 도구(예: Claude Code의 `Glob`에 패턴 `*` 또는 `*/*`)를 사용하여 최상위 디렉토리 구조를 파악하십시오. `STRATEGY.md`가 있으면 이를 읽으십시오 — 제품의 대상 문제, 접근 방식, 페르소나, 지표 및 트랙이 담겨 있습니다. 다음 내용을 포함하는 30줄 이내의 간결한 요약을 반환하십시오:
+   > - 프로젝트 형상 (언어, 프레임워크, 최상위 디렉토리 구조)
+   > - 주목할 만한 패턴 또는 컨벤션
+   > - 명백한 페인 포인트(pain points) 또는 격차
+   > - 개선을 위한 유력한 레버리지 포인트(leverage points)
+   > - `STRATEGY.md`가 있었을 경우의 제품 전략 요약 — 아이디어 생성이 전략과 일치하는 방향으로 비중을 둘 수 있도록 접근 방식과 활성 트랙을 그대로 포함하십시오.
    >
-   > Keep the scan shallow — read only top-level documentation, `STRATEGY.md` if present, and directory structure. Do not analyze GitHub issues, templates, or contribution guidelines. Do not do deep code search.
+   > 스캔을 얕게 유지하십시오 — 최상위 문서, `STRATEGY.md`(있을 경우), 그리고 디렉토리 구조만 읽으십시오. GitHub 이슈, 템플릿 또는 기여 가이드를 분석하지 마십시오. 깊은 코드 검색을 하지 마십시오.
    >
-   > Focus hint: {focus_hint}
+   > 집중 힌트: {focus_hint}
 
-2. **Learnings search** — dispatch `ce-learnings-researcher` with a brief summary of the ideation focus.
+2. **Learnings 검색** — 아이디어 생성 집중 영역의 간략한 요약과 함께 `ce-learnings-researcher`를 배치합니다.
 
-3. **Web research** (always-on; see "Web research" subsection below for skip-phrase and V15 cache handling).
+3. **웹 조사** (항시 활성; 건너뛰기 구절 및 V15 캐시 처리는 아래 "웹 조사" 하위 섹션 참조).
 
-4. **Issue intelligence** (conditional) — if issue-tracker intent was detected in Phase 0.3, dispatch `ce-issue-intelligence-analyst` with the focus hint. Run in parallel with the other agents.
+4. **이슈 인텔리전스** (조건부) — 단계 0.3에서 이슈 트래커 의도가 감지된 경우, 집중 힌트와 함께 `ce-issue-intelligence-analyst`를 배치합니다. 다른 에이전트들과 병렬로 실행합니다.
 
-   If the agent returns an error (gh not installed, no remote, auth failure), log a warning to the user ("Issue analysis unavailable: {reason}. Proceeding with standard ideation.") and continue with the remaining grounding.
+   에이전트가 오류를 반환하는 경우(gh 미설치, 원격 저장소 없음, 인증 실패), 사용자에게 경고를 기록하고("이슈 분석을 사용할 수 없습니다: {reason}. 표준 아이디어 생성으로 진행합니다.") 남은 접지 작업을 계속합니다.
 
-   If the agent reports fewer than 5 total issues, note "Insufficient issue signal for theme analysis" and proceed with default ideation frames in Phase 2.
+   에이전트가 총 5개 미만의 이슈를 보고하는 경우, "테마 분석을 위한 이슈 신호 부족"으로 기록하고 단계 2에서 기본 아이디어 프레임으로 진행합니다.
 
-**Elsewhere mode dispatch (skip the codebase scan; user-supplied context is the primary grounding):**
+**Elsewhere 모드 배치 (코드베이스 스캔 건너뜀; 사용자가 제공한 문맥이 주요 접지 자료임):**
 
-1. **User-context synthesis** — dispatch a general-purpose sub-agent (cheapest capable model) to read the user-supplied context from Phase 0.4 intake plus any rich-prompt material, and return a structured grounding summary that mirrors the codebase-context shape (project shape → topic shape; notable patterns → stated constraints; pain points → user-named pain points; leverage points → opportunity hooks the context implies). This keeps Phase 2 sub-agents agnostic to grounding source.
+1. **사용자 문맥 합성** — 범용 하위 에이전트(가장 저렴하고 유능한 모델)를 배치하여 단계 0.4 섭취 단계의 사용자 제공 문맥과 풍부한 프롬프트 재료를 읽게 하고, 코드베이스 문맥 형상을 모방한 구조화된 접지 요약을 반환하게 합니다 (프로젝트 형상 → 주제 형상; 주목할 만한 패턴 → 명시된 제약 조건; 페인 포인트 → 사용자가 언급한 페인 포인트; 레버리지 포인트 → 문맥이 암시하는 기회 훅). 이는 단계 2 하위 에이전트들이 접지 소스에 관계없이 작동하게 해줍니다.
 
-2. **Learnings search** *(elsewhere-software only; skipped by default in elsewhere-non-software)* — dispatch `ce-learnings-researcher` with the topic summary in case relevant institutional knowledge exists (skill-design patterns, prior solutions in similar shape). Skip for elsewhere-non-software: the CWD's `docs/solutions/` is unlikely to be topically relevant for non-digital topics, and running it risks polluting generation with unrelated engineering patterns.
+2. **Learnings 검색** *(elsewhere-software 전용; elsewhere-non-software에서는 기본적으로 건너뜀)* — 관련 있는 기관 지식(스킬 디자인 패턴, 유사한 형상의 이전 해결책)이 있을 경우를 대비하여 주제 요약과 함께 `ce-learnings-researcher`를 배치합니다. elsewhere-non-software에서는 건너뜁니다: CWD의 `docs/solutions/`가 디지털이 아닌 주제와 토픽상 관련이 있을 가능성이 낮고, 이를 실행하면 관련 없는 엔지니어링 패턴으로 생성을 오염시킬 위험이 있습니다.
 
-3. **Web research** — same as repo mode (see subsection below).
+3. **웹 조사** — repo 모드와 동일합니다 (아래 하위 섹션 참조).
 
-Issue intelligence does not apply in elsewhere mode. Slack research is opt-in for both modes (see "Slack context" below).
+이슈 인텔리전스는 elsewhere 모드에서 적용되지 않습니다. Slack 조사는 두 모드 모두에서 선택 사항입니다 (아래 "Slack 문맥" 참조).
 
-#### Web Research (V5, V15)
+#### 웹 조사 (V5, V15)
 
-Always-on for both modes. Skip when the user said "no external research", "skip web research", or equivalent in their prompt or earlier answers; in that case, omit `ce-web-researcher` from dispatch and note the skip in the consolidated grounding summary.
+두 모드 모두에서 항상 활성화됩니다. 사용자가 프롬프트나 이전 답변에서 "외부 조사 제외", "웹 조사 건너뛰기" 또는 그에 상응하는 말을 한 경우 건너뛰십시오. 이 경우 `ce-web-researcher` 배치를 생략하고 통합 접지 요약에 건너뛰었음을 기록하십시오.
 
-Reuse prior web research within a session via a sidecar cache — see `references/web-research-cache.md` for the cache file shape, reuse check, append behavior, and platform-degradation rules. Read it the first time `ce-web-researcher` would be dispatched in this run (and on every subsequent dispatch where the cache might apply).
+세션 내 이전 웹 조사를 사이드카 캐시를 통해 재사용하십시오 — 캐시 파일 형상, 재사용 확인, 추가 동작 및 플랫폼 성능 저하 규칙은 `references/web-research-cache.md`를 참조하십시오. 이 실행에서 `ce-web-researcher`가 처음 배치될 때(그리고 캐시가 적용될 수 있는 모든 후속 배치 시) 이 파일을 읽으십시오.
 
-When dispatching `ce-web-researcher`, pass: the focus hint, a brief planning context summary (one or two sentences), and the mode. Do not pass codebase content — the agent operates externally.
+`ce-web-researcher`를 배치할 때 집중 힌트, 간략한 계획 문맥 요약(1~2문장), 그리고 모드를 전달하십시오. 코드베이스 내용은 전달하지 마십시오 — 에이전트는 외부에서 작동합니다.
 
-#### Consolidated Grounding Summary
+#### 통합 접지 요약 (Consolidated Grounding Summary)
 
-Consolidate all dispatched results into a short grounding summary using these sections (omit any section that produced nothing):
+배치된 모든 결과를 다음 섹션을 사용하여 짧은 접지 요약으로 통합하십시오 (결과가 없는 섹션은 생략):
 
-- **Codebase context** *(repo mode)* OR **Topic context** *(elsewhere mode)* — project/topic shape, notable patterns or stated constraints, pain points, leverage points
-- **Past learnings** — relevant institutional knowledge from `docs/solutions/`
-- **Issue intelligence** *(when present, repo mode only)* — theme summaries with titles, descriptions, issue counts, and trend directions
-- **External context** *(when web research ran)* — prior art, adjacent solutions, market signals, cross-domain analogies. Note "(reused from earlier dispatch)" when V15 reuse fired
-- **Slack context** *(when present)* — organizational context
+- **코드베이스 문맥** *(repo 모드)* 또는 **주제 문맥** *(elsewhere 모드)* — 프로젝트/주제 형상, 주목할 만한 패턴 또는 명시된 제약 조건, 페인 포인트, 레버리지 포인트
+- **과거 학습 내용 (Past learnings)** — `docs/solutions/`의 관련 기관 지식
+- **이슈 인텔리전스** *(있을 경우, repo 모드 전용)* — 제목, 설명, 이슈 수, 트렌드 방향을 포함한 테마 요약
+- **외부 문맥** *(웹 조사가 실행된 경우)* — 선행 사례, 인접 해결책, 시장 신호, 도메인 간 비유. V15 재사용이 발생한 경우 "(이전 배치에서 재사용됨)"이라고 기록하십시오.
+- **Slack 문맥** *(있을 경우)* — 조직적 문맥
 
-**Failure handling.** Grounding agent failures follow "warn and proceed" — never block on grounding failure. If `ce-web-researcher` fails (network, tool unavailable), log a warning ("External research unavailable: {reason}. Proceeding with internal grounding only.") and continue. If elsewhere-mode intake produced no usable context, note in the grounding summary that context is thin so Phase 2 sub-agents can compensate with broader generation.
+**실패 처리.** 접지 에이전트 실패는 "경고 후 진행"을 따릅니다 — 접지 실패로 인해 전체를 중단하지 마십시오. `ce-web-researcher`가 실패하면(네트워크, 도구 불가), 경고를 기록하고("외부 조사를 사용할 수 없습니다: {reason}. 내부 접지 자료로만 진행합니다.") 계속합니다. elsewhere 모드 섭취에서 사용 가능한 문맥이 생성되지 않은 경우, 문맥이 빈약함을 접지 요약에 기록하여 단계 2 하위 에이전트들이 더 넓은 생성을 통해 보완할 수 있게 하십시오.
 
-**Slack context** (opt-in, both modes) — never auto-dispatch. When the user asks for Slack context and Slack tools are available (look for any `slack-researcher` agent or `slack` MCP tools in the current environment), dispatch `ce-slack-researcher` with the focus hint in parallel with other Phase 1 agents. When tools are present but the user did not ask, mention availability in the grounding summary so they can opt in. When the user asked but no Slack tools are reachable, surface the install hint instead.
+**Slack 문맥** (두 모드 모두 선택 사항) — 절대 자동으로 배치하지 마십시오. 사용자가 Slack 조사를 요청하고 Slack 도구가 현재 환경에서 사용 가능한 경우(현재 환경에서 `slack-researcher` 에이전트나 `slack` MCP 도구가 있는지 확인), 단계 1의 다른 에이전트들과 병렬로 `ce-slack-researcher`를 배치합니다. 도구는 있지만 사용자가 요청하지 않은 경우, 접지 요약에 가용성을 언급하여 사용자가 선택할 수 있게 하십시오. 사용자가 요청했지만 Slack 도구에 접근할 수 없는 경우 설치 힌트를 표시하십시오.
 
-### Phase 2: Divergent Ideation
+### 단계 2: 확산적 아이디어 생성 (Divergent Ideation)
 
-Generate the full candidate list before critiquing any idea.
+아이디어를 비판하기 전에 전체 후보 리스트를 생성합니다.
 
-Dispatch parallel ideation sub-agents on the inherited model (do not tier down -- creative ideation needs the orchestrator's reasoning level). Omit the `mode` parameter so the user's configured permission settings apply. Dispatch count is mode-conditional: **4 sub-agents only when issue-tracker intent was detected in Phase 0.2 AND the issue intelligence agent returned usable themes** (see override below — cluster-derived frames capped at 4); **6 sub-agents otherwise**, including the insufficient-issue-signal fallback from Phase 1 where intent triggered but themes were not returned. Each targets ~6-8 ideas (yielding ~36-48 raw ideas across 6 frames or ~24-32 across 4 frames, roughly 25-30 survivors after dedupe in the 6-frame path and fewer in the 4-frame path). Adjust per-agent targets when volume overrides apply (e.g., "100 ideas" raises it, "top 3" may lower the survivor count instead).
+병렬 아이디어 생성 하위 에이전트들을 상속된 모델(orchestrator와 동일한 추론 수준 — 창의적인 아이디어 생성에는 고성능 추론이 필요함)에 배치합니다. 사용자의 설정된 권한 설정이 적용되도록 `mode` 파라미터는 생략하십시오. 배치 개수는 모드에 따라 다릅니다: **0.2단계에서 이슈 트래커 의도가 감지되고 이슈 인텔리전스 에이전트가 사용 가능한 테마를 반환한 경우에만 4개의 하위 에이전트** (아래 오버라이드 참조 — 클러스터 유도 프레임은 4개로 제한됨); **그 외의 경우 6개의 하위 에이전트** (의도가 트리거되었으나 단계 1에서 테마가 반환되지 않은 불충분 이슈 신호 폴백 포함). 각 에이전트는 약 6-8개의 아이디어를 목표로 합니다 (6개 프레임 경로에서 총 ~36-48개의 가공되지 않은 아이디어, 4개 프레임 경로에서 ~24-32개가 생성됨. 6개 프레임 경로에서 중복 제거 후 약 25-30개의 생존 아이디어가 남고, 4개 프레임 경로에서는 그보다 적게 남습니다). 분량 오버라이드가 적용되는 경우 에이전트당 목표치를 조정하십시오 (예: "100가지 아이디어"는 목표치를 높이고, "상위 3개"는 생존 아이디어 개수를 낮출 수 있음).
 
-Give each sub-agent: the grounding summary, the focus hint, the per-agent volume target, and an instruction to generate raw candidates only (not critique). Each agent's first few ideas tend to be obvious -- push past them. Ground every idea in the Phase 1 grounding summary.
+각 하위 에이전트에게 접지 요약, 집중 힌트, 에이전트당 분량 목표, 그리고 비판 없이 가공되지 않은 후보만 생성하라는 지침을 제공하십시오. 각 에이전트의 처음 몇 가지 아이디어는 뻔한 경향이 있으므로 이를 넘어서도록 독려하십시오. 모든 아이디어는 단계 1 접지 요약에 기반해야 합니다.
 
-Assign each sub-agent a different ideation frame as a **starting bias, not a constraint**. Prompt each to begin from its assigned perspective but follow any promising thread -- cross-cutting ideas that span multiple frames are valuable.
+각 하위 에이전트에게 **제약 조건이 아닌 시작 편향**으로서 서로 다른 아이디어 생성 프레임(frame)을 할당하십시오. 각 에이전트가 할당된 관점에서 시작하되 유망한 흐름이 있다면 무엇이든 따르도록 프롬프트를 작성하십시오 — 여러 프레임에 걸쳐 있는 아이디어는 가치가 큽니다.
 
-**Frame selection (mode-symmetric — same six frames in repo and elsewhere modes):**
+**프레임 선택 (모드 대칭 — repo 및 elsewhere 모드에서 동일한 6개 프레임):**
 
-1. **Pain and friction** — user, operator, or topic-level pain points; what is consistently slow, broken, or annoying.
-2. **Inversion, removal, or automation** — invert a painful step, remove it entirely, or automate it away.
-3. **Assumption-breaking and reframing** — what is being treated as fixed that is actually a choice; reframe one level up or sideways.
-4. **Leverage and compounding** — choices that, once made, make many future moves cheaper or stronger; second-order effects.
-5. **Cross-domain analogy** — generate ideas by asking how completely different fields solve a structurally analogous problem. The grounding domain is the user's topic; the analogy domain is anywhere else (other industries, biology, games, infrastructure, history). Push past the obvious analogy to non-obvious ones.
-6. **Constraint-flipping** — invert the obvious constraint to its opposite or extreme. What if the budget were 10x or 0? What if the team were 100 people or 1? What if there were no users, or 1M? Use the resulting design as a candidate even if the constraint flip itself is not realistic.
+1. **페인 포인트 및 마찰 (Pain and friction)** — 사용자, 운영자 또는 주제 수준의 페인 포인트; 지속적으로 느리거나, 고장 나거나, 짜증 나는 부분.
+2. **역발상, 제거 또는 자동화 (Inversion, removal, or automation)** — 고통스러운 단계를 뒤집거나, 완전히 제거하거나, 자동화합니다.
+3. **가정 파괴 및 재구성 (Assumption-breaking and reframing)** — 고정된 것으로 취급되지만 사실은 선택인 것; 한 단계 위나 옆으로 재구성합니다.
+4. **레버리지 및 복리 (Leverage and compounding)** — 한 번 선택하면 미래의 많은 움직임을 더 저렴하거나 강력하게 만드는 선택; 2차 효과.
+5. **도메인 간 비유 (Cross-domain analogy)** — 완전히 다른 분야가 구조적으로 유사한 문제를 어떻게 해결하는지 물어봄으로써 아이디어를 생성합니다. 접지 도메인은 사용자의 주제이고, 비유 도메인은 그 외의 모든 곳(다른 산업, 생물학, 게임, 인프라, 역사)입니다. 뻔한 비유를 넘어 뻔하지 않은 비유로 밀어붙이십시오.
+6. **제약 조건 뒤집기 (Constraint-flipping)** — 명백한 제약 조건을 그 반대나 극단으로 뒤집습니다. 예산이 10배라면, 혹은 0이라면? 팀이 100명이라면, 혹은 1명이라면? 사용자가 한 명도 없다면, 혹은 100만 명이라면? 결과적으로 나온 디자인이 비현실적일지라도 이를 후보 아이디어로 사용하십시오.
 
-**Issue-tracker mode override (repo mode only).** When issue-tracker intent is active and themes were returned by the issue intelligence agent: each high/medium-confidence theme becomes a frame. Pad with frames from the 6-frame default pool (in the order listed above) if fewer than 3 cluster-derived frames. Cap at 4 total — issue-tracker mode keeps its tighter dispatch by design.
+**이슈 트래커 모드 오버라이드 (repo 모드 전용).** 이슈 트래커 의도가 활성화되어 있고 이슈 인텔리전스 에이전트가 테마를 반환한 경우: 각 높음/중간 확신 테마가 하나의 프레임이 됩니다. 클러스터 유도 프레임이 3개 미만인 경우 위의 6개 기본 프레임 풀에서 순서대로 가져와 채웁니다. 총 4개로 제한합니다 — 이슈 트래커 모드는 의도적으로 더 타이트한 배치를 유지합니다.
 
-**Per-idea output contract (uniform across all frames, all modes):**
+**아이디어당 출력 계약 (모든 프레임, 모든 모드에서 동일):**
 
-Each sub-agent returns this structure per idea:
+각 하위 에이전트는 아이디어당 다음 구조를 반환합니다:
 
-- **title**
-- **summary** (2-4 sentences)
-- **warrant** (required, tagged) — one of:
-  - `direct:` quoted line / specific file / named issue / explicit user-supplied context
-  - `external:` named prior art, domain research, adjacent pattern, with source
-  - `reasoned:` explicit first-principles argument for why this move likely applies — not a gesture; the argument is written out
-- **why_it_matters** — connects the warrant to the move's significance
-- **meeting_test** — one line confirming this would warrant team discussion (waived when Phase 0.5 detected tactical focus signals)
+- **title (제목)**
+- **summary (요약)** (2~4문장)
+- **warrant (근거)** (필수, 태그됨) — 다음 중 하나:
+  - `direct:` 인용된 문구 / 특정 파일 / 명명된 이슈 / 명시적인 사용자 제공 문맥
+  - `external:` 출처가 포함된 명명된 선행 사례, 도메인 조사, 인접 패턴
+  - `reasoned:` 이 조치가 왜 적용될 가능성이 높은지에 대한 명시적인 제1원리 논증 — 단순한 제스처가 아니어야 하며 논증이 온전히 작성되어야 함
+- **why_it_matters (중요성)** — 근거와 조치의 중요성을 연결함
+- **meeting_test (회의 테스트)** — 이것이 팀 토론의 가치가 있음을 확인하는 한 줄 (단계 0.5에서 전술적 집중 신호가 감지된 경우 면제됨)
 
-Warrant is required, not optional. If a sub-agent cannot articulate warrant of at least one type, the idea does not surface. The failure mode to prevent is generic "AI-slop" ideas that sound plausible but lack a basis the user can verify.
+근거(Warrant)는 선택이 아닌 필수입니다. 하위 에이전트가 최소 하나 이상의 유형으로 근거를 명시할 수 없다면 해당 아이디어는 표출되지 않습니다. 방지하고자 하는 실패 모드는 그럴싸해 보이지만 사용자가 검증할 기초가 없는 일반적인 "AI 작성(AI-slop)" 아이디어입니다.
 
-**Generation rules (uniform across frames, all modes):**
+**생성 규칙 (프레임, 모드 공통):**
 
-- Every idea carries articulated warrant. Unjustified speculation does not surface, regardless of how plausible it sounds.
-- Bias toward the warrant type your frame naturally produces — pain/inversion/leverage tend toward `direct:`; analogy and constraint-flipping tend toward `reasoned:`; assumption-breaking is mixed — but don't exclude other warrant types.
-- Apply the meeting-test as a default floor: would this idea warrant team discussion? If not, it's below the floor and does not surface. The floor is relaxed only when Phase 0.5 detected tactical focus signals.
-- Stay within the subject's identity. Product expansions, new surfaces, new markets, retirements, and architectural pivots are fair game when warrant supports them. Subject-replacement moves (abandoning the project, pivoting to unrelated domains, becoming a different organization) are out regardless of warrant.
+- 모든 아이디어는 명시된 근거를 가집니다. 아무리 그럴싸해 보여도 정당화되지 않은 추측은 표출되지 않습니다.
+- 프레임이 자연스럽게 생성하는 근거 유형에 비중을 두십시오 — 페인 포인트/역발상/레버리지는 `direct:` 쪽으로, 비유 및 제약 조건 뒤집기는 `reasoned:` 쪽으로 흐르는 경향이 있습니다. 하지만 다른 근거 유형을 배제하지 마십시오.
+- 기본 하한선으로 회의 테스트를 적용하십시오: 이 아이디어가 팀 토론의 가치가 있습니까? 그렇지 않다면 하한선 미달이며 표출되지 않습니다. 이 하한선은 단계 0.5에서 전술적 집중 신호가 감지된 경우에만 완화됩니다.
+- 주제의 정체성 내에 머무르십시오. 제품 확장, 새로운 표면, 새로운 시장, 은퇴 및 아키텍처 피벗은 근거가 뒷받침된다면 허용됩니다. 주제 교체 조치(프로젝트 포기, 무관한 도메인으로의 피벗, 다른 조직으로 변모)는 근거에 관계없이 제외됩니다.
 
-**Surprise-me mode addendum.** When Phase 0.2 routed to surprise-me, include this additional instruction in each sub-agent's dispatch prompt:
+**서프라이즈 모드 추가 사항.** 단계 0.2에서 서프라이즈 모드로 라우팅된 경우, 각 하위 에이전트의 배치 프롬프트에 다음 지침을 추가하십시오:
 
-> No user-specified subject. Through your frame's lens, explore the Phase 1 material and identify the subject(s) you find most interesting for this frame. Different frames finding different subjects is the feature — cross-subject divergence is what makes surprise-me valuable. Each idea still carries warrant; warrant may include identification of the subject itself (why *this* subject is worth ideating on through your lens, citing what in the Phase 1 material signals it).
+> 사용자 지정 주제가 없습니다. 프레임의 렌즈를 통해 단계 1의 자료를 탐색하고 이 프레임에 가장 흥미로운 주제(들)를 식별하십시오. 서로 다른 프레임이 서로 다른 주제를 찾는 것이 이 모드의 특징입니다 — 주제 간의 발산이 서프라이즈 모드를 가치 있게 만듭니다. 각 아이디어는 여전히 근거를 가집니다. 근거에는 주제 식별 자체(단계 1 자료의 어떤 신호 때문에 *이* 주제가 당신의 렌즈를 통해 아이디어를 낼 가치가 있는지)가 포함될 수 있습니다.
 
-After all sub-agents return:
+모든 하위 에이전트가 반환된 후:
 
-1. Merge and dedupe into one master candidate list.
-2. Synthesize cross-cutting combinations -- scan for ideas from different frames that combine into something stronger. In specified mode, expect 3-5 additions at most. **In surprise-me mode, cross-cutting is the magic layer** — frames often converge on overlapping subjects or find complementary angles; expect 5-8 additions and give this step more attention. Surface combinations that span multiple frame-chosen subjects as a distinctive surprise-me output pattern.
-3. If a focus was provided, weight the merged list toward it without excluding stronger adjacent ideas.
-4. Spread ideas across multiple dimensions when justified: workflow/DX, reliability, extensibility, missing capabilities, docs/knowledge compounding, quality/maintenance, leverage on future work.
+1. 하나의 마스터 후보 리스트로 병합하고 중복을 제거합니다.
+2. 교차 시너지 조합을 합성합니다 — 서로 다른 프레임의 아이디어들을 결합하여 더 강력한 것을 만들 수 있는지 스캔하십시오. 지정된 모드에서는 최대 3-5개의 추가를 예상하십시오. **서프라이즈 모드에서 교차 시너지는 마법 같은 계층입니다** — 프레임들이 종종 겹치는 주제에서 수렴하거나 상호 보완적인 각도를 찾습니다. 5-8개의 추가를 예상하며 이 단계에 더 많은 주의를 기울이십시오. 여러 프레임이 선택한 주제들을 가로지르는 조합을 독특한 서프라이즈 모드 출력 패턴으로 표출하십시오.
+3. 집중 영역이 제공된 경우, 더 강력한 인접 아이디어들을 배제하지 않으면서 병합된 리스트에서 해당 영역에 비중을 둡니다.
+4. 정당화되는 경우 아이디어를 여러 차원에 걸쳐 분산시키십시오: 워크플로우/DX, 안정성, 확장성, 누락된 기능, 문서/지식 축적, 품질/유지보수, 미래 작업에 대한 레버리지.
 
-**Checkpoint A (V17).** Immediately after the cross-cutting synthesis step completes and the raw candidate list is consolidated, write `<scratch-dir>/raw-candidates.md` (using the absolute path captured in Phase 1) containing the full candidate list with sub-agent attribution. This protects the most expensive output (6 parallel sub-agent dispatches + dedupe) before Phase 3 critique potentially compacts context. Best-effort: if the write fails (disk full, permissions), log a warning and proceed; the checkpoint is not load-bearing. Not cleaned up at the end of the run (the run directory is preserved so the V15 cache remains reusable across run-ids in the same session — see Phase 6).
+**체크포인트 A (V17).** 교차 시너지 합성 단계가 완료되고 가공되지 않은 후보 리스트가 통합된 직후, (단계 1에서 캡처한 절대 경로를 사용하여) 하위 에이전트 귀속이 포함된 전체 후보 리스트를 담은 `<scratch-dir>/raw-candidates.md`를 작성하십시오. 이는 단계 3의 비판 과정에서 문맥이 압축되기 전에 가장 비용이 많이 드는 출력(6개 병렬 하위 에이전트 배치 + 중복 제거)을 보호합니다. 최선의 노력을 다하되, 쓰기에 실패하면(디스크 풀, 권한) 경고를 기록하고 진행하십시오. 체크포인트는 실행에 필수적인 요소는 아닙니다. 실행 종료 시 삭제되지 않습니다 (동일 세션 내의 run-id 간에 V15 캐시를 재사용할 수 있도록 실행 디렉토리가 보존됩니다 — 단계 6 참조).
 
-After merging and synthesis — and before presenting survivors — load `references/post-ideation-workflow.md`. This load is non-optional. The file contains the adversarial filtering rubric, artifact template, quality bar, and the canonical Phase 6 handoff menu (Refine, Open and iterate in Proof, Brainstorm, Save and end) — these options do not appear anywhere in this main body. Skipping the load silently degrades every subsequent step; the agent improvises the menu from memory instead of presenting the documented options. "Quickly" means fewer Phase 2 sub-agents, not skipping references. Do not load this file before Phase 2 agent dispatch completes.
+병합 및 합성 후 — 그리고 생존 아이디어를 제시하기 전 — `references/post-ideation-workflow.md`를 로드하십시오. 이 로드는 선택 사항이 아닙니다. 해당 파일에는 적대적 필터링 루브릭, 아티팩트 템플릿, 품질 바(quality bar), 그리고 표준적인 단계 6 핸드오프 메뉴(정제, Proof에서 열고 반복, 브레인스토밍, 저장 후 종료)가 포함되어 있습니다 — 이러한 옵션들은 본문에 존재하지 않습니다. 로드를 생략하면 이후 모든 단계가 소리 없이 저하됩니다. 에이전트는 문서화된 옵션을 제시하는 대신 기억에 의존해 메뉴를 즉흥적으로 만들게 됩니다. "빠르게"는 단계 2 하위 에이전트를 적게 배치하는 것을 의미하며, 참조 로드를 건너뛰는 것이 아닙니다. 단계 2 에이전트 배치가 완료되기 전에는 이 파일을 로드하지 마십시오.

@@ -1,703 +1,720 @@
 ---
 name: ce-compound-refresh
-description: Refresh stale learning docs and pattern docs under docs/solutions/ by reviewing them against the current codebase, then updating, consolidating, replacing, or deleting the drifted ones. Trigger this skill when the user asks to refresh, audit, sweep, clean up, or consolidate stale docs in docs/solutions/ (phrases like "refresh my learnings", "audit docs/solutions/", "clean up stale learnings", "consolidate overlapping docs", "compound refresh", "/ce-compound-refresh"), or when ce-compound has just captured a new learning and flagged a specific older doc in docs/solutions/ as now inaccurate or superseded — invoke with the narrow scope hint ce-compound provides. Also trigger when the user points at a specific learning or pattern doc under docs/solutions/ and calls it stale, outdated, overlapping, or drifted. Do not trigger for general refactor, migration, debugging, or code-review work unless the user has explicitly directed attention to docs/solutions/ itself.
+description: docs/solutions/ 폴더 아래의 오래된 학습 문서(learning docs)와 패턴 문서(pattern docs)를 현재 코드베이스와 대조하여 검토한 뒤, 업데이트, 통합, 교체 또는 삭제하여 최신 상태로 유지합니다. 사용자가 docs/solutions/ 폴더 내의 오래된 문서를 새로고침, 감사, 정리 또는 통합해달라고 요청할 때(예: "내 학습 내용 새로고침해줘", "docs/solutions/ 감사해줘", "오래된 학습 내용 정리해줘", "중복되는 문서 통합해줘", "compound refresh", "/ce-compound-refresh") 사용합니다. 또한 ce-compound가 방금 새로운 학습 내용을 캡처하면서 docs/solutions/ 내의 특정 문서가 부정확하거나 대체되었다고 플래그를 세운 경우(ce-compound가 제공하는 범위 힌트와 함께 호출)에도 사용합니다. 사용자가 docs/solutions/ 폴더 내의 특정 학습 또는 패턴 문서를 지목하며 오래되었거나, 중복되거나, 현재와 맞지 않는다고 할 때도 실행합니다. 사용자가 명시적으로 docs/solutions/ 자체를 지목하지 않는 한 일반적인 리팩토링, 마이그레이션, 디버깅 또는 코드 리뷰 작업에는 실행하지 마십시오.
+allowed-tools:
+  - gem
 ---
 
-# Compound Refresh
+# 컴파운드 리프레시 (Compound Refresh)
 
-Maintain the quality of `docs/solutions/` over time. This workflow reviews existing learnings against the current codebase, then refreshes any derived pattern docs that depend on them.
+## 다중 에이전트 협업 (Multi-Agent Collaboration)
 
-## Mode Detection
+사용자의 입력(`$ARGUMENTS`) 내에 `--add <ai-이름>` 형태의 플래그가 포함되어 있는지 확인하십시오. 
+현재 지원되는 외부 AI 인터페이스는 `--add gemini` (또는 `--add gem`)입니다.
 
-Check if `$ARGUMENTS` contains `mode:autofix`. If present, strip it from arguments (use the remainder as a scope hint) and run in **autofix mode**.
+만약 해당 플래그가 감지되면, 작업을 단독으로 확정하지 말고 다음 절차를 따르십시오:
+1. **의도 파악:** 플래그를 제외한 나머지 문자열을 실제 지시사항으로 간주합니다.
+2. **초안 작성:** 본인(주 에이전트)의 지식과 코드베이스 컨텍스트를 바탕으로 작업의 초기 뼈대나 접근법을 생각합니다.
+3. **MCP 협업 호출:** `gem` 도구를 호출하여 외부 Gemini 에이전트에게 조언이나 검토를 구합니다.
+   - 호출 시 전달할 메시지 예시: "나는 현재 이 작업에 대한 초안을 세우고 있어. 내 초안은 [초안 요약]이야. 이 접근 방식의 기술적 타당성을 검토하고 누락된 에지 케이스나 더 나은 패턴을 조언해줄 수 있어?"
+4. **결과 통합:** `gem` 도구가 반환한 피드백을 당신의 최종 결과물에 통합(Synthesis)합니다. 
+5. **명시적 표시:** 최종 산출물의 상단 또는 설명 부분에 "이 결과물은 Gemini와의 협업을 통해 검토 및 보완되었습니다."라는 문구를 추가하십시오.
 
-| Mode | When | Behavior |
+이 협업 절차를 염두에 두고 아래의 본래 스킬 워크플로우를 진행하십시오.
+
+
+시간이 흐름에 따라 `docs/solutions/`의 품질을 유지합니다. 이 워크플로우는 기존의 학습 내용들을 현재 코드베이스와 대조하여 검토하고, 이를 바탕으로 파생된 패턴 문서들을 새로고침합니다.
+
+## 모드 감지 (Mode Detection)
+
+`$ARGUMENTS`에 `mode:autofix`가 포함되어 있는지 확인합니다. 포함되어 있다면 인자에서 이를 제거하고(나머지는 범위 힌트로 사용), **자동 수정 모드(autofix mode)**로 실행합니다.
+
+| 모드 | 상황 | 동작 |
 |------|------|----------|
-| **Interactive** (default) | User is present and can answer questions | Ask for decisions on ambiguous cases, confirm actions |
-| **Autofix** | `mode:autofix` in arguments | No user interaction. Apply all unambiguous actions (Keep, Update, Consolidate, auto-Delete, Replace with sufficient evidence). Mark ambiguous cases as stale. Generate a summary report at the end. |
+| **대화형 (Interactive)** (기본값) | 사용자가 존재하며 질문에 답변할 수 있음 | 모호한 경우 사용자에게 결정을 요청하고, 작업을 확인받음 |
+| **자동 수정 (Autofix)** | 인자에 `mode:autofix` 포함됨 | 사용자 상호작용 없음. 명확한 모든 작업(Keep, Update, Consolidate, auto-Delete, 충분한 증거가 있는 Replace)을 적용함. 모호한 경우는 오래된(stale) 것으로 표시함. 마지막에 요약 보고서를 생성함. |
 
-### Autofix mode rules
+### 자동 수정 모드 규칙
 
-- **Skip all user questions.** Never pause for input.
-- **Process all docs in scope.** No scope narrowing questions — if no scope hint was provided, process everything.
-- **Attempt all safe actions:** Keep (no-op), Update (fix references), Consolidate (merge and delete subsumed doc), auto-Delete (unambiguous criteria met), Replace (when evidence is sufficient). If a write succeeds, record it as **applied**. If a write fails (e.g., permission denied), record the action as **recommended** in the report and continue — do not stop or ask for permissions.
-- **Mark as stale when uncertain.** If classification is genuinely ambiguous (Update vs Replace vs Consolidate vs Delete) or Replace evidence is insufficient, mark as stale with `status: stale`, `stale_reason`, and `stale_date` in the frontmatter. If even the stale-marking write fails, include it as a recommendation.
-- **Use conservative confidence.** In interactive mode, borderline cases get a user question. In autofix mode, borderline cases get marked stale. Err toward stale-marking over incorrect action.
-- **Always generate a report.** The report is the primary deliverable. It has two sections: **Applied** (actions that were successfully written) and **Recommended** (actions that could not be written, with full rationale so a human can apply them or run the skill interactively). The report structure is the same regardless of what permissions were granted — the only difference is which section each action lands in.
+- **모든 사용자 질문을 건너뜁니다.** 입력을 위해 멈추지 마십시오.
+- **범위 내의 모든 문서를 처리합니다.** 범위 좁히기 질문을 하지 않습니다. 범위 힌트가 없다면 모든 문서를 처리합니다.
+- **안전한 모든 작업을 시도합니다:** Keep (작업 없음), Update (참조 수정), Consolidate (병합 후 흡수된 문서 삭제), auto-Delete (명확한 기준 충족 시), Replace (증거가 충분한 경우). 쓰기 작업에 성공하면 **적용됨(applied)**으로 기록합니다. 실패하면(예: 권한 거부) 보고서에 **권장됨(recommended)**으로 기록하고 계속 진행합니다. 중단하거나 권한을 묻지 마십시오.
+- **불확실한 경우 stale로 표시합니다.** 분류가 정말로 모호하거나(Update vs Replace vs Consolidate vs Delete) Replace를 위한 증거가 부족한 경우, frontmatter에 `status: stale`, `stale_reason`, `stale_date`를 추가하여 stale로 표시합니다. stale 표시를 위한 쓰기 작업마저 실패하면 권장 사항에 포함합니다.
+- **보수적인 확신을 사용합니다.** 대화형 모드에서 경계선에 있는 사례는 사용자에게 질문하지만, 자동 수정 모드에서는 stale로 표시합니다. 잘못된 작업을 수행하기보다 stale로 표시하는 쪽을 택하십시오.
+- **항상 보고서를 생성합니다.** 보고서가 주요 결과물입니다. 보고서는 **적용됨(Applied)**(성공적으로 작성된 작업)과 **권장됨(Recommended)**(작성되지 못한 작업과 그 근거)의 두 섹션으로 나뉩니다. 보고서 구조는 동일하며, 각 작업이 어느 섹션에 들어가는지만 달라집니다.
 
-## Interaction Principles
+## 상호작용 원칙
 
-**These principles apply to interactive mode only. In autofix mode, skip all user questions and apply the autofix mode rules above.**
+**이 원칙들은 대화형 모드에만 적용됩니다. 자동 수정 모드에서는 모든 사용자 질문을 건너뛰고 위의 자동 수정 모드 규칙을 따르십시오.**
 
-Follow the same interaction style as `ce-brainstorm`:
+`ce-brainstorm`과 동일한 상호작용 스타일을 따릅니다:
 
-- Ask questions **one at a time** — use the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to numbered options in plain text only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question
-- Prefer **multiple choice** when natural options exist
-- Start with **scope and intent**, then narrow only when needed
-- Do **not** ask the user to make decisions before you have evidence
-- Lead with a recommendation and explain it briefly
+- 질문은 **한 번에 하나씩** 하십시오 — 플랫폼의 질문 도구를 사용하십시오: Claude Code의 `AskUserQuestion` (스키마가 로드되지 않은 경우 `ToolSearch`로 `select:AskUserQuestion` 먼저 호출), Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user` (`pi-ask-user` 확장 필요). 도구가 없거나 오류가 발생하는 경우에만 일반 텍스트에 번호를 매겨 옵션을 제시하십시오. 질문을 소리 없이 건너뛰지 마십시오.
+- 자연스러운 옵션이 존재할 경우 **객관식**을 선호하십시오.
+- **범위와 의도**부터 시작하고, 필요한 경우에만 좁혀가십시오.
+- 증거를 확보하기 전에는 사용자에게 결정을 내려달라고 요청하지 **마십시오**.
+- 추천안을 먼저 제시하고 그 이유를 짧게 설명하십시오.
 
-The goal is not to force the user through a checklist. The goal is to help them make a good maintenance decision with the smallest amount of friction.
+목표는 사용자가 체크리스트를 억지로 수행하게 하는 것이 아니라, 최소한의 마찰로 좋은 유지보수 결정을 내릴 수 있도록 돕는 것입니다.
 
-## Refresh Order
+## 새로고침 순서
 
-Refresh in this order:
+다음 순서대로 새로고침을 진행합니다:
 
-1. Review the relevant individual learning docs first
-2. Note which learnings stayed valid, were updated, were consolidated, were replaced, or were deleted
-3. Then review any pattern docs that depend on those learnings
+1. 먼저 관련 개별 학습 문서(learning docs)들을 검토합니다.
+2. 어떤 학습 내용이 유효한지(Keep), 업데이트되었는지(Update), 통합되었는지(Consolidate), 교체되었는지(Replace), 또는 삭제되었는지(Delete) 기록합니다.
+3. 그 후 해당 학습 내용들에 의존하는 패턴 문서(pattern docs)들을 검토합니다.
 
-Why this order:
+이 순서를 따르는 이유:
+- 학습 문서가 일차적인 증거입니다.
+- 패턴 문서는 하나 이상의 학습 내용에서 파생됩니다.
+- 오래된 학습 내용은 패턴 문서가 실제보다 더 유효해 보이게 만들 수 있습니다.
 
-- learning docs are the primary evidence
-- pattern docs are derived from one or more learnings
-- stale learnings can make a pattern look more valid than it really is
+사용자가 패턴 문서를 지목하며 시작했다면 거기서부터 우려 사항을 파악할 수 있지만, 패턴을 변경하기 전에 뒷받침하는 학습 문서들을 먼저 조사하십시오.
 
-If the user starts by naming a pattern doc, you may begin there to understand the concern, but inspect the supporting learning docs before changing the pattern.
+## 유지보수 모델
 
-## Maintenance Model
+각 아티팩트에 대해 다음 다섯 가지 결과 중 하나로 분류합니다:
 
-For each candidate artifact, classify it into one of five outcomes:
-
-| Outcome | Meaning | Default action |
+| 결과 | 의미 | 기본 작업 |
 |---------|---------|----------------|
-| **Keep** | Still accurate and still useful | No file edit by default; report that it was reviewed and remains trustworthy |
-| **Update** | Core solution is still correct, but references drifted | Apply evidence-backed in-place edits |
-| **Consolidate** | Two or more docs overlap heavily but are both correct | Merge unique content into the canonical doc, delete the subsumed doc |
-| **Replace** | The old artifact is now misleading, but there is a known better replacement | Create a trustworthy successor, then delete the old artifact |
-| **Delete** | No longer useful, applicable, or distinct | Delete the file — git history preserves it if anyone needs to recover it later |
+| **Keep** | 여전히 정확하고 유용함 | 기본적으로 파일 수정 없음. 검토 결과 여전히 신뢰할 수 있음을 보고함. |
+| **Update** | 핵심 해결책은 여전히 유효하지만, 참조가 변경됨 | 증거를 바탕으로 제자리에서 수정 적용 |
+| **Consolidate** | 두 개 이상의 문서가 많이 겹치지만 둘 다 정확함 | 고유한 내용을 대표 문서(canonical doc)로 병합하고, 흡수된 문서는 삭제함 |
+| **Replace** | 오래된 내용이 오해를 불러일으키지만, 알려진 더 나은 대체안이 있음 | 신뢰할 수 있는 후속 문서를 생성한 뒤, 오래된 문서를 삭제함 |
+| **Delete** | 더 이상 유용하지 않거나, 적용 불가능하거나, 별개로 존재할 이유가 없음 | 파일 삭제 — 나중에 복구가 필요하면 git 히스토리에 보존되어 있음 |
 
-## Core Rules
+## 핵심 규칙
 
-1. **Evidence informs judgment.** The signals below are inputs, not a mechanical scorecard. Use engineering judgment to decide whether the artifact is still trustworthy.
-2. **Prefer no-write Keep.** Do not update a doc just to leave a review breadcrumb.
-3. **Match docs to reality, not the reverse.** When current code differs from a learning, update the learning to reflect the current code. The skill's job is doc accuracy, not code review — do not ask the user whether code changes were "intentional" or "a regression." If the code changed, the doc should match. If the user thinks the code is wrong, that is a separate concern outside this workflow.
-4. **Be decisive, minimize questions.** When evidence is clear (file renamed, class moved, reference broken), apply the update. In interactive mode, only ask the user when the right action is genuinely ambiguous. In autofix mode, mark ambiguous cases as stale instead of asking. The goal is automated maintenance with human oversight on judgment calls, not a question for every finding.
-5. **Avoid low-value churn.** Do not edit a doc just to fix a typo, polish wording, or make cosmetic changes that do not materially improve accuracy or usability.
-6. **Use Update only for meaningful, evidence-backed drift.** Paths, module names, related links, category metadata, code snippets, and clearly stale wording are fair game when fixing them materially improves accuracy.
-7. **Use Replace only when there is a real replacement.** That means either:
-   - the current conversation contains a recently solved, verified replacement fix, or
-   - the user has provided enough concrete replacement context to document the successor honestly, or
-   - the codebase investigation found the current approach and can document it as the successor, or
-   - newer docs, pattern docs, PRs, or issues provide strong successor evidence.
-8. **Delete when the code is gone, and only after checking for inbound links.** If the referenced code, controller, or workflow no longer exists in the codebase and no successor can be found, delete the file — don't default to Keep just because the general advice is still "sound." When in doubt between Keep and Delete, ask the user (in interactive mode) or mark as stale (in autofix mode). Inbound links inform classification, not cleanup: cleanup is always mechanical, but **decorative** citations (principle stated inline) allow Delete, while **substantive** citations (citing doc relies on the cited doc) signal Replace. The auto-delete case is missing code, no matching successor, and citations absent or decorative.
-9. **Evaluate document-set design, not just accuracy.** In addition to checking whether each doc is accurate, evaluate whether it is still the right unit of knowledge. If two or more docs overlap heavily, determine whether they should remain separate, be cross-scoped more clearly, or be consolidated into one canonical document. Redundant docs are dangerous because they drift silently — two docs saying the same thing will eventually say different things.
-10. **Delete, don't archive.** There is no `_archived/` directory. When a doc is no longer useful, delete it. Git history preserves every deleted file — that is the archive. A dedicated archive directory creates problems: archived docs accumulate, pollute search results, and nobody reads them. If someone needs a deleted doc, `git log --diff-filter=D -- docs/solutions/` will find it.
+1. **증거가 판단의 근거가 됩니다.** 아래의 신호들은 입력값일 뿐 기계적인 점수표가 아닙니다. 엔지니어링 판단을 통해 아티팩트가 여전히 신뢰할 수 있는지 결정하십시오.
+2. **수정 없는 Keep을 선호하십시오.** 단지 검토했다는 흔적을 남기기 위해 문서를 업데이트하지 마십시오.
+3. **현실에 문서를 맞추십시오. 그 반대가 아닙니다.** 현재 코드가 학습 내용과 다르다면, 현재 코드를 반영하도록 학습 내용을 업데이트하십시오. 이 스킬의 임무는 문서의 정확성이지 코드 리뷰가 아닙니다 — 사용자에게 코드 변경이 "의도된 것인지" 혹은 "회귀(regression)인지" 묻지 마십시오. 코드가 바뀌었다면 문서도 그에 맞아야 합니다. 만약 사용자가 코드가 잘못되었다고 생각한다면, 그것은 이 워크플로우 밖의 별개 문제입니다.
+4. **단호하게 행동하고 질문을 최소화하십시오.** 증거가 명확하면(파일 이름 변경, 클래스 이동, 참조 깨짐 등) 업데이트를 바로 적용하십시오. 대화형 모드에서는 올바른 작업이 정말로 모호할 때만 사용자에게 묻습니다. 자동 수정 모드에서는 모호한 사례를 묻는 대신 stale로 표시합니다. 목표는 판단이 필요한 부분에 대해서만 사람이 감독하는 자동화된 유지보수이지, 모든 발견 사항에 대해 질문하는 것이 아닙니다.
+5. **가치 낮은 수정을 피하십시오.** 오타 수정, 문구 다듬기, 또는 정확성이나 유용성을 실질적으로 개선하지 않는 외관상의 변경만을 위해 문서를 편집하지 마십시오.
+6. **의미 있고 증거가 뒷받침되는 변경에만 Update를 사용하십시오.** 경로, 모듈 이름, 관련 링크, 카테고리 메타데이터, 코드 스니펫, 그리고 명백히 오래된 문구를 수정하는 것이 정확성을 실질적으로 높인다면 수행하십시오.
+7. **진짜 대체안이 있을 때만 Replace를 사용하십시오.** 이는 다음 중 하나를 의미합니다:
+   - 현재 대화에 방금 해결되고 검증된 대체 수정안이 포함되어 있거나,
+   - 사용자가 후속 문서를 정직하게 작성할 수 있을 만큼 구체적인 대체 컨텍스트를 제공했거나,
+   - 코드베이스 조사 결과 현재의 접근 방식을 찾아내어 이를 후속 내용으로 문서화할 수 있거나,
+   - 최신 문서, 패턴 문서, PR 또는 이슈가 강력한 후속 증거를 제공하는 경우입니다.
+8. **코드가 사라졌을 때 삭제하되, 반드시 인바운드 링크(inbound links)를 먼저 확인하십시오.** 참조된 코드, 컨트롤러 또는 워크플로우가 코드베이스에 더 이상 존재하지 않고 후속 내용도 찾을 수 없다면 파일을 삭제하십시오 — 일반적인 조언이 여전히 "타당해" 보인다는 이유만으로 Keep을 선택하지 마십시오. Keep과 Delete 사이에서 고민된다면 대화형 모드에서는 사용자에게 묻고, 자동 수정 모드에서는 stale로 표시하십시오. 인바운드 링크는 정리가 아닌 분류에 영향을 줍니다: 정리는 항상 기계적으로 이루어지지만, **장식적(decorative)** 인용(원칙이 인라인으로 서술됨)은 Delete를 허용하며, **실질적(substantive)** 인용(인용하는 문서가 인용되는 문서에 의존함)은 Replace 신호가 됩니다. 자동 삭제(auto-delete) 케이스는 코드가 없고, 일치하는 후속 내용이 없으며, 인용이 없거나 장식적인 경우입니다.
+9. **단순한 정확성을 넘어 문서 세트의 설계를 평가하십시오.** 각 문서가 정확한지 확인하는 것 외에도, 그것이 여전히 지식의 적절한 단위인지 평가하십시오. 두 개 이상의 문서가 많이 겹친다면, 별도로 유지할지, 범위를 더 명확히 나눌지, 아니면 하나의 대표 문서로 통합할지 결정하십시오. 중복된 문서는 소리 없이 서로 달라지기 때문에 위험합니다 — 같은 것을 말하는 두 문서는 결국 서로 다른 말을 하게 될 것입니다.
+10. **보관하지 말고 삭제하십시오.** `_archived/` 디렉토리는 없습니다. 문서가 더 이상 유용하지 않으면 삭제하십시오. Git 히스토리가 삭제된 모든 파일을 보존하고 있으므로 그것이 아카이브 역할을 합니다. 별도의 아카이브 디렉토리는 문제를 일으킵니다: 아카이브된 문서가 쌓이고, 검색 결과를 오염시키며, 아무도 읽지 않습니다. 삭제된 문서가 필요하다면 `git log --diff-filter=D -- docs/solutions/` 명령으로 찾을 수 있습니다.
 
-## Scope Selection
+## 범위 선택 (Scope Selection)
 
-Start by discovering learnings and pattern docs under `docs/solutions/`.
+`docs/solutions/` 아래에서 학습 문서와 패턴 문서를 찾는 것으로 시작합니다.
 
-Exclude:
-
+제외 항목:
 - `README.md`
-- `docs/solutions/_archived/` (legacy — if this directory exists, flag it for cleanup in the report)
+- `docs/solutions/_archived/` (레거시 — 이 디렉토리가 존재한다면 보고서에서 정리를 권고하십시오)
 
-Find all `.md` files under `docs/solutions/`, excluding `README.md` files and anything under `_archived/`. If an `_archived/` directory exists, note it in the report as a legacy artifact that should be cleaned up (files either restored or deleted).
+`README.md` 파일과 `_archived/` 아래의 파일을 제외한 `docs/solutions/` 아래의 모든 `.md` 파일을 찾습니다. `_archived/` 디렉토리가 존재한다면, 정리해야 할 레거시 아티팩트(파일 복구 또는 삭제)로 보고서에 기재하십시오.
 
-If `$ARGUMENTS` is provided, use it to narrow scope before proceeding. Try these matching strategies in order, stopping at the first that produces results:
+`$ARGUMENTS`가 제공되면, 진행하기 전에 이를 사용하여 범위를 좁힙니다. 다음 매칭 전략을 순서대로 시도하며 결과가 나오는 첫 번째 단계에서 멈춥니다:
 
-1. **Directory match** — check if the argument matches a subdirectory name under `docs/solutions/` (e.g., `performance-issues`, `database-issues`)
-2. **Frontmatter match** — search `module`, `component`, or `tags` fields in learning frontmatter for the argument
-3. **Filename match** — match against filenames (partial matches are fine)
-4. **Content search** — search file contents for the argument as a keyword (useful for feature names or feature areas)
+1. **디렉토리 매칭** — 인자가 `docs/solutions/` 아래의 서브디렉토리 이름과 일치하는지 확인 (예: `performance-issues`, `database-issues`)
+2. **Frontmatter 매칭** — 학습 문서 frontmatter의 `module`, `component`, 또는 `tags` 필드에서 인자를 검색
+3. **파일명 매칭** — 파일 이름과 대조 (부분 일치 허용)
+4. **내용 검색** — 파일 내용에서 인자를 키워드로 검색 (기능 이름이나 영역 검색에 유용)
 
-If no matches are found, report that and ask the user to clarify. In autofix mode, report the miss and stop — do not guess at scope.
+일치하는 항목이 없으면 보고하고 사용자에게 명확히 해달라고 요청하십시오. 자동 수정 모드에서는 실패를 보고하고 중단합니다 — 범위를 추측하지 마십시오.
 
-If no candidate docs are found, report:
+대상 문서를 찾지 못한 경우 다음과 같이 보고합니다:
 
 ```text
-No candidate docs found in docs/solutions/.
-Run `ce-compound` after solving problems to start building your knowledge base.
+docs/solutions/에서 대상 문서를 찾지 못했습니다.
+문제를 해결한 후 `ce-compound`를 실행하여 지식 베이스 구축을 시작해 보세요.
 ```
 
-## Phase 0: Assess and Route
+## 단계 0: 평가 및 라우팅
 
-Before asking the user to classify anything:
+사용자에게 분류를 요청하기 전에:
 
-1. Discover candidate artifacts
-2. Estimate scope
-3. Choose the lightest interaction path that fits
+1. 후보 아티팩트들을 발견합니다.
+2. 범위를 추정합니다.
+3. 상황에 맞는 가장 가벼운 상호작용 경로를 선택합니다.
 
-### Route by Scope
+### 범위에 따른 라우팅
 
-| Scope | When to use it | Interaction style |
+| 범위 | 사용 시점 | 상호작용 스타일 |
 |-------|----------------|-------------------|
-| **Focused** | 1-2 likely files or user named a specific doc | Investigate directly, then present a recommendation |
-| **Batch** | Up to ~8 mostly independent docs | Investigate first, then present grouped recommendations |
-| **Broad** | 9+ docs, ambiguous, or repo-wide stale-doc sweep | Triage first, then investigate in batches |
+| **Focused (집중)** | 1~2개의 유력한 파일 또는 사용자가 특정 문서를 지명함 | 직접 조사한 뒤 추천안 제시 |
+| **Batch (배치)** | 최대 8개 정도의 대부분 독립적인 문서들 | 먼저 조사한 뒤 그룹화된 추천안 제시 |
+| **Broad (광범위)** | 9개 이상의 문서, 모호함, 또는 저장소 전체의 오래된 문서 정리 | 먼저 분류(triage)한 뒤 배치 단위로 조사 |
 
-### Broad Scope Triage
+### 광범위 범위 분류 (Broad Scope Triage)
 
-When scope is broad (9+ candidate docs), do a lightweight triage before deep investigation:
+범위가 넓을 때(9개 이상의 후보 문서)는 심층 조사 전에 가벼운 분류를 수행합니다:
 
-1. **Inventory** — read frontmatter of all candidate docs, group by module/component/category
-2. **Impact clustering** — identify areas with the densest clusters of learnings + pattern docs. A cluster of 5 learnings and 2 patterns covering the same module is higher-impact than 5 isolated single-doc areas, because staleness in one doc is likely to affect the others.
-3. **Spot-check drift** — for each cluster, check whether the primary referenced files still exist. Missing references in a high-impact cluster = strongest signal for where to start.
-4. **Recommend a starting area** — present the highest-impact cluster with a brief rationale and ask the user to confirm or redirect. In autofix mode, skip the question and process all clusters in impact order.
+1. **목록 작성(Inventory)** — 모든 후보 문서의 frontmatter를 읽고 모듈/컴포넌트/카테고리별로 그룹화합니다.
+2. **영향도 클러스터링(Impact clustering)** — 학습 내용과 패턴 문서가 가장 밀도 있게 모여 있는 영역을 식별합니다. 동일한 모듈을 다루는 5개의 학습 내용과 2개의 패턴이 있는 클러스터는 5개의 고립된 단일 문서 영역보다 영향도가 높습니다. 한 문서의 노후화가 다른 문서에도 영향을 미칠 가능성이 크기 때문입니다.
+3. **오래된 정도 점검(Spot-check drift)** — 각 클러스터에 대해 주요 참조 파일들이 여전히 존재하는지 확인합니다. 고영향도 클러스터에서 참조가 누락된 경우, 그곳이 시작하기 가장 좋은 지점이라는 강력한 신호입니다.
+4. **시작 영역 추천** — 가장 영향력 있는 클러스터를 간략한 근거와 함께 제시하고 사용자에게 확인 또는 변경을 요청합니다. 자동 수정 모드에서는 질문을 건너뛰고 모든 클러스터를 영향도 순으로 처리합니다.
 
-Example:
+예시:
 
 ```text
-Found 24 learnings across 5 areas.
+5개 영역에 걸쳐 24개의 학습 내용을 발견했습니다.
 
-The auth module has 5 learnings and 2 pattern docs that cross-reference
-each other — and 3 of those reference files that no longer exist.
-I'd start there.
+auth 모듈은 서로 교차 참조하는 5개의 학습 내용과 2개의 패턴 문서를 가지고 있으며,
+그중 3개는 더 이상 존재하지 않는 파일을 참조하고 있습니다.
+여기서부터 시작하겠습니다.
 
-1. Start with auth (recommended)
-2. Pick a different area
-3. Review everything
+1. auth부터 시작 (추천)
+2. 다른 영역 선택
+3. 모든 내용 검토
 ```
 
-Do not ask action-selection questions yet. First gather evidence.
+아직 작업 선택 질문을 하지 마십시오. 먼저 증거를 수집하십시오.
 
-## Phase 1: Investigate Candidate Learnings
+## 단계 1: 후보 학습 내용 조사
 
-For each learning in scope, read it, cross-reference its claims against the current codebase, and form a recommendation.
+범위 내의 각 학습 내용을 읽고 현재 코드베이스와 대조하여 추천안을 도출합니다.
 
-A learning has several dimensions that can independently go stale. Surface-level checks catch the obvious drift, but staleness often hides deeper:
+학습 내용은 여러 차원에서 독립적으로 노후화될 수 있습니다. 표면적인 확인으로 명백한 차이는 잡아낼 수 있지만, 노후화는 종종 더 깊은 곳에 숨어 있습니다:
 
-- **References** — do the file paths, class names, and modules it mentions still exist or have they moved?
-- **Recommended solution** — does the fix still match how the code actually works today? A renamed file with a completely different implementation pattern is not just a path update.
-- **Code examples** — if the learning includes code snippets, do they still reflect the current implementation?
-- **Related docs** — are cross-referenced learnings and patterns still present and consistent?
-- **Auto memory** (Claude Code only) — does the injected auto-memory block in your system prompt contain entries in the same problem domain? Scan that block directly. If the block is absent, skip this dimension. A memory note describing a different approach than what the learning recommends is a supplementary drift signal.
-- **Overlap** — while investigating, note when another doc in scope covers the same problem domain, references the same files, or recommends a similar solution. For each overlap, record: the two file paths, which dimensions overlap (problem, solution, root cause, files, prevention), and which doc appears broader or more current. These signals feed Phase 1.75 (Document-Set Analysis).
+- **참조** — 언급된 파일 경로, 클래스 이름, 모듈이 여전히 존재하는지 혹은 이동했는지 확인합니다.
+- **권장 해결책** — 해당 수정 방식이 오늘날 코드가 작동하는 방식과 여전히 일치합니까? 완전히 다른 구현 패턴을 가진 이름만 같은 파일은 단순한 경로 업데이트 대상이 아닙니다.
+- **코드 예시** — 학습 내용에 코드 스니펫이 포함되어 있다면 현재의 구현을 여전히 반영하고 있습니까?
+- **관련 문서** — 교차 참조된 학습 및 패턴 문서가 여전히 존재하며 일관성이 있습니까?
+- **자동 메모 (Auto memory)** (Claude Code 전용) — 시스템 프롬프트에 주입된 자동 메모 블록에 동일한 문제 도메인의 항목이 있습니까? 해당 블록을 직접 스캔하십시오. 블록이 없다면 이 확인은 건너뜁니다. 학습 내용이 권장하는 방식과 다른 방식을 설명하는 메모는 부가적인 노후화 신호입니다.
+- **중복** — 조사하는 동안 범위 내의 다른 문서가 동일한 문제 도메인을 다루거나, 동일한 파일을 참조하거나, 유사한 해결책을 권장하는지 확인합니다. 중복이 발견될 때마다 다음을 기록하십시오: 두 파일 경로, 중복되는 차원(문제, 해결책, 원인, 파일, 예방), 그리고 어떤 문서가 더 포괄적이거나 최신인지 기록합니다. 이 신호들은 단계 1.75(문서 세트 분석)의 입력값이 됩니다.
 
-Match investigation depth to the learning's specificity — a learning referencing exact file paths and code snippets needs more verification than one describing a general principle.
+조사 깊이는 학습 내용의 구체성에 맞춥니다 — 정확한 파일 경로와 코드 스니펫을 참조하는 학습 내용은 일반적인 원칙을 설명하는 것보다 더 많은 검증이 필요합니다.
 
-### Drift Classification: Update vs Replace
+### 노후화 분류: Update vs Replace
 
-The critical distinction is whether the drift is **cosmetic** (references moved but the solution is the same) or **substantive** (the solution itself changed):
+핵심적인 구분 기준은 노후화가 **외관상(cosmetic)**인 것인지(참조는 이동했지만 해결책은 동일함) 아니면 **실질적(substantive)**인 것인지(해결책 자체가 바뀜) 여부입니다:
 
-- **Update territory** — file paths moved, classes renamed, links broke, metadata drifted, but the core recommended approach is still how the code works. `ce-compound-refresh` fixes these directly.
-- **Replace territory** — the recommended solution conflicts with current code, the architectural approach changed, or the pattern is no longer the preferred way. This means a new learning needs to be written. A replacement subagent writes the successor following `ce-compound`'s document format (frontmatter, problem, root cause, solution, prevention), using the investigation evidence already gathered. The orchestrator does not rewrite learnings inline — it delegates to a subagent for context isolation.
+- **Update 영역** — 파일 경로 이동, 클래스 이름 변경, 링크 깨짐, 메타데이터 변경 등이 발생했지만 핵심 권장 방식이 여전히 현재 코드의 작동 방식인 경우입니다. `ce-compound-refresh`가 이를 직접 수정합니다.
+- **Replace 영역** — 권장 해결책이 현재 코드와 충돌하거나, 아키텍처 접근 방식이 바뀌었거나, 해당 패턴이 더 이상 선호되지 않는 경우입니다. 이는 새로운 학습 내용이 작성되어야 함을 의미합니다. 대체 하위 에이전트(replacement subagent)가 이미 수집된 조사 증거를 바탕으로 `ce-compound`의 문서 형식(frontmatter, problem, root cause, solution, prevention)을 따라 후속 문서를 작성합니다. 오케스트레이터는 학습 내용을 인라인으로 직접 다시 쓰지 않고 컨텍스트 격리를 위해 하위 에이전트에게 위임합니다.
 
-**The boundary:** if you find yourself rewriting the solution section or changing what the learning recommends, stop — that is Replace, not Update.
+**경계선:** 만약 여러분이 해결책 섹션을 다시 쓰고 있거나 학습 내용이 권장하는 내용을 바꾸고 있다면 멈추십시오 — 그것은 Update가 아니라 Replace입니다.
 
-**Memory-sourced drift signals** are supplementary, not primary. A memory note describing a different approach does not alone justify Replace or Delete. Use memory signals to:
-- Corroborate codebase-sourced drift (strengthens the case for Replace)
-- Prompt deeper investigation when codebase evidence is borderline
-- Add context to the evidence report ("(auto memory [claude]) notes suggest approach X may have changed since this learning was written")
+**메모 기반 노후화 신호**는 주된 증거가 아닌 보조적인 증거입니다. 다른 방식을 설명하는 메모 하나만으로는 Replace나 Delete를 정당화할 수 없습니다. 메모 신호는 다음을 위해 사용하십시오:
+- 코드베이스 기반 노후화 증거 보강 (Replace 결정 강화)
+- 코드베이스 증거가 경계선에 있을 때 더 깊은 조사 유도
+- 증거 보고서에 컨텍스트 추가 ("(auto memory [claude]) 메모는 이 학습 내용이 작성된 이후 접근 방식 X가 바뀌었을 가능성을 시사함")
 
-In autofix mode, memory-only drift (no codebase corroboration) should result in stale-marking, not action.
+자동 수정 모드에서 코드베이스 뒷받침이 없는 메모 전용 노후화 신호는 작업 수행이 아닌 stale 표시로 이어져야 합니다.
 
-### Judgment Guidelines
+### 판단 지침
 
-Three guidelines that are easy to get wrong:
+틀리기 쉬운 세 가지 지침:
 
-1. **Contradiction = strong Replace signal.** If the learning's recommendation conflicts with current code patterns or a recently verified fix, that is not a minor drift — the learning is actively misleading. Classify as Replace.
-2. **Age alone is not a stale signal.** A 2-year-old learning that still matches current code is fine. Only use age as a prompt to inspect more carefully.
-3. **Check for successors before deleting.** Before recommending Replace or Delete, look for newer learnings, pattern docs, PRs, or issues covering the same problem space. If successor evidence exists, prefer Replace over Delete so readers are directed to the newer guidance.
+1. **모순은 강력한 Replace 신호입니다.** 학습 내용의 권장 사항이 현재 코드 패턴이나 최근 검증된 수정 사항과 충돌한다면 그것은 사소한 노후화가 아닙니다 — 해당 학습 내용은 활발하게 오해를 불러일으키고 있는 것입니다. Replace로 분류하십시오.
+2. **나이 그 자체는 노후화 신호가 아닙니다.** 2년 된 학습 내용이라도 현재 코드와 여전히 일치한다면 괜찮습니다. 나이는 단지 더 주의 깊게 검토하라는 힌트로만 사용하십시오.
+3. **삭제하기 전에 후속 내용이 있는지 확인하십시오.** Replace나 Delete를 권장하기 전에 동일한 문제 영역을 다루는 더 최신의 학습 내용, 패턴 문서, PR 또는 이슈를 찾으십시오. 후속 증거가 존재한다면 독자가 더 최신의 지침으로 안내받을 수 있도록 Delete보다 Replace를 선호하십시오.
 
-## Phase 1.5: Investigate Pattern Docs
+## 단계 1.5: 패턴 문서 조사
 
-After reviewing the underlying learning docs, investigate any relevant pattern docs under `docs/solutions/patterns/`.
+기초가 되는 학습 문서들을 검토한 후, `docs/solutions/patterns/` 아래의 관련 패턴 문서들을 조사합니다.
 
-Pattern docs are high-leverage — a stale pattern is more dangerous than a stale individual learning because future work may treat it as broadly applicable guidance. Evaluate whether the generalized rule still holds given the refreshed state of the learnings it depends on.
+패턴 문서는 영향력이 큽니다 — 노후화된 패턴은 개별 학습 내용보다 더 위험합니다. 미래의 작업이 이를 광범위하게 적용 가능한 지침으로 취급할 수 있기 때문입니다. 의존하는 학습 내용들의 새로고침된 상태를 바탕으로 일반화된 규칙이 여전히 유효한지 평가하십시오.
 
-A pattern doc with no clear supporting learnings is a stale signal — investigate carefully before keeping it unchanged.
+명확히 뒷받침하는 학습 내용이 없는 패턴 문서는 노후화 신호입니다 — 변경 없이 유지하기 전에 주의 깊게 조사하십시오.
 
-## Phase 1.75: Document-Set Analysis
+## 단계 1.75: 문서 세트 분석
 
-After investigating individual docs, step back and evaluate the document set as a whole. The goal is to catch problems that only become visible when comparing docs to each other — not just to reality.
+개별 문서들을 조사한 후, 한 걸음 물러나 문서 세트 전체를 평가합니다. 목표는 개별 문서를 현실과 대조할 때는 보이지 않고 문서들끼리 비교할 때만 보이는 문제들을 잡아내는 것입니다.
 
-### Overlap Detection
+### 중복 감지 (Overlap Detection)
 
-For docs that share the same module, component, tags, or problem domain, compare them across these dimensions:
+동일한 모듈, 컴포넌트, 태그 또는 문제 도메인을 공유하는 문서들에 대해 다음 차원을 비교합니다:
 
-- **Problem statement** — do they describe the same underlying problem?
-- **Solution shape** — do they recommend the same approach, even if worded differently?
-- **Referenced files** — do they point to the same code paths?
-- **Prevention rules** — do they repeat the same prevention bullets?
-- **Root cause** — do they identify the same root cause?
+- **문제 정의** — 동일한 근본 문제를 설명하고 있습니까?
+- **해결책 형상** — 문구는 다르더라도 동일한 접근 방식을 권장하고 있습니까?
+- **참조 파일** — 동일한 코드 경로를 가리키고 있습니까?
+- **예방 규칙** — 동일한 예방 수칙을 반복하고 있습니까?
+- **근본 원인** — 동일한 근본 원인을 식별하고 있습니까?
 
-High overlap across 3+ dimensions is a strong Consolidate signal. The question to ask: "Would a future maintainer need to read both docs to get the current truth, or is one mostly repeating the other?"
+3개 이상의 차원에서 많이 겹친다면 강력한 Consolidate 신호입니다. "미래의 유지보수자가 현재의 진실을 파악하기 위해 두 문서를 모두 읽어야 하는가, 아니면 한 문서가 다른 문서를 대부분 반복하고 있는가?"라고 자문해 보십시오.
 
-### Supersession Signals
+### 대체 신호 (Supersession Signals)
 
-Detect "older narrow precursor, newer canonical doc" patterns:
+"오래되고 좁은 선행 문서, 새롭고 대표적인 문서" 패턴을 감지합니다:
 
-- A newer doc covers the same files, same workflow, and broader runtime behavior than an older doc
-- An older doc describes a specific incident that a newer doc generalizes into a pattern
-- Two docs recommend the same fix but the newer one has better context, examples, or scope
+- 새로운 문서가 오래된 문서보다 동일한 파일, 동일한 워크플로우에 대해 더 넓은 런타임 동작을 다루고 있음
+- 오래된 문서는 특정 사건을 설명하는데 새로운 문서는 이를 패턴으로 일반화하고 있음
+- 두 문서가 동일한 수정을 권장하지만 새로운 문서가 더 나은 컨텍스트, 예시 또는 범위를 가지고 있음
 
-When a newer doc clearly subsumes an older one, the older doc is a consolidation candidate — its unique content (if any) should be merged into the newer doc, and the older doc should be deleted.
+새로운 문서가 오래된 문서를 명확히 흡수하고 있다면, 오래된 문서는 통합 대상입니다 — 고유한 내용(있는 경우)을 새로운 문서로 병합하고 오래된 문서는 삭제해야 합니다.
 
-### Canonical Doc Identification
+### 대표 문서(Canonical Doc) 식별
 
-For each topic cluster (docs sharing a problem domain), identify which doc is the **canonical source of truth**:
+각 주제 클러스터(문제 도메인을 공유하는 문서들)에 대해 무엇이 **대표적인 진실의 소스**인지 식별합니다:
 
-- Usually the most recent, broadest, most accurate doc in the cluster
-- The one a maintainer should find first when searching for this topic
-- The one that other docs should point to, not duplicate
+- 보통 클러스터 내에서 가장 최신이고, 범위가 넓으며, 정확한 문서입니다.
+- 유지보수자가 이 주제를 검색할 때 가장 먼저 찾아야 하는 문서입니다.
+- 다른 문서들이 내용을 중복하지 않고 가리켜야 할 문서입니다.
 
-All other docs in the cluster are either:
-- **Distinct** — they cover a meaningfully different sub-problem and have independent retrieval value. Keep them separate.
-- **Subsumed** — their unique content fits as a section in the canonical doc. Consolidate.
-- **Redundant** — they add nothing the canonical doc doesn't already say. Delete.
+클러스터 내의 다른 문서들은 다음 중 하나여야 합니다:
+- **별개 (Distinct)** — 의미 있게 다른 하위 문제를 다루고 있으며 독립적인 검색 가치가 있음. 별도로 유지합니다.
+- **흡수됨 (Subsumed)** — 고유한 내용이 대표 문서의 한 섹션으로 들어가기에 적합함. 통합(Consolidate)합니다.
+- **중복 (Redundant)** — 대표 문서가 이미 말하고 있는 것 외에 추가하는 내용이 없음. 삭제(Delete)합니다.
 
-### Retrieval-Value Test
+### 검색 가치 테스트 (Retrieval-Value Test)
 
-Before recommending that two docs stay separate, apply this test: "If a maintainer searched for this topic six months from now, would having these as separate docs improve discoverability, or just create drift risk?"
+두 문서를 별도로 유지하기로 권장하기 전에 이 테스트를 적용해 보십시오: "유지보수자가 6개월 후에 이 주제를 검색했을 때, 이들이 별도의 문서로 있는 것이 발견 가능성을 높여줄까요, 아니면 단지 노후화 위험만 만들까요?"
 
-Separate docs earn their keep only when:
-- They cover genuinely different sub-problems that someone might search for independently
-- They target different audiences or contexts (e.g., one is about debugging, another about prevention)
-- Merging them would create an unwieldy doc that is harder to navigate than two focused ones
+별도의 문서는 다음 경우에만 가치가 있습니다:
+- 누군가 독립적으로 검색할 법한 진정으로 다른 하위 문제들을 다루는 경우
+- 서로 다른 대상이나 컨텍스트를 타겟으로 하는 경우 (예: 하나는 디버깅, 하나는 예방에 관한 것)
+- 병합했을 때 두 개의 집중된 문서보다 탐색하기 힘든 감당할 수 없는 크기의 문서가 되는 경우
 
-If none of these apply, prefer consolidation. Two docs covering the same ground will eventually drift apart and contradict each other — that is worse than a slightly longer single doc.
+이에 해당하지 않는다면 통합을 선호하십시오. 동일한 영역을 다루는 두 문서는 결국 서로 달라지고 모순될 것입니다 — 이는 약간 더 긴 단일 문서보다 나쁩니다.
 
-### Cross-Doc Conflict Check
+### 문서 간 충돌 확인 (Cross-Doc Conflict Check)
 
-Look for outright contradictions between docs in scope:
-- Doc A says "always use approach X" while Doc B says "avoid approach X"
-- Doc A references a file path that Doc B says was deprecated
-- Doc A and Doc B describe different root causes for what appears to be the same problem
+범위 내의 문서들 사이에서 명백한 모순을 찾습니다:
+- 문서 A는 "항상 접근 방식 X를 사용하라"고 하는데 문서 B는 "접근 방식 X를 피하라"고 함
+- 문서 A가 참조하는 파일 경로가 문서 B에서는 지원 중단되었다고 함
+- 문서 A와 B가 동일해 보이는 문제에 대해 서로 다른 근본 원인을 설명함
 
-Contradictions between docs are more urgent than individual staleness — they actively confuse readers. Flag these for immediate resolution, either through Consolidate (if one is right and the other is a stale version of the same truth) or through targeted Update/Replace.
+문서 간의 모순은 개별적인 노후화보다 더 시급합니다 — 독자를 적극적으로 혼란스럽게 만들기 때문입니다. 이러한 경우 즉각적인 해결(하나가 옳고 다른 하나가 과거의 진실이라면 Consolidate, 혹은 타겟팅된 Update/Replace)을 위해 플래그를 세우십시오.
 
-## Subagent Strategy
+## 하위 에이전트 전략 (Subagent Strategy)
 
-Use subagents for context isolation when investigating multiple artifacts — not just because the task sounds complex. Choose the lightest approach that fits:
+여러 아티팩트를 조사할 때 컨텍스트 격리를 위해 하위 에이전트를 사용하십시오 — 단순히 작업이 복잡해 보인다는 이유만이 아닙니다. 상황에 맞는 가장 가벼운 방식을 선택하십시오:
 
-| Approach | When to use |
+| 방식 | 사용 시점 |
 |----------|-------------|
-| **Main thread only** | Small scope, short docs |
-| **Sequential subagents** | 1-2 artifacts with many supporting files to read |
-| **Parallel subagents** | 3+ truly independent artifacts with low overlap |
-| **Batched subagents** | Broad sweeps — narrow scope first, then investigate in batches |
+| **메인 스레드 전용** | 범위가 작고 문서가 짧을 때 |
+| **순차적 하위 에이전트** | 읽어야 할 관련 파일이 많은 1~2개의 아티팩트 |
+| **병렬 하위 에이전트** | 중복이 적고 진정으로 독립적인 3개 이상의 아티팩트 |
+| **배치 하위 에이전트** | 광범위한 정리 — 먼저 범위를 좁히고 배치 단위로 조사 |
 
-**When spawning any subagent**, omit the `mode` parameter so the user's configured permission settings apply. Include this instruction in its task prompt:
+**하위 에이전트를 생성할 때**, 사용자의 설정이 적용되도록 `mode` 파라미터는 생략하십시오. 작업 프롬프트에 다음 지침을 포함하십시오:
 
-> Use dedicated file search and read tools (Glob, Grep, Read) for all investigation. Do NOT use shell commands (ls, find, cat, grep, test, bash) for file operations. This avoids permission prompts and is more reliable.
+> 모든 조사 작업에는 전용 파일 검색 및 읽기 도구(Glob, Grep, Read)를 사용하십시오. 파일 작업에 쉘 명령(ls, find, cat, grep, test, bash)을 사용하지 마십시오. 이는 권한 요청을 피하고 더 안정적입니다.
 >
-> Also scan the "user's auto-memory" block injected into your system prompt (Claude Code only). Check for notes related to the learning's problem domain. Report any memory-sourced drift signals separately from codebase-sourced evidence, tagged with "(auto memory [claude])" in the evidence section. If the block is not present in your context, skip this check.
+> 또한 시스템 프롬프트에 주입된 "사용자의 자동 메모" 블록을 스캔하십시오 (Claude Code 전용). 학습 내용의 문제 도메인과 관련된 메모가 있는지 확인하십시오. 메모 기반 노후화 신호는 코드베이스 기반 증거와 분리하여 보고하고, 증거 섹션에 "(auto memory [claude])" 태그를 붙이십시오. 컨텍스트에 해당 블록이 없다면 이 확인은 건너뛰십시오.
 
-There are two subagent roles:
+두 가지 하위 에이전트 역할이 있습니다:
 
-1. **Investigation subagents** — read-only. They must not edit files, create successors, or delete anything. Each returns: file path, evidence, recommended action, confidence, and open questions. These can run in parallel when artifacts are independent.
-2. **Replacement subagents** — write a single new learning to replace a stale one. These run **one at a time, sequentially** (each replacement subagent may need to read significant code, and running multiple in parallel risks context exhaustion). The orchestrator handles all deletions and metadata updates after each replacement completes.
+1. **조사 하위 에이전트 (Investigation subagents)** — 읽기 전용입니다. 파일을 편집하거나 후속 문서를 생성하거나 삭제해서는 안 됩니다. 각각 파일 경로, 증거, 추천 작업, 확신도, 그리고 열린 질문을 반환합니다. 아티팩트들이 독립적일 때 병렬로 실행될 수 있습니다.
+2. **대체 하위 에이전트 (Replacement subagents)** — 노후화된 학습 내용을 대체할 새로운 학습 내용 하나를 작성합니다. 이들은 **한 번에 하나씩 순차적으로** 실행됩니다 (각 대체 작업은 상당한 양의 코드를 읽어야 할 수 있으며, 병렬 실행은 컨텍스트 고갈 위험이 있습니다). 오케스트레이터는 각 대체 작업이 완료된 후 모든 삭제 및 메타데이터 업데이트를 처리합니다.
 
-The orchestrator merges investigation results, detects contradictions, coordinates replacement subagents, and performs all deletions/metadata edits centrally. In interactive mode, it asks the user questions on ambiguous cases. In autofix mode, it marks ambiguous cases as stale instead. If two artifacts overlap or discuss the same root issue, investigate them together rather than parallelizing.
+오케스트레이터는 조사 결과를 병합하고, 모순을 감지하고, 대체 하위 에이전트를 조율하며, 모든 삭제/메타데이터 수정을 중앙에서 수행합니다. 대화형 모드에서는 모호한 경우 사용자에게 질문합니다. 자동 수정 모드에서는 대신 stale로 표시합니다. 두 아티팩트가 겹치거나 동일한 근본 문제를 다루는 경우, 병렬화하지 말고 함께 조사하십시오.
 
-## Phase 2: Classify the Right Maintenance Action
+## 단계 2: 적절한 유지보수 작업 분류
 
-After gathering evidence, assign one recommended action.
+증거를 수집한 후, 하나의 권장 작업을 할당합니다.
 
 ### Keep
 
-The learning is still accurate and useful. Do not edit the file — report that it was reviewed and remains trustworthy. Only add `last_refreshed` if you are already making a meaningful update for another reason.
+학습 내용이 여전히 정확하고 유용합니다. 파일을 수정하지 마십시오 — 검토 결과 여전히 신뢰할 수 있음을 보고합니다. 다른 이유로 의미 있는 업데이트를 수행할 때만 `last_refreshed`를 추가하십시오.
 
 ### Update
 
-The core solution is still valid but references have drifted (paths, class names, links, code snippets, metadata). Apply the fixes directly.
+핵심 해결책은 여전히 유효하지만 참조(경로, 클래스 이름, 링크, 코드 스니펫, 메타데이터)가 노후화되었습니다. 수정을 직접 적용하십시오.
+
+유효한 인플레이스(in-place) 업데이트 예시:
+- `app/models/auth_token.rb` 참조를 `app/models/session_token.rb`로 변경
+- `module: AuthToken`을 `module: SessionToken`으로 업데이트
+- 관련 문서로의 오래된 링크 수정
+- 디렉토리 이동 후 구현 노트 새로고침
+
+인플레이스 업데이트가 아니어야 하는 예시:
+- 이해에 영향이 없는 오타 수정
+- 문체만을 위한 문구 수정
+- 정확성이나 유용성을 실질적으로 개선하지 않는 사소한 정리
+- 과거의 해결책이 이제는 안티 패턴인 경우
+- 시스템 아키텍처가 바뀌어 과거의 지침이 오해를 불러일으키는 경우
+- 문제 해결 경로가 실질적으로 달라진 경우
+
+이러한 경우는 Update가 아니라 **Replace**가 필요합니다.
 
 ### Consolidate
 
-Choose **Consolidate** when Phase 1.75 identified docs that overlap heavily but are both materially correct. This is different from Update (which fixes drift in a single doc) and Replace (which rewrites misleading guidance). Consolidate handles the "both right, one subsumes the other" case.
+단계 1.75에서 많이 겹치면서 둘 다 실질적으로 정확한 문서들이 식별되었을 때 **Consolidate**를 선택합니다. 이는 단일 문서의 노후화를 고치는 Update나 잘못된 지침을 다시 쓰는 Replace와는 다릅니다. Consolidate는 "둘 다 맞지만 하나가 다른 하나를 포함하는" 경우를 처리합니다.
 
-**When to consolidate:**
+**통합할 때:**
+- 두 문서가 동일한 문제를 설명하고 동일한(또는 호환되는) 해결책을 권장함
+- 하나는 좁은 범위의 선행 문서이고 새로운 문서가 더 넓은 범위를 다룸
+- 흡수되는 문서의 고유한 내용이 대표 문서의 한 섹션이나 부록으로 들어가기에 적합함
+- 두 문서를 모두 유지하는 것이 유의미한 검색 이득 없이 노후화 위험만 만듦
 
-- Two docs describe the same problem and recommend the same (or compatible) solution
-- One doc is a narrow precursor and a newer doc covers the same ground more broadly
-- The unique content from the subsumed doc can fit as a section or addendum in the canonical doc
-- Keeping both creates drift risk without meaningful retrieval benefit
+**통합하지 않을 때** (단계 1.75의 검색 가치 테스트 적용):
+- 문서들이 독립적으로 검색될 법한 진정으로 다른 하위 문제들을 다룸
+- 병합했을 때 탐색을 방해할 정도로 거대한 문서가 됨
 
-**When NOT to consolidate** (apply the Retrieval-Value Test from Phase 1.75):
+**Consolidate vs Delete:** 흡수되는 문서에 보존할 가치가 있는 고유한 내용(예외 케이스, 대안, 추가 예방 규칙)이 있다면 먼저 Consolidate를 사용하여 해당 내용을 병합하십시오. 만약 흡수되는 문서가 대표 문서가 이미 말하고 있는 것 외에 아무것도 추가하지 않는다면 바로 Delete로 넘어갑니다.
 
-- The docs cover genuinely different sub-problems that someone would search for independently
-- Merging would create an unwieldy doc that harms navigation more than drift risk harms accuracy
-
-**Consolidate vs Delete:** If the subsumed doc has unique content worth preserving (edge cases, alternative approaches, extra prevention rules), use Consolidate to merge that content first. If the subsumed doc adds nothing the canonical doc doesn't already say, skip straight to Delete.
-
-The Consolidate action is: merge unique content from the subsumed doc into the canonical doc, then delete the subsumed doc. Not archive — delete. Git history preserves it.
+통합 작업은 다음과 같습니다: 흡수되는 문서의 고유한 내용을 대표 문서로 병합한 다음, 흡수되는 문서를 삭제합니다. 보관이 아니라 삭제입니다. Git 히스토리가 이를 보존합니다.
 
 ### Replace
 
-Choose **Replace** when the learning's core guidance is now misleading — the recommended fix changed materially, the root cause or architecture shifted, or the preferred pattern is different.
+학습 내용의 핵심 지침이 이제는 오해를 불러일으키는 경우 **Replace**를 선택합니다 — 권장 수정 방식이 실질적으로 바뀌었거나, 근본 원인이나 아키텍처가 변했거나, 선호되는 패턴이 달라진 경우입니다.
 
-The user may have invoked the refresh months after the original learning was written. Do not ask them for replacement context they are unlikely to have — use agent intelligence to investigate the codebase and synthesize the replacement.
+사용자는 원래 학습 내용이 작성된 지 몇 달 후에 새로고침을 요청했을 수 있습니다. 사용자에게 그들이 기억하지 못할 법한 대체 컨텍스트를 묻지 마십시오 — 에이전트 지능을 사용하여 코드베이스를 조사하고 대체 내용을 합성하십시오.
 
-**Evidence assessment:**
+**증거 평가:**
+Replace 후보를 식별할 때쯤이면 단계 1 조사를 통해 이미 상당한 증거를 수집했을 것입니다: 과거 학습 내용의 주장, 현재 코드가 실제로 하는 일, 그리고 어디서 차이가 발생했는지 등입니다. 이 증거가 신뢰할 수 있는 후속 문서를 작성하기에 충분한지 평가하십시오:
 
-By the time you identify a Replace candidate, Phase 1 investigation has already gathered significant evidence: the old learning's claims, what the current code actually does, and where the drift occurred. Assess whether this evidence is sufficient to write a trustworthy replacement:
-
-- **Sufficient evidence** — you understand both what the old learning recommended AND what the current approach is. The investigation found the current code patterns, the new file locations, the changed architecture. → Proceed to write the replacement (see Phase 4 Replace Flow).
-- **Insufficient evidence** — the drift is so fundamental that you cannot confidently document the current approach. The entire subsystem was replaced, or the new architecture is too complex to understand from a file scan alone. → Mark as stale in place:
-   - Add `status: stale`, `stale_reason: [what you found]`, `stale_date: YYYY-MM-DD` to the frontmatter
-   - Report what evidence you found and what is missing
-   - Recommend the user run `ce-compound` after their next encounter with that area, when they have fresh problem-solving context
+- **증거 충분** — 과거 학습 내용이 권장한 것과 현재의 접근 방식을 모두 이해하고 있습니다. 조사를 통해 현재의 코드 패턴, 새로운 파일 위치, 변경된 아키텍처를 찾았습니다. → 후속 문서 작성을 진행합니다 (단계 4 Replace Flow 참조).
+- **증거 부족** — 노후화가 너무 근본적이어서 현재의 접근 방식을 자신 있게 문서화할 수 없습니다. 하위 시스템 전체가 교체되었거나, 새로운 아키텍처가 파일 스캔만으로는 이해하기에 너무 복잡합니다. → 해당 위치에 stale로 표시합니다:
+   - frontmatter에 `status: stale`, `stale_reason: [발견한 내용]`, `stale_date: YYYY-MM-DD` 추가
+   - 발견한 증거와 부족한 내용을 보고
+   - 사용자가 해당 영역에서 다음에 신선한 문제 해결 컨텍스트를 가졌을 때 `ce-compound`를 실행하도록 권장
 
 ### Delete
 
-Choose **Delete** when:
+다음 경우에 **Delete**를 선택합니다:
 
-- The code or workflow no longer exists and the problem domain is gone
-- The learning is obsolete and has no modern replacement worth documenting
-- The learning is fully redundant with another doc (use Consolidate if there is unique content to merge first)
-- There is no meaningful successor evidence suggesting it should be replaced instead
+- 코드나 워크플로우가 더 이상 존재하지 않고 문제 도메인 자체가 사라짐
+- 학습 내용이 구식이 되었고 문서화할 가치가 있는 현대적인 대체안이 없음
+- 학습 내용이 다른 문서와 완전히 중복됨 (병합할 고유 내용이 있다면 Consolidate 사용)
+- 대신 교체되어야 함을 시사하는 유의미한 후속 증거가 없음
 
-Action: delete the file. No archival directory, no metadata — just delete it. Git history preserves every deleted file if recovery is ever needed.
+작업: 파일 삭제. 보관 디렉토리도 없고 메타데이터도 없습니다 — 그냥 삭제하십시오. 복구가 필요하다면 Git 히스토리가 삭제된 모든 파일을 보존합니다.
 
-### Before deleting: check if the problem domain is still active
+### 삭제 전: 문제 도메인이 여전히 활성 상태인지 확인
 
-When a learning's referenced files are gone, that is strong evidence — but only that the **implementation** is gone. Before deleting, reason about whether the **problem the learning solves** is still a concern in the codebase:
+학습 내용이 참조하는 파일이 사라진 것은 강력한 증거이지만, 그것은 **구현**이 사라졌다는 증거일 뿐입니다. 삭제하기 전에 해당 학습 내용이 해결하는 **문제**가 여전히 코드베이스에서 우려 사항인지 추론해 보십시오:
 
-- A learning about session token storage where `auth_token.rb` is gone — does the application still handle session tokens? If so, the concept persists under a new implementation. That is Replace, not Delete.
-- A learning about a deprecated API endpoint where the entire feature was removed — the problem domain is gone. That is Delete.
+- `auth_token.rb`가 사라진 세션 토큰 저장에 관한 학습 내용 — 애플리케이션이 여전히 세션 토큰을 처리합니까? 그렇다면 개념은 새로운 구현 하에 유지되고 있는 것입니다. 이는 Delete가 아니라 Replace입니다.
+- 기능 전체가 제거되어 더 이상 사용되지 않는 API 엔드포인트에 관한 학습 내용 — 문제 도메인이 사라졌습니다. 이는 Delete입니다.
 
-Do not search mechanically for keywords from the old learning. Instead, understand what problem the learning addresses, then investigate whether that problem domain still exists in the codebase. The agent understands concepts — use that understanding to look for where the problem lives now, not where the old code used to be.
+과거 학습 내용의 키워드를 기계적으로 검색하지 마십시오. 대신 학습 내용이 어떤 문제를 다루는지 이해하고, 그 문제 도메인이 여전히 코드베이스에 존재하는지 조사하십시오. 에이전트는 개념을 이해합니다 — 그 이해력을 사용하여 과거 코드가 있던 자리가 아니라 현재 문제가 머무는 곳을 찾으십시오.
 
-### Before deleting: check for inbound links
+### 삭제 전: 인바운드 링크 확인
 
-A doc that other files cite is load-bearing in a way the doc itself does not announce. Before classifying as Delete, search the repo's markdown content (other docs, plans, instruction files, READMEs) for citations of the file — not source code, where citations are rare and only appear in comments. The filename slug is usually unique enough that one query covers all citation sites.
+다른 파일이 인용하고 있는 문서는 문서 자체가 알리지 않는 방식으로 중요할 수 있습니다. Delete로 분류하기 전에, 저장소의 마크다운 콘텐츠(다른 문서, 계획, 지침 파일, README)에서 해당 파일에 대한 인용을 검색하십시오 — 인용이 드물고 주석에만 나타나는 소스 코드는 제외합니다. 파일 이름 슬러그(slug)는 보통 충분히 독특하므로 하나의 쿼리로 모든 인용 지점을 찾을 수 있습니다.
 
-Search efficiently:
+효율적으로 검색하십시오:
+- 쉘 명령보다 플랫폼 네이티브 콘텐츠 검색 도구(예: Claude Code의 Grep)를 선호하십시오. 상황에 따라 쉘이 실질적으로 더 나은 경우에만 사용하십시오.
+- 파일 이름 슬러그(`.md` 제외)를 검색하십시오. 검색 결과가 너무 많을 때만 전체 경로로 좁히십시오.
+- 파일 전체를 로드하지 말고 각 매칭 지점 주변의 컨텍스트 라인을 읽으십시오.
 
-- Prefer the platform's native content-search tool (e.g., Grep in Claude Code) over shell. Drop to shell when materially better for the case.
-- Search the filename slug (without `.md`); narrow to the full path only if matches are noisy.
-- Read context lines around each match (e.g., Grep's `-B`/`-A`), not whole files.
+**인바운드 링크는 정리가 아닌 분류에 영향을 줍니다.** 인용을 제거하는 것은 항상 기계적입니다. 판단은 그 이전에 이루어집니다: 이러한 인용들이 있을 때 Delete가 여전히 맞는가, 아니면 Replace가 더 맞는가?
 
-**Inbound links inform the classification, not the cleanup.** Removing a citation is always mechanical (drop the parenthetical, the bare entry, or the deferring clause). The judgment is upstream: given these citations, is Delete still right, or is Replace closer to right?
+각 인용을 인용하는 문맥에서의 역할에 따라 분류하십시오:
+- **장식적 (Decorative)** — 원칙이 인라인으로 서술되어 있고, 인용은 "참고" 포인터이거나 단순한 출처 표시인 경우입니다. Delete가 가능하며, 동일한 커밋에서 인용을 정리합니다.
+- **실질적 (Substantive)** — 인용하는 문서가 인라인으로 서술되지 않은 내용을 제공하기 위해 인용되는 문서에 의존하는 경우 (예: "Y에 대한 자세한 내용은 X를 참조"). Replace 신호를 보냅니다 — 동일한 경로에 후속 문서를 작성하거나, 문서의 실제 내용이 제목보다 넓다면 **범위를 좁혀서 Keep** 합니다.
+- **혼합 또는 불분명** — stale로 표시합니다.
 
-Classify each citation by what it does in its citing context:
+자동 수정 모드에서는 Delete + 장식적 인용 정리가 가능합니다. 실질적인 인용이 있거나 진정으로 모호한 경우 stale 표시로 하향 조정됩니다 — Replace 후속 문서를 작성하는 것은 판단이 많이 개입되므로 감독 없이 수행되어서는 안 됩니다.
 
-- **Decorative** — principle stated inline, citation is a "see also" pointer or bare attribution. Delete is fine; clean up citations in the same commit.
-- **Substantive** — citing doc relies on the cited doc to provide content not stated inline (e.g., "see X for details on Y" with no inline Y). Signal Replace — write a successor at the same path, or **Keep with narrowed scope** if the doc's actual content is broader than its title implies.
-- **Mixed or unclear** — stale-mark.
+**다음 세 가지 조건이 모두 충족될 때만 자동 삭제(auto-delete)합니다:**
+- 구현이 사라짐 (또는 명확히 더 나은 후속 문서에 의해 완전히 대체됨, 혹은 문서가 명백히 중복됨).
+- 문제 도메인이 사라짐 — 앱이 더 이상 해당 학습 내용이 다루는 문제를 다루지 않음.
+- 인바운드 링크가 없거나 명백히 장식적임.
 
-In autofix mode, Delete + decorative cleanup is fine. Any substantive citation, or any genuine ambiguity, downgrades to stale-marking — writing a Replace successor is judgment-heavy and should not happen unattended.
+하나라도 실패하면 위의 규칙에 따라 Replace, Update, Consolidate 또는 stale 표시로 분류하십시오. 문제 도메인이 여전히 활성 상태이거나 원칙이 실질적으로 인용되는 학습 내용을 삭제하지 마십시오 — 대신 대체 문서를 작성하여 격차를 메우십시오.
 
-**Auto-delete only when all three hold:**
+## 패턴 지침
 
-- The implementation is gone (or fully superseded by a clearly better successor, or the doc is plainly redundant).
-- The problem domain is gone — the app no longer deals with what the learning addresses.
-- Inbound links are absent or unambiguously decorative.
+학습 문서와 동일한 다섯 가지 결과(Keep, Update, Consolidate, Replace, Delete)를 패턴 문서에 적용하되, 개별 사건 수준의 학습 내용이 아닌 **파생된 지침**으로 평가하십시오. 주요 차이점:
 
-If any condition fails, classify as Replace, Update, Consolidate, or stale-mark per the rules above. Do not delete a learning whose problem domain is still active or whose principles are cited substantively — fill the gap with a replacement instead.
+- **Keep**: 기초가 되는 학습 내용들이 여전히 일반화된 규칙을 뒷받침하며 예시들이 여전히 대표성을 띰
+- **Update**: 규칙은 유효하지만 예시, 링크, 범위 또는 뒷받침하는 참조가 노후화됨
+- **Consolidate**: 두 패턴 문서가 동일한 학습 내용 세트를 일반화하거나 동일한 설계 우려 사항을 다룸 — 하나의 대표 패턴으로 통합
+- **Replace**: 일반화된 규칙이 이제는 오해를 불러일으키거나, 기초 학습 내용들이 다른 종합적 결론을 뒷받침함. 새로고침된 학습 내용 세트를 바탕으로 후속 내용을 작성하며, 추측으로 새로운 규칙을 지어내지 마십시오.
+- **Delete**: 패턴이 더 이상 유효하지 않거나, 더 이상 반복되지 않거나, 고유한 내용 없이 더 강력한 패턴 문서에 완전히 흡수됨
 
-## Pattern Guidance
+## 단계 3: 결정 요청하기
 
-Apply the same five outcomes (Keep, Update, Consolidate, Replace, Delete) to pattern docs, but evaluate them as **derived guidance** rather than incident-level learnings. Key differences:
+### 자동 수정 모드
 
-- **Keep**: the underlying learnings still support the generalized rule and examples remain representative
-- **Update**: the rule holds but examples, links, scope, or supporting references drifted
-- **Consolidate**: two pattern docs generalize the same set of learnings or cover the same design concern — merge into one canonical pattern
-- **Replace**: the generalized rule is now misleading, or the underlying learnings support a different synthesis. Base the replacement on the refreshed learning set — do not invent new rules from guesswork
-- **Delete**: the pattern is no longer valid, no longer recurring, or fully subsumed by a stronger pattern doc with no unique content remaining
+**이 단계 전체를 건너뛰십시오. 어떤 질문도 하지 말고 옵션도 제시하지 마십시오. 입력을 기다리지 마십시오.** 단계 4로 직접 진행하여 단계 2의 분류를 바탕으로 모든 작업을 실행합니다:
 
-## Phase 3: Ask for Decisions
+- 명확한 Keep, Update, Consolidate, auto-Delete, 그리고 (증거가 충분한) Replace → 직접 실행
+- 모호한 사례 → stale로 표시
+- 그 후 보고서 생성 (출력 형식 참조)
 
-### Autofix mode
+### 대화형 모드
 
-**Skip this entire phase. Do not ask any questions. Do not present options. Do not wait for input.** Proceed directly to Phase 4 and execute all actions based on the classifications from Phase 2:
+대부분의 Update와 Consolidate는 묻지 않고 직접 적용해야 합니다. 다음 경우에만 사용자에게 묻습니다:
 
-- Unambiguous Keep, Update, Consolidate, auto-Delete, and Replace (with sufficient evidence) → execute directly
-- Ambiguous cases → mark as stale
-- Then generate the report (see Output Format)
+- 올바른 작업이 정말로 모호함 (Update vs Replace vs Consolidate vs Delete)
+- 문서를 Delete하려고 하는데 증거가 명확하지 않음 (단계 2의 자동 삭제 기준 참조). 자동 삭제 기준이 충족되면 묻지 않고 진행합니다.
+- Consolidate를 수행하려는데 대표 문서 선택이 불분명함
+- Replace를 통해 후속 문서를 생성하려고 함
 
-### Interactive mode
+코드 변경이 의도된 것인지, 코드의 버그를 수정하고 싶은지 등 문서 유지보수 이외의 질문은 하지 마십시오. 문서의 정확성이라는 본연의 임무에 집중하십시오.
 
-Most Updates and Consolidations should be applied directly without asking. Only ask the user when:
+#### 질문 스타일
 
-- The right action is genuinely ambiguous (Update vs Replace vs Consolidate vs Delete)
-- You are about to Delete a document **and** the evidence is not unambiguous (see auto-delete criteria in Phase 2). When auto-delete criteria are met, proceed without asking.
-- You are about to Consolidate and the choice of canonical doc is not clear-cut
-- You are about to create a successor via Replace
+항상 플랫폼의 질문 도구를 사용하여 선택지를 제시하십시오: Claude Code의 `AskUserQuestion` (스키마가 로드되지 않은 경우 `ToolSearch`로 `select:AskUserQuestion` 먼저 호출), Codex의 `request_user_input`, Gemini의 `ask_user`, Pi의 `ask_user` (`pi-ask-user` 확장 필요). 도구가 없거나 오류가 발생하는 경우에만 일반 텍스트에 번호를 매겨 옵션을 제시하십시오. 질문을 소리 없이 건너뛰지 마십시오.
 
-Do **not** ask questions about whether code changes were intentional, whether the user wants to fix bugs in the code, or other concerns outside doc maintenance. Stay in your lane — doc accuracy.
+질문 규칙:
+- **한 번에 하나씩** 질문하십시오.
+- **객관식**을 선호하십시오.
+- **추천 옵션**을 먼저 제시하십시오.
+- 추천 근거를 증거를 바탕으로 한 문장으로 짧게 설명하십시오.
+- 실제로 타당하지 않은 작업들을 선택지로 제시하지 마십시오.
 
-#### Question Style
+#### 집중 범위 (Focused Scope)
 
-Always present choices using the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to numbered options in plain text only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question.
+단일 아티팩트에 대해 다음을 제시합니다:
+- 파일 경로
+- 증거 2~4개 (글머리 기호)
+- 권장 작업
 
-Question rules:
-
-- Ask **one question at a time**
-- Prefer **multiple choice**
-- Lead with the **recommended option**
-- Explain the rationale for the recommendation in one concise sentence
-- Avoid asking the user to choose from actions that are not actually plausible
-
-#### Focused Scope
-
-For a single artifact, present:
-
-- file path
-- 2-4 bullets of evidence
-- recommended action
-
-Then ask:
+그 다음 질문합니다:
 
 ```text
-This [learning/pattern] looks like a [Keep/Update/Consolidate/Replace/Delete].
+이 [학습 내용/패턴]은 [Keep/Update/Consolidate/Replace/Delete] 대상인 것으로 보입니다.
 
-Why: [one-sentence rationale based on the evidence]
+이유: [증거에 기반한 한 문장 근거]
 
-What would you like to do?
+어떻게 하시겠습니까?
 
-1. [Recommended action]
-2. [Second plausible action]
-3. Skip for now
+1. [권장 작업]
+2. [타당한 두 번째 작업]
+3. 일단 건너뛰기
 ```
 
-Do not list all five actions unless all five are genuinely plausible.
+다섯 가지 작업이 모두 타당한 경우가 아니라면 모두 나열하지 마십시오.
 
-#### Batch Scope
+#### 배치 범위 (Batch Scope)
 
-For several learnings:
+여러 학습 내용에 대해:
 
-1. Group obvious **Keep** cases together
-2. Group obvious **Update** cases together when the fixes are straightforward
-3. Present **Consolidate** cases together when the canonical doc is clear
-4. Present **Replace** cases individually or in very small groups
-5. Present **Delete** cases individually unless they are strong auto-delete candidates
+1. 명백한 **Keep** 사례들을 그룹화합니다.
+2. 수정이 간단한 명백한 **Update** 사례들을 그룹화합니다.
+3. 대표 문서가 명확한 **Consolidate** 사례들을 함께 제시합니다.
+4. **Replace** 사례들은 개별적으로 또는 아주 작은 그룹으로 제시합니다.
+5. 삭제가 명확하고 안전하게 자동 적용 가능한 경우가 아니라면 **Delete** 사례들은 개별적으로 제시합니다.
 
-Ask for confirmation in stages:
+단계별로 확인을 요청합니다:
+1. 그룹화된 Keep/Update 추천안 확인
+2. 그 후 Consolidate 그룹 처리 (대표 문서와 병합될 내용 제시)
+3. 그 후 Replace를 하나씩 처리
+4. 그 후 삭제가 명확하고 안전한 경우가 아니라면 Delete를 하나씩 처리
 
-1. Confirm grouped Keep/Update recommendations
-2. Then handle Consolidate groups (present the canonical doc and what gets merged)
-3. Then handle Replace one at a time
-4. Then handle Delete one at a time unless the deletion is unambiguous and safe to auto-apply
+#### 광범위 범위 (Broad Scope)
 
-#### Broad Scope
+사용자가 대대적인 새로고침을 요청했다면, 점진적인 상호작용을 유지하십시오:
 
-If the user asked for a sweeping refresh, keep the interaction incremental:
+1. 먼저 범위를 좁힙니다.
+2. 관리 가능한 배치를 조사합니다.
+3. 추천안을 제시합니다.
+4. 다음 배치로 계속 진행할지 묻습니다.
 
-1. Narrow scope first
-2. Investigate a manageable batch
-3. Present recommendations
-4. Ask whether to continue to the next batch
+사용자에게 전체 유지보수 큐를 한꺼번에 들이밀지 마십시오.
 
-Do not front-load the user with a full maintenance queue.
+## 단계 4: 선택한 작업 실행
 
-## Phase 4: Execute the Chosen Action
+### Keep 흐름
 
-### Keep Flow
+기본적으로 파일 수정이 없습니다. 학습 내용이 여전히 신뢰할 수 있는 이유를 요약합니다.
 
-No file edit by default. Summarize why the learning remains trustworthy.
+### Update 흐름
 
-### Update Flow
+해결책이 여전히 실질적으로 정확할 때만 제자리 수정을 적용합니다.
 
-Apply in-place edits only when the solution is still substantively correct.
+유효한 인플레이스 업데이트 예시:
+- `app/models/auth_token.rb` 참조를 `app/models/session_token.rb`로 변경
+- `module: AuthToken`을 `module: SessionToken`으로 업데이트
+- 관련 문서로의 오래된 링크 수정
+- 디렉토리 이동 후 구현 노트 새로고침
 
-Examples of valid in-place updates:
+인플레이스 업데이트가 아니어야 하는 경우:
+- 오타 수정만 하는 경우
+- 문체만 다듬는 경우
+- 정확성이나 유용성을 실질적으로 개선하지 않는 사소한 정리
+- 과거의 수정 방식이 이제는 안티 패턴인 경우
+- 시스템 아키텍처가 바뀌어 과거 지침이 오해를 불러일으키는 경우
+- 문제 해결 경로가 실질적으로 달라진 경우
 
-- Rename `app/models/auth_token.rb` reference to `app/models/session_token.rb`
-- Update `module: AuthToken` to `module: SessionToken`
-- Fix outdated links to related docs
-- Refresh implementation notes after a directory move
+이러한 경우는 Update가 아니라 **Replace**가 필요합니다.
 
-Examples that should **not** be in-place updates:
+### Consolidate 흐름
 
-- Fixing a typo with no effect on understanding
-- Rewording prose for style alone
-- Small cleanup that does not materially improve accuracy or usability
-- The old fix is now an anti-pattern
-- The system architecture changed enough that the old guidance is misleading
-- The troubleshooting path is materially different
+오케스트레이터가 직접 통합을 처리합니다 (하위 에이전트 불필요 — 문서는 이미 읽혀졌고 병합은 집중적인 편집 작업입니다). 단계 1.75에서 식별된 주제 클러스터별로 Consolidate 후보를 처리합니다:
 
-Those cases require **Replace**, not Update.
+1. **대표 문서 확인** — 클러스터 내에서 더 넓고, 최신이며, 정확한 문서를 선택합니다.
+2. **고유 내용 추출** — 흡수될 문서(들)에서 대표 문서가 다루지 않는 고유한 내용을 추출합니다. 구체적인 예외 케이스, 추가 예방 규칙, 또는 대안적인 디버깅 접근 방식 등이 해당될 수 있습니다.
+3. **고유 내용 병합** — 추출한 내용을 대표 문서의 자연스러운 위치에 병합합니다. 단순히 뒤에 붙이지 말고 논리적으로 어울리는 곳에 통합하십시오. 내용이 적으면 인라인으로 넣고, 내용이 많으면 명확한 섹션을 추가하십시오.
+4. **교차 참조 업데이트** — 다른 문서가 흡수된 문서를 참조하고 있다면 대표 문서를 가리키도록 업데이트합니다.
+5. **흡수된 문서 삭제** — 보관 디렉토리로 옮기거나 리다이렉트 메타데이터를 추가하지 마십시오. 그냥 파일을 삭제하십시오. Git 히스토리가 이를 보존합니다.
 
-### Consolidate Flow
+하나의 클러스터에 3개 이상의 문서가 겹친다면 쌍으로 처리하십시오: 가장 많이 겹치는 두 문서를 먼저 통합한 뒤, 그 결과물을 다음 문서와 통합할지 평가합니다.
 
-The orchestrator handles consolidation directly (no subagent needed — the docs are already read and the merge is a focused edit). Process Consolidate candidates by topic cluster. For each cluster identified in Phase 1.75:
+**병합 이상의 구조적 편집:** Consolidate는 반대의 경우도 포함합니다. 하나의 문서가 너무 비대해져서 별도로 검색하는 것이 유리한 여러 개의 뚜렷한 문제를 다루고 있다면, 이를 나누는 것을 권장할 수 있습니다. 하위 주제들이 진정으로 독립적이고 유지보수자가 다른 주제 없이 하나만 검색할 가능성이 있을 때만 수행하십시오.
 
-1. **Confirm the canonical doc** — the broader, more current, more accurate doc in the cluster.
-2. **Extract unique content** from the subsumed doc(s) — anything the canonical doc does not already cover. This might be specific edge cases, additional prevention rules, or alternative debugging approaches.
-3. **Merge unique content** into the canonical doc in a natural location. Do not just append — integrate it where it logically belongs. If the unique content is small (a bullet point, a sentence), inline it. If it is a substantial sub-topic, add it as a clearly labeled section.
-4. **Update cross-references** — if any other docs reference the subsumed doc, update those references to point to the canonical doc.
-5. **Delete the subsumed doc.** Do not archive it, do not add redirect metadata — just delete the file. Git history preserves it.
+### Replace 흐름
 
-If a doc cluster has 3+ overlapping docs, process pairwise: consolidate the two most overlapping docs first, then evaluate whether the merged result should be consolidated with the next doc.
+Replace 후보는 **한 번에 하나씩 순차적으로** 처리합니다. 메인 컨텍스트 윈도우를 보호하기 위해 각 대체 문서는 하위 에이전트가 작성합니다.
 
-**Structural edits beyond merge:** Consolidate also covers the reverse case. If one doc has grown unwieldy and covers multiple distinct problems that would benefit from separate retrieval, it is valid to recommend splitting it. Only do this when the sub-topics are genuinely independent and a maintainer might search for one without needing the other.
+대체가 필요할 때, 문서 작성 규약 파일을 읽고 그 내용을 하위 에이전트의 작업 프롬프트에 전달하십시오:
+- `references/schema.yaml` — frontmatter 필드 및 enum 값
+- `references/yaml-schema.md` — 카테고리 매핑
+- `assets/resolution-template.md` — 섹션 구조
 
-### Replace Flow
+하위 에이전트가 기억에 의존하여 frontmatter 필드, enum 값, 또는 섹션 순서를 지어내게 하지 마십시오.
 
-Process Replace candidates **one at a time, sequentially**. Each replacement is written by a subagent to protect the main context window.
+**증거가 충분한 경우:**
 
-When a replacement is needed, read the documentation contract files and pass their contents into the replacement subagent's task prompt:
+1. 대체 학습 내용을 작성할 단일 하위 에이전트를 생성합니다. 다음을 전달하십시오:
+   - 과거 학습 내용의 전체 내용
+   - 조사 증거 요약 (무엇이 바뀌었는지, 현재 코드가 무엇을 하는지, 왜 과거 지침이 오해를 주는지)
+   - 타겟 경로 및 카테고리 (카테고리 자체가 바뀌지 않았다면 이전과 동일하게 유지)
+   - 위에 나열된 세 가지 지원 파일의 관련 내용
+2. 하위 에이전트는 지원 파일들을 진실의 소스로 사용하여 새로운 학습 내용을 작성합니다: frontmatter 필드 및 enum 값은 `references/schema.yaml`, 카테고리 매핑 및 배열 항목의 YAML 안전 규칙은 `references/yaml-schema.md`, 섹션 순서는 `assets/resolution-template.md`를 따릅니다. 전달된 컨텍스트 외에 추가 정보가 필요하다면 전용 파일 검색 및 읽기 도구를 사용해야 합니다.
+3. **`python3 scripts/validate-frontmatter.py <new-learning-path>`를 실행하십시오.** 텍스트 규칙이 놓치기 쉬운 파서 안전 이슈들을 잡아냅니다: 잘못된 `---` 구분선, 스칼라 값 내의 따옴표 없는 ` #` (주석으로 오인되어 잘림), 따옴표 없는 `: ` (매핑 오인) 등입니다. Exit 0은 파서에 안전함을 의미합니다. Exit 1은 수정이 필요한 필드를 알려줍니다 — 값을 따옴표로 감싸고 다시 실행하여 Exit 0이 될 때까지 반복하십시오. 검증에 실패한 상태에서 성공을 선언하지 마십시오. 이 스크립트는 스키마 규칙을 강제하거나 YAML 예약 문자를 체크하지는 않습니다 (그러한 것들은 소리 없는 변질이 아닌 명확한 파서 에러를 발생시키기 때문). Python 3 표준 라이브러리만 사용합니다.
+4. 하위 에이전트 작업이 완료되면 오케스트레이터가 과거 학습 내용 파일을 삭제합니다. 새 학습 내용의 frontmatter에 추적성을 위해 `supersedes: [과거 학습 파일명]`을 포함할 수 있지만 선택 사항입니다 — git 히스토리와 커밋 메시지가 동일한 정보를 제공합니다.
 
-- `references/schema.yaml` — frontmatter fields and enum values
-- `references/yaml-schema.md` — category mapping
-- `assets/resolution-template.md` — section structure
+**증거가 부족한 경우:**
 
-Do not let replacement subagents invent frontmatter fields, enum values, or section order from memory.
+1. 학습 내용이 있는 위치에 stale로 표시합니다:
+   - frontmatter 추가: `status: stale`, `stale_reason: [발견한 내용]`, `stale_date: YYYY-MM-DD`
+2. 발견된 증거와 부족한 내용을 보고합니다.
+3. 사용자가 다음에 해당 영역을 다룰 때 `ce-compound`를 실행하도록 권장합니다.
 
-**When evidence is sufficient:**
+### Delete 흐름
 
-1. Spawn a single subagent to write the replacement learning. Pass it:
-   - The old learning's full content
-   - A summary of the investigation evidence (what changed, what the current code does, why the old guidance is misleading)
-   - The target path and category (same category as the old learning unless the category itself changed)
-   - The relevant contents of the three support files listed above
-2. The subagent writes the new learning using the support files as the source of truth: `references/schema.yaml` for frontmatter fields and enum values, `references/yaml-schema.md` for category mapping and YAML-safety rules for array items, and `assets/resolution-template.md` for section order. It should use dedicated file search and read tools if it needs additional context beyond what was passed.
-3. **Run `python3 scripts/validate-frontmatter.py <new-learning-path>`** to catch silent-corruption parser-safety issues that the prose rules miss: malformed `---` delimiter lines, unquoted ` #` in scalar values (silent comment truncation), and unquoted `: ` in scalar values (silent mapping confusion). Exit 0 means the doc is parser-safe; exit 1 means the script's stderr names the offending field(s) and what to fix — quote the value(s), re-write the doc, and re-run until exit 0. Do not declare success while validation fails. The script does not enforce schema rules and does not flag YAML reserved-indicator characters (those produce loud parser errors downstream rather than silent corruption — out of scope). Uses Python 3 stdlib only (no PyYAML or other deps).
-4. After the subagent completes, the orchestrator deletes the old learning file. The new learning's frontmatter may include `supersedes: [old learning filename]` for traceability, but this is optional — the git history and commit message provide the same information.
+학습 내용이 명백히 구식이거나, 중복되거나(병합할 고유 내용 없음), 혹은 문제 도메인이 사라진 경우에만 삭제하십시오. 단지 오래되었다는 이유만으로는 삭제하지 마십시오 — 나이 그 자체는 신호가 아닙니다.
 
-**When evidence is insufficient:**
+파일을 삭제하기 전에, 단계 1 조사에서 놓친 참조가 있는지 저장소의 마크다운 콘텐츠에서 최종 인바운드 링크 확인을 수행하십시오. 효율성을 위해 플랫폼 네이티브 콘텐츠 검색 도구(예: Claude Code의 Grep)를 사용하고, 전체 파일을 로드하는 대신 매칭 지점 주변의 컨텍스트 라인을 읽으십시오.
 
-1. Mark the learning as stale in place:
-   - Add to frontmatter: `status: stale`, `stale_reason: [what you found]`, `stale_date: YYYY-MM-DD`
-2. Report what evidence was found and what is missing
-3. Recommend the user run `ce-compound` after their next encounter with that area
+발견된 모든 매칭은 삭제 후 깨진 링크가 될 인용들입니다. 정리는 기계적으로 이루어집니다 — 단계 2에서 이미 인용들을 분류하고 Delete가 맞음을 확인했습니다. 다시 논쟁하지 마십시오.
 
-### Delete Flow
+단계 1에서 보지 못한 인용이 발견되었는데 그것이 명백히 장식적인 것이 아니라면 (실질적이거나 혼합/불분명), 멈추고 다시 분류하십시오: 자동 수정 모드에서는 stale로 표시하고, 대화형 모드에서는 사용자에게 Replace가 적절한지 묻습니다. 새로 발견된 모든 인용이 명백히 장식적인 경우에만 정리를 진행하십시오.
 
-Delete only when a learning is clearly obsolete, redundant (with no unique content to merge), or its problem domain is gone. Do not delete a document just because it is old — age alone is not a signal.
+## 출력 형식 (Output Format)
 
-Before unlinking the file, run a final inbound-link check across the repo's markdown content to catch any references missed during Phase 1 investigation. Prefer the platform's native content-search tool (e.g., Grep in Claude Code) for efficiency; use ranged or context-line reads around matches rather than loading whole files.
+**전체 보고서는 반드시 마크다운 출력으로 인쇄되어야 합니다.** 발견한 내용을 내부적으로만 요약하고 한 줄짜리 출력을 내보내지 마십시오. 보고서가 결과물입니다 — 모든 섹션을 헤더, 표, 글머리 기호가 포함된 읽기 쉬운 마크다운으로 인쇄하십시오.
 
-Each match is a citation that will dangle after delete. Cleanup is mechanical — Phase 2 already classified the citations and confirmed Delete was right. Don't re-litigate.
-
-If any citation surfaces here that wasn't seen in Phase 1 and is anything other than unambiguously decorative (substantive or mixed/unclear), stop and reclassify: autofix mode stale-marks; interactive mode asks the user whether Replace fits. Only proceed with cleanup when all late-discovered citations are unambiguously decorative.
-
-## Output Format
-
-**The full report MUST be printed as markdown output.** Do not summarize findings internally and then output a one-liner. The report is the deliverable — print every section in full, formatted as readable markdown with headers, tables, and bullet points.
-
-After processing the selected scope, output the following report:
+선택한 범위를 처리한 후 다음 보고서를 출력합니다:
 
 ```text
-Compound Refresh Summary
+Compound Refresh 요약
 ========================
-Scanned: N learnings
+검사함: 학습 내용 N개
 
-Kept: X
-Updated: Y
-Consolidated: C
-Replaced: Z
-Deleted: W
-Skipped: V
-Marked stale: S
+유지(Keep): X
+업데이트(Update): Y
+통합(Consolidate): C
+교체(Replace): Z
+삭제(Delete): W
+건너뜀(Skipped): V
+stale 표시됨: S
 ```
 
-Then for EVERY file processed, list:
-- The file path
-- The classification (Keep/Update/Consolidate/Replace/Delete/Stale)
-- What evidence was found -- tag any memory-sourced findings with "(auto memory [claude])" to distinguish them from codebase-sourced evidence
-- What action was taken (or recommended)
-- For Consolidate: which doc was canonical, what unique content was merged, what was deleted
+그 다음 처리된 모든 파일에 대해 나열합니다:
+- 파일 경로
+- 분류 (Keep/Update/Consolidate/Replace/Delete/Stale)
+- 발견된 증거 -- 메모 기반 발견 사항은 코드베이스 기반 증거와 구분하기 위해 "(auto memory [claude])" 태그를 붙입니다.
+- 수행된(또는 권장되는) 작업
+- Consolidate의 경우: 어떤 문서가 대표였는지, 어떤 고유 내용이 병합되었는지, 무엇이 삭제되었는지
 
-For **Keep** outcomes, list them under a reviewed-without-edits section so the result is visible without creating git churn.
+**Keep** 결과의 경우, git 수정 없이도 결과가 보이도록 '수정 없이 검토됨' 섹션 아래에 나열합니다.
 
-### Autofix mode report
+### 자동 수정 모드 보고서
 
-In autofix mode, the report is the sole deliverable — there is no user present to ask follow-up questions, so the report must be self-contained and complete. **Print the full report. Do not abbreviate, summarize, or skip sections.**
+자동 수정 모드에서 보고서는 유일한 결과물입니다 — 후속 질문을 할 사용자가 없으므로 보고서는 그 자체로 완결되어야 합니다. **전체 보고서를 인쇄하십시오. 생략하거나 요약하지 마십시오.**
 
-Split actions into two sections:
+작업을 두 섹션으로 나눕니다:
 
-**Applied** (writes that succeeded):
-- For each **Updated** file: the file path, what references were fixed, and why
-- For each **Consolidated** cluster: the canonical doc, what unique content was merged from each subsumed doc, and the subsumed docs that were deleted
-- For each **Replaced** file: what the old learning recommended vs what the current code does, and the path to the new successor
-- For each **Deleted** file: the file path and why it was removed (problem domain gone, fully redundant, etc.)
-- For each **Marked stale** file: the file path, what evidence was found, and why it was ambiguous
+**적용됨 (Applied)** (성공한 쓰기 작업):
+- 각 **Updated** 파일: 파일 경로, 수정된 참조 및 이유
+- 각 **Consolidated** 클러스터: 대표 문서, 각 흡수된 문서에서 병합된 고유 내용, 그리고 삭제된 흡수 문서들
+- 각 **Replaced** 파일: 과거 권장 사항 vs 현재 코드 동작, 그리고 새로운 후속 문서 경로
+- 각 **Deleted** 파일: 파일 경로 및 삭제 이유 (문제 도메인 소멸, 완전 중복 등)
+- 각 **Marked stale** 파일: 파일 경로, 발견된 증거 및 모호한 이유
 
-**Recommended** (actions that could not be written — e.g., permission denied):
-- Same detail as above, but framed as recommendations for a human to apply
-- Include enough context that the user can apply the change manually or re-run the skill interactively
+**권장됨 (Recommended)** (실행되지 못한 작업 — 예: 권한 거부):
+- 위와 동일한 상세 내용이되, 사람이 적용할 권장 사항으로 프레이밍함
+- 사용자가 수동으로 변경을 적용하거나 스킬을 대화형으로 다시 실행할 수 있도록 충분한 컨텍스트 포함
 
-If all writes succeed, the Recommended section is empty. If no writes succeed (e.g., read-only invocation), all actions appear under Recommended — the report becomes a maintenance plan.
+모든 쓰기 작업이 성공하면 권장됨 섹션은 비어 있게 됩니다. 모든 쓰기 작업이 실패하면(예: 읽기 전용 실행) 모든 작업이 권장됨 아래에 나타나며 보고서는 유지보수 계획서가 됩니다.
 
-**Legacy cleanup** (if `docs/solutions/_archived/` exists):
-- List archived files found and recommend disposition: restore (if still relevant), delete (if truly obsolete), or consolidate (if overlapping with active docs)
+**레거시 정리 (Legacy cleanup)** (`docs/solutions/_archived/`가 존재하는 경우):
+- 발견된 아카이브 파일들을 나열하고 처리 방안을 권장함: 복구(여전히 유효한 경우), 삭제(진정으로 구식인 경우), 또는 통합(활성 문서와 겹치는 경우)
 
-## Phase 5: Commit Changes
+## 단계 5: 변경 사항 커밋
 
-After all actions are executed and the report is generated, handle committing the changes. Skip this phase if no files were modified (all Keep, or all writes failed).
+모든 작업이 실행되고 보고서가 생성된 후, 변경 사항 커밋을 처리합니다. 파일이 수정되지 않았다면 (모두 Keep이거나 모든 쓰기 실패) 이 단계를 건너뜁니다.
 
-### Detect git context
+### Git 컨텍스트 감지
 
-Before offering options, check:
-1. Which branch is currently checked out (main/master vs feature branch)
-2. Whether the working tree has other uncommitted changes beyond what compound-refresh modified
-3. Recent commit messages to match the repo's commit style
+옵션을 제시하기 전에 확인하십시오:
+1. 현재 어떤 브랜치가 체크아웃되어 있는지 (main/master vs 기능 브랜치)
+2. 작업 트리에 compound-refresh가 수정한 것 외에 커밋되지 않은 다른 변경 사항이 있는지
+3. 저장소의 커밋 스타일을 따르기 위한 최근 커밋 메시지 확인
 
-### Autofix mode
+### 자동 수정 모드
 
-Use sensible defaults — no user to ask:
+사용자에게 물을 수 없으므로 합리적인 기본값을 사용합니다:
 
-| Context | Default action |
+| 컨텍스트 | 기본 작업 |
 |---------|---------------|
-| On main/master | Create a branch named for what was refreshed (e.g., `docs/refresh-auth-and-ci-learnings`), commit, attempt to open a PR. If PR creation fails, report the branch name. |
-| On a feature branch | Commit as a separate commit on the current branch |
-| Git operations fail | Include the recommended git commands in the report and continue |
+| main/master인 경우 | 새로고침된 내용을 따서 브랜치 생성 (예: `docs/refresh-auth-and-ci-learnings`), 커밋, PR 생성 시도. PR 생성 실패 시 브랜치 이름 보고. |
+| 기능 브랜치인 경우 | 현재 브랜치에 별도의 커밋으로 커밋 |
+| Git 작업 실패 시 | 권장하는 git 명령어를 보고서에 포함하고 계속 진행 |
 
-Stage only the files that compound-refresh modified — not other dirty files in the working tree.
+작업 트리의 다른 더티 파일이 아닌, compound-refresh가 수정한 파일만 스테이징하십시오.
 
-### Interactive mode
+### 대화형 모드
 
-First, run `git branch --show-current` to determine the current branch. Then present the correct options based on the result. Stage only compound-refresh files regardless of which option the user picks.
+먼저 `git branch --show-current`를 실행하여 현재 브랜치를 확인합니다. 그 결과에 따라 적절한 옵션을 제시하십시오. 어떤 옵션을 선택하든 compound-refresh 관련 파일만 스테이징하십시오.
 
-**If the current branch is main, master, or the repo's default branch:**
+**현재 브랜치가 main, master 또는 저장소 기본 브랜치인 경우:**
+1. 브랜치 생성, 커밋, PR 생성 (추천) — 브랜치 이름은 `docs/compound-refresh`와 같은 범용적인 이름이 아닌, 무엇이 새로고침되었는지 구체적이어야 함 (예: `docs/refresh-auth-learnings`)
+2. `{현재 브랜치 이름}`에 직접 커밋
+3. 커밋하지 않음 — 직접 처리하겠음
 
-1. Create a branch, commit, and open a PR (recommended) — the branch name should be specific to what was refreshed, not generic (e.g., `docs/refresh-auth-learnings` not `docs/compound-refresh`)
-2. Commit directly to `{current branch name}`
-3. Don't commit — I'll handle it
+**현재 브랜치가 기능 브랜치이고, 작업 트리가 깨끗한 경우:**
+1. 현재 브랜치에 별도의 커밋으로 커밋 (추천)
+2. 별도의 브랜치 생성 및 커밋
+3. 커밋하지 않음
 
-**If the current branch is a feature branch, clean working tree:**
+**현재 브랜치가 기능 브랜치이고, 작업 트리에 다른 변경 사항이 있는 경우:**
+1. compound-refresh 변경 사항만 선택적으로 현재 브랜치에 커밋 (다른 파일들은 건드리지 않음)
+2. 커밋하지 않음
 
-1. Commit to `{current branch name}` as a separate commit (recommended)
-2. Create a separate branch and commit
-3. Don't commit
+### 커밋 메시지
 
-**If the current branch is a feature branch, dirty working tree (other uncommitted changes):**
+다음을 포함하는 서술적인 커밋 메시지를 작성합니다:
+- 새로고침된 내용 요약 (예: "학습 내용 3개 업데이트, 중복 문서 2개 통합, 구식 문서 1개 삭제")
+- 저장소의 기존 커밋 컨벤션 준수 (최근 git log 확인)
+- 간결하게 작성 — 상세 내용은 수정된 파일 자체에 담겨 있습니다.
 
-1. Commit only the compound-refresh changes to `{current branch name}` (selective staging — other dirty files stay untouched)
-2. Don't commit
+## ce-compound와의 관계
 
-### Commit message
+- `ce-compound`는 방금 해결되고 검증된 문제를 캡처합니다.
+- `ce-compound-refresh`는 코드베이스가 진화함에 따라 개별 문서의 정확성과 문서 세트 전체의 설계를 유지 관리합니다.
 
-Write a descriptive commit message that:
-- Summarizes what was refreshed (e.g., "update 3 stale learnings, consolidate 2 overlapping docs, delete 1 obsolete doc")
-- Follows the repo's existing commit conventions (check recent git log for style)
-- Is succinct — the details are in the changed files themselves
+조사 과정에서 신뢰할 수 있는 후속 문서를 작성할 실질적인 증거가 확보되었을 때만 **Replace**를 사용하십시오. 증거가 부족하면 stale로 표시하고, 사용자가 해당 문제 영역을 다음에 마주했을 때 `ce-compound`를 실행하도록 권장하십시오.
 
-## Relationship to ce-compound
+문서 세트가 유기적으로 성장하면서 중복이 발생했을 때 선제적으로 **Consolidate**를 사용하십시오. `ce-compound`가 실행될 때마다 새로운 문서가 추가됩니다. 시간이 지나면 여러 문서가 동일한 문제를 약간씩 다른 각도에서 다루게 될 수 있습니다. 정기적인 통합은 문서 세트를 간결하고 권위 있게 유지해 줍니다.
 
-- `ce-compound` captures a newly solved, verified problem
-- `ce-compound-refresh` maintains older learnings as the codebase evolves — both their individual accuracy and their collective design as a document set
+## 발견 가능성 확인 (Discoverability Check)
 
-Use **Replace** only when the refresh process has enough real evidence to write a trustworthy successor. When evidence is insufficient, mark as stale and recommend `ce-compound` for when the user next encounters that problem area.
+새로고침 보고서가 생성된 후, 프로젝트 지침 파일이 에이전트에게 문서화된 영역에서 작업을 시작하기 전에 `docs/solutions/`를 발견하고 검색하도록 안내하는지 확인합니다. 지식 저장소는 에이전트가 이를 발견하고 사용할 수 있을 때만 가치를 창출합니다. 이 확인 결과로 수정이 발생하면 단계 5 커밋 흐름의 일부로(혹은 직후에) 커밋됩니다.
 
-Use **Consolidate** proactively when the document set has grown organically and redundancy has crept in. Every `ce-compound` invocation adds a new doc — over time, multiple docs may cover the same problem from slightly different angles. Periodic consolidation keeps the document set lean and authoritative.
+1. 루트 수준의 지침 파일(AGENTS.md, CLAUDE.md 또는 둘 다)이 존재하는지 확인합니다. 파일을 읽고 실질적인 내용을 담고 있는 파일을 식별합니다 — 하나는 다른 파일을 `@`로 포함하는 단순한 래퍼일 수 있습니다. 실질적인 내용이 있는 파일이 평가 및 수정 대상입니다. 둘 다 없다면 이 확인을 건너뜁니다.
+2. 에이전트가 지침 파일을 읽었을 때 다음 세 가지를 배울 수 있는지 평가합니다:
+   - 문서화된 해결책이 모인 검색 가능한 지식 저장소가 존재함
+   - 효과적으로 검색할 수 있을 만큼 구조를 알고 있음 (카테고리 구성, `module`, `tags`, `problem_type`과 같은 YAML frontmatter 필드)
+   - 언제 검색해야 하는지 알고 있음 (기능 구현, 이슈 디버깅, 혹은 문서화된 영역에서 결정을 내리기 전 — 학습 내용은 버그, 모범 사례, 워크플로우 패턴 등을 다룰 수 있음)
 
-## Discoverability Check
+   이는 문자열 매칭이 아닌 의미론적 평가입니다. 정보는 아키텍처 섹션의 한 줄일 수도, 주의 사항 섹션의 글머리 기호일 수도 있으며, 여러 곳에 흩어져 있거나 `docs/solutions/`라는 정확한 경로를 사용하지 않고 표현될 수도 있습니다. 판단력을 발휘하십시오 — 에이전트가 파일을 읽은 후 지식 저장소를 합리적으로 발견하고 사용할 수 있다면 통과입니다.
 
-After the refresh report is generated, check whether the project's instruction files would lead an agent to discover and search `docs/solutions/` before starting work in a documented area. This runs every time — the knowledge store only compounds value when agents can find it. If this check produces edits, they are committed as part of (or immediately after) the Phase 5 commit flow — see step 5 below.
+3. 취지가 이미 충족되었다면 아무 작업도 필요 없습니다.
+4. 그렇지 않다면:
+   a. 파일의 기존 구조, 톤, 밀도에 따라 언급이 자연스럽게 어울리는 위치를 식별합니다. 새로운 섹션을 만들기 전에, 아키텍처 트리, 디렉토리 목록, 문서 섹션, 또는 규칙 블록 등 가장 관련 있는 기존 섹션에 한 줄로 추가할 수 있는지 확인하십시오. 기존 섹션에 추가하는 것이 새로운 섹션을 만드는 것보다 거의 항상 낫습니다. 파일에 명확한 섹션 구조가 있고 관련 있는 곳이 전혀 없는 경우에만 최후의 수단으로 새 섹션을 추가하십시오.
+   b. 세 가지 사실을 전달하는 가장 작은 추가안을 작성합니다. 파일의 기존 스타일과 밀도에 맞춥니다. 추가 내용은 플러그인이 아닌 지식 저장소 자체를 설명해야 합니다.
 
-1. Identify which root-level instruction files exist (AGENTS.md, CLAUDE.md, or both). Read the file(s) and determine which holds the substantive content — one file may just be a shim that `@`-includes the other (e.g., `CLAUDE.md` containing only `@AGENTS.md`, or vice versa). The substantive file is the assessment and edit target; ignore shims. If neither file exists, skip this check entirely.
-2. Assess whether an agent reading the instruction files would learn three things:
-   - That a searchable knowledge store of documented solutions exists
-   - Enough about its structure to search effectively (category organization, YAML frontmatter fields like `module`, `tags`, `problem_type`)
-   - When to search it (before implementing features, debugging issues, or making decisions in documented areas — learnings may cover bugs, best practices, workflow patterns, or other institutional knowledge)
+      톤을 강요가 아닌 정보 제공형으로 유지하십시오. 타이밍을 지시가 아닌 설명으로 표현하십시오 — "검색해야 함"이 아니라 "문서화된 영역에서 구현하거나 디버깅할 때 관련이 있음"과 같이 표현하십시오. "구현 전 항상 검색하라"와 같은 강압적인 지시는 워크플로우에 이미 전용 검색 단계가 포함된 경우 중복 읽기를 유발합니다. 목표는 인지입니다: 에이전트가 폴더의 존재와 내용을 알게 되면, 언제 참고할지는 스스로 판단하게 됩니다.
 
-   This is a semantic assessment, not a string match. The information could be a line in an architecture section, a bullet in a gotchas section, spread across multiple places, or expressed without ever using the exact path `docs/solutions/`. Use judgment — if an agent would reasonably discover and use the knowledge store after reading the file, the check passes.
+      조정 예시 (템플릿이 아님 — 파일에 맞게 조정):
 
-3. If the spirit is already met, no action needed.
-4. If not:
-   a. Based on the file's existing structure, tone, and density, identify where a mention fits naturally. Before creating a new section, check whether the information could be a single line in the closest related section — an architecture tree, a directory listing, a documentation section, or a conventions block. A line added to an existing section is almost always better than a new headed section. Only add a new section as a last resort when the file has clear sectioned structure and nothing is even remotely related.
-   b. Draft the smallest addition that communicates the three things. Match the file's existing style and density. The addition should describe the knowledge store itself, not the plugin.
-
-      Keep the tone informational, not imperative. Express timing as description, not instruction — "relevant when implementing or debugging in documented areas" rather than "check before implementing or debugging." Imperative directives like "always search before implementing" cause redundant reads when a workflow already includes a dedicated search step. The goal is awareness: agents learn the folder exists and what's in it, then use their own judgment about when to consult it.
-
-      Examples of calibration (not templates — adapt to the file):
-
-      When there's an existing directory listing or architecture section — add a line:
+      기존 디렉토리 목록이나 아키텍처 섹션이 있는 경우 — 한 줄 추가:
       ```
-      docs/solutions/  # documented solutions to past problems (bugs, best practices, workflow patterns), organized by category with YAML frontmatter (module, tags, problem_type)
+      docs/solutions/  # 과거 문제(버그, 모범 사례, 워크플로우 패턴)에 대한 문서화된 해결책. 카테고리별로 구성되어 있으며 YAML frontmatter(module, tags, problem_type)를 포함함.
       ```
 
-      When nothing in the file is a natural fit — a small headed section is appropriate:
+      파일에 적절한 곳이 없는 경우 — 작은 섹션 추가:
       ```
-      ## Documented Solutions
+      ## 문서화된 해결책 (Documented Solutions)
 
-      `docs/solutions/` — documented solutions to past problems (bugs, best practices, workflow patterns), organized by category with YAML frontmatter (`module`, `tags`, `problem_type`). Relevant when implementing or debugging in documented areas.
+      `docs/solutions/` — 과거 문제(버그, 모범 사례, 워크플로우 패턴)에 대한 문서화된 해결책. 카테고리별로 구성되어 있으며 YAML frontmatter(`module`, `tags`, `problem_type`)를 포함함. 문서화된 영역에서 구현하거나 디버깅할 때 관련이 있음.
       ```
-   c. In interactive mode, explain to the user why this matters — agents working in this repo (including fresh sessions, other tools, or collaborators without the plugin) won't know to check `docs/solutions/` unless the instruction file surfaces it. Show the proposed change and where it would go, then use the platform's blocking question tool to get consent before making the edit: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to presenting the proposal in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question. In autofix mode, include it as a "Discoverability recommendation" line in the report — do not attempt to edit instruction files (autofix scope is doc maintenance, not project config).
+   c. 대화형 모드에서는 사용자에게 이것이 왜 중요한지 설명하십시오 — 이 저장소에서 작업하는 에이전트들(새로운 세션, 다른 도구, 혹은 플러그인이 없는 협업자 포함)은 지침 파일에 명시되지 않으면 `docs/solutions/`를 확인해야 한다는 것을 알 수 없습니다. 제안된 변경 사항과 위치를 보여준 뒤, 플랫폼의 질문 도구를 사용하여 편집 전 동의를 얻으십시오. 질문을 소리 없이 건너뛰지 마십시오. 자동 수정 모드에서는 보고서에 "발견 가능성 권장 사항(Discoverability recommendation)" 라인으로 포함하되, 지침 파일을 직접 수정하려 하지 마십시오 (자동 수정 범위는 문서 유지보수이지 프로젝트 설정이 아닙니다).
 
-5. **Amend or create a follow-up commit when the check produces edits.** If step 4 resulted in an edit to an instruction file and Phase 5 already committed the refresh changes, stage the newly edited file and either amend the existing commit (if still on the same branch and no push has occurred) or create a small follow-up commit (e.g., `docs: add docs/solutions/ discoverability to AGENTS.md`). If Phase 5 already pushed the branch to a remote (e.g., the branch+PR path), push the follow-up commit as well so the open PR includes the discoverability change. This keeps the working tree clean and the remote in sync at the end of the run. If the user chose "Don't commit" in Phase 5, leave the instruction-file edit unstaged alongside the other uncommitted refresh changes — no separate commit logic needed.
+5. **수정이 발생하면 후속 커밋을 추가하거나 수정합니다.** 단계 4에서 지침 파일 수정이 발생했고 단계 5에서 이미 새로고침 변경 사항이 커밋되었다면, 수정된 파일을 스테이징하고 기존 커밋을 수정(amend)(동일 브랜치이고 푸시되지 않은 경우)하거나 작은 후속 커밋(예: `docs: add docs/solutions/ discoverability to AGENTS.md`)을 생성합니다. 단계 5에서 이미 브랜치를 원격에 푸시했다면(브랜치+PR 경로), 후속 커밋도 푸시하여 PR에 발견 가능성 변경 사항이 포함되도록 하십시오. 이는 작업 트리를 깨끗하게 유지하고 원격 저장소를 동기화된 상태로 마무리하기 위함입니다. 만약 사용자가 단계 5에서 "커밋하지 않음"을 선택했다면, 지침 파일 수정을 다른 커밋되지 않은 새로고침 변경 사항과 함께 스테이징되지 않은 상태로 남겨두십시오.
